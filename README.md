@@ -13,20 +13,30 @@ For more information, contact:
 
 ## Directory Structure
 
-We use the following structure for the files:
+We use the following directory structure:
 
 `nanodesign`: the main python package
+
 `docs`: doc generation for the package
+
 `tests`: tests for the package
+
 `scripts`: example scripts for using the package, as well as scripts used to run specific tasks for the NanoDesign web application
+
+
 
 Individual top level files of interest:
 
 `README.md`: You're reading it.
+
 `Makefile`: Some basic commands you might use, such as 'make init' for doing the requirements install, or 'make tests' for running the tests. More will be added.
+
 `requirements.txt`: pip requirements file. Add specific package requirements here.
+
 `setup.py`: distutils based package install. To run the package install, 'python setup.py install'
+
 `LICENSE`: Our distribution license. Currently blank, do not distribute.
+
 `Dockerfile`: Defines docker container with appropriate requirements.
 
 ## Purpose
