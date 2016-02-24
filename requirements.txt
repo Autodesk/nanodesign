@@ -1,0 +1,11 @@
+# Basic requirements. 
+#
+
+# Note: the initial list is just a sample guess to show an example. See
+#  https://pip.pypa.io/en/stable/reference/pip_install/#requirements-file-format
+#  for details on more complex requirements.
+
+biopython
+
+numpy >= 1.9
+
