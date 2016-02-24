@@ -14,4 +14,5 @@ Probably shouldn't edit:
 Usage 
 -----
 
-`make html` in this directory will build the html version of the documentation. It will then reside in `_build/html/index.html` as the root.
+Make sure sphinx is installed. `make init` in the root directory should install it, but if not, just use `pip install sphinx`. 
+Once sphinx is installed, `make html` in this directory will build the html version of the documentation. It will then reside in `_build/html/index.html` as the root. 
