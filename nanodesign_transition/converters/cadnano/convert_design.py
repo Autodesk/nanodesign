@@ -19,6 +19,7 @@ import sys
 import time
 import numpy as np
 from math import sqrt,cos,acos,sin,asin,pi
+from dna_sequence_data import dna_sequence_data
 
 from design import CadnanoDesign,CadnanoVirtualHelix,CadnanoBase
 from reader import CadnanoReader 
@@ -75,14 +76,14 @@ class CadnanoConvertDesign(object):
         self._logger.addHandler(console_handler)
 
     def create_structure(self,design):
-        """Create a DNA structure from a caDNAno DNA origami design.
+        """ Create a DNA structure from a caDNAno DNA origami design.
 
-           Args:
-               design (CadnanoDesign): A caDNAno DNA origami design.
+            Arguments:
+                design (CadnanoDesign): A caDNAno DNA origami design.
 
-           Returns:
-               DnaStructure: The DNA structure object containing topological and geometric information for the
-                                   caDNAno DNA origami design model.
+            Returns:
+                DnaStructure: The DNA structure object containing topological and geometric information for the
+                              caDNAno DNA origami design model.
         """
 
         self._timer.start()
@@ -986,43 +987,244 @@ class CadnanoConvertDesign(object):
         #__while (True):
         return dna_topology, strands
 
-    def set_sequence(self, sequence):
+    def set_sequence_from_name(self, modified_structure, seq_name):
+        """ Set the sequence information for the staple and scaffold strands using a known
+            origami vector sequence name.
+
+            Cadnano seems to start assigning the sequence at virtual helix 0. If ordered_traverse=True
+            then use the cadnano method.
+
+            If the structure has not been modified with insertions and deletions then we will need to 
+            use its insertions and deletions information (at the base level) to selectively set its 
+            sequence.
+
+            Arguments:
+                modified_structure (bool): If true then the structure has been modified for insertions and deletions. 
+                seq_name (string): The name of the sequence as defined in the dna_sequence_data dictionary. 
+        """
+        #self._logger.setLevel(logging.DEBUG)
+        self._logger.setLevel(logging.INFO)
+
+        sequence = dna_sequence_data.get(seq_name,None)
+        seq_index = 0
+        sequence_length = len(sequence)
+        self._logger.debug("-------------------- set_sequence_from_name --------------------")
+        self._logger.debug("sequence name: %s" % seq_name)
+        self._logger.debug("sequence length: %d" % len(sequence))
+        dna_structure = self.dna_structure 
+        base_connectivity = dna_structure.base_connectivity
+        strands = dna_structure.strands 
+        ordered_traverse = False
+        ordered_traverse = True
+
+        for strand in strands:
+            if (not strand.is_scaffold):
+                continue 
+
+            if (ordered_traverse): 
+                self._logger.debug("---------- traverse scaffold strand --------------------")
+                tour = strand.tour
+                id = tour[0]
+                base = base_connectivity[id-1]
+                min_vh = base.h
+                min_p = base.p
+                start_index = 0
+
+                for j in xrange(0,len(tour)):
+                    id = tour[j]
+                    base = base_connectivity[id-1]
+                    if (base.h < min_vh):
+                        min_vh = base.h
+                        min_p = base.p
+                        start_index = j
+                    if ((base.h == min_vh) and (base.p < min_p)):
+                        min_p = base.p
+                        start_index = j
+                self._logger.debug("start_index %d  min_vh %d  min_p %d ", start_index, min_vh,min_p)
+                start_id = tour[start_index]
+                start_base = base_connectivity[start_id-1]
+                base = start_base 
+                even_vh = min_vh % 2
+
+                for j in xrange(0,len(tour)):
+                    letter = sequence[seq_index]
+                    up = base.up
+                    down = base.down
+                    across = base.across
+
+                    if (not modified_structure):
+                        if (across >= 0):
+                            if (base.skip != 0):
+                                self._logger.debug("**** deleted base: id %d " % base.id)
+                                letter = 'N'
+                            elif (base.loop != 0):
+                                self._logger.debug("**** inserted base: id %d " % base.id)
+                                strand.insert_seq.append(seq.letters[seq_index+1])
+                                seq_index += 2
+                            else:
+                                seq_index += 1
+                    else:
+                        seq_index += 1
+
+                    if (seq_index == sequence_length): 
+                        seq_index = 0
+
+                    base.seq = letter 
+                    self._logger.debug("base id %d  vh %d  pos %d  up %d  down %d  across %d  seq %s", 
+                        base.id, base.h, base.p, up, down, across, base.seq)
+
+                    if (across >= 0):
+                        across_base = base_connectivity[base.across-1]
+                        across_base.seq = self._wspair(letter)
+
+                    if (even_vh):
+                        if (up != -1):
+                            base_id = up
+                            base = base_connectivity[base_id-1]
+                        elif (across != -1):
+                            base_id = across
+                            base = base_connectivity[base_id-1]
+                            even_vh = base.h % 2
+                    else:
+                        if (down != -1):
+                            base_id = down
+                            base = base_connectivity[base_id-1]
+                        elif (across != -1):
+                            base_id = across
+                            base = base_connectivity[base_id-1]
+                            even_vh = base.h % 2
+
+                 #__for j in xrange(0,len(tour)):
+
+            else: 
+                for i in xrange(0,len(strand.tour)):
+                    letter = sequence[seq_index]
+                    base_index = int(strand.tour[i])-1
+                    base = base_connectivity[base_index]
+                    across = base.across
+
+                    if (not modified_structure):
+                        if (base.skip != 0):
+                            self._logger.debug("**** deleted base: id %d  vh %d  pos %d", base.id, base.h, base.p)
+                            letter = 'N'
+                        elif (base.loop != 0):
+                            self._logger.debug("**** inserted base: id %d  vh %d  pos %d " % base.id, base.h, base.p)
+                            strand.insert_seq.append(seq.letters[seq_index+1])
+                            seq_index += 2
+                        else:
+                            seq_index += 1
+                    else:
+                        seq_index += 1
+
+                    base.seq = letter 
+
+                    if (seq_index == sequence_length): 
+                        seq_index = 0
+
+                    if (base.across >= 0):
+                        across_base = base_connectivity[base.across-1]
+                        across_base.seq = self._wspair(letter)
+
+                #__for i in xrange(0,len(strand.tour))
+        #__for strand in strands
+
+        print_strands = True
+        print_strands = False
+        if (print_strands):
+            self._logger.debug("---------- strands sequences ----------")
+            self._logger.debug(">>> number of strands: %d " % len(strands))
+            for strand in strands:
+                tour = strand.tour 
+                self._logger.debug(">>> strand: %d  scaf: %d length: %d" % (strand.id,strand.is_scaffold,len(tour)))
+                self._logger.debugprint("    seq:")
+                for j in xrange(0,len(tour)):
+                    id = tour[j]
+                    base = base_connectivity[id-1]
+                    self._logger.debug("    vhelix: %d  pos: %d  seq: %s" % (int(base.h), int(base.p), base.seq))
+            #__for i in xrange(0,len(strands))
+
+    #__def set_sequence_from_name
+
+    def set_sequence(self, modified_structure, sequence):
         """ Set the sequence information for the staple and scaffold strands.
 
-            Args:
-               sequence (CadnanoModel): A list of DnaSequence objects representing the sequence for staple or scaffold strands.
+            The caDNAno csv file contains sequence information reflecting the insertions and deletions of a
+            design. If a structure has had bases inserted and deleted then its sequence can be set directly 
+            from the sequences in the csv file. If the structure has not been modified with insertions and
+            deletions then we will need to use its insertions and deletions information (at the base level)
+            to set selectively set its sequence from the sequences in the csv file.   
+
+            Arguments:
+               modified_structure (bool): If True then the structure has been modified with deletions and insertions. 
+               sequence (DnaSequence): A list of DnaSequence objects representing the sequences for staple or scaffold strands.
         """
 
-        strands = self.strands 
-        staple_ends = self.staple_ends 
+        #self._logger.setLevel(logging.DEBUG)
+        self._logger.setLevel(logging.INFO)
+
+        dna_structure = self.dna_structure 
+        strands = dna_structure.strands 
+        base_connectivity = dna_structure.base_connectivity
+        staple_ends = dna_structure.staple_ends 
         start = np.array([0,0], dtype=float)
 
         for i in xrange(0,len(sequence)):
             seq = sequence[i]
-            #print("---------- seq %d ----------" % (i+1))
-            #print(">>> start: %s" % str(seq.start))
-            #print(">>> stap_ends: %s" % str(stap_ends[:,1:3]))
             start[0] = sequence[i].start[0]
             start[1] = sequence[i].start[1]
             row = _find_row(start, staple_ends[:,1:3])[0]
-            #print(">>> row: %s" % str(row))
             istrand = int(staple_ends[row,0])
             tour = strands[istrand-1].tour
-            #print(">>> tour: %s" % str(tour))
 
-            for j in xrange(0,len(strands[istrand-1].tour)):
-                k = int(strands[istrand-1].tour[j])-1
-                #print(">>> k: %d" % k)
-                self.dna_topology[k].seq = seq.letters[j]
-                #print(">>> dna_topology[k].seq: %s" % dna_topology[k].seq)
-                if (self.dna_topology[k].across >= 0):
-                    k_across = self.dna_topology[k].across
-                    #assert(strcmp(dnaTop(k_across).seq, 'N'));
-                    self.dna_topology[k_across-1].seq = self._wspair(seq.letters[j])
-            #__for j
+            if (modified_structure):
+                for j in xrange(0,len(strands[istrand-1].tour)):
+                    k = int(strands[istrand-1].tour[j])-1
+                    base_connectivity[k].seq = seq.letters[j]
+                    if (self.base_connectivity[k].across >= 0):
+                        k_across = self.base_connectivity[k].across
+                        self.base_connectivity[k_across-1].seq = self._wspair(seq.letters[j])
+                #__for j
+
+            else:
+                seq_index = 0
+                for j in xrange(0,len(tour)):
+                    letter = seq.letters[seq_index]
+                    base_index = int(tour[j])-1
+                    base = base_connectivity[base_index]
+                    if (base.skip != 0):
+                        letter = 'N'
+                    elif (base.loop != 0):
+                        strand.insert_seq.append(seq.letters[seq_index+1])
+                        seq_index += 2
+                    else:
+                        seq_index += 1
+                    base.seq = letter
+                    if (base.across >= 0):
+                        across_base = base_connectivity[base.across-1]
+                        across_base.seq = self._wspair(letter)
+                #__for j
+
         #__for i
 
+        print_strands = True
+        print_strands = False
+        if (print_strands):
+            self._logger.debug("---------- strands sequences ----------")
+            self._logger.debug(">>> number of strands: %d " % len(strands))
+            for strand in strands:
+                tour = strand.tour
+                self._logger.debug(">>> strand: %d scaf: %d len: %d" % (strand.id,strand.is_scaffold,len(tour)))
+                self._logger.debug("    seq:")
+                for j in xrange(0,len(tour)):
+                    id = tour[j]
+                    base = base_connectivity[id-1]
+                    self._logger.debug("    vhelix: %d  pos: %d  seq: %s" % (int(base.h), int(base.p), base.seq))
+            #__for i in xrange(0,len(strands))
+    #__def set_sequence
+
     def _wspair(self, x):
+        """ Match a base with its complementary base. 
+        """
         x = x.upper()
 
         if (x == 'A'):
@@ -1031,11 +1233,12 @@ class CadnanoConvertDesign(object):
             y = 'C'
         elif (x == 'C'):
             y = 'G'
-        elif (x =='T'):
+        elif (x == 'T'):
             y = 'A'
+        elif (x == 'N'):
+            y = 'N'
         else:
             self._logger.error('Illegal base.')
-            y = 'N'
         return y
 
 #__class CadnanoTopology(object)

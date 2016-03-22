@@ -2,6 +2,7 @@
 """ 
 This module is used to convert DNA design files into other file formats.
 """
+import os
 import sys
 import json
 import logging
@@ -11,6 +12,7 @@ from cadnano.convert_design import CadnanoConvertDesign
 from viewer.writer import ViewerWriter 
 from cando.writer import CandoWriter 
 from nanodesign.dna_structure import DnaStructure
+from dna_sequence_data import dna_sequence_data
 
 class ConverterFileFormats(object):
     """ File format names to convert to/from. """
@@ -24,25 +26,42 @@ class Converter(object):
     """ This class stores objects for various models created when reading from a file.
     """
     def __init__(self):
-        cadnano_design = None 
-        dna_structure = None 
-        cadnano_convert_design = None
+        self.cadnano_design = None 
+        self.dna_structure = None 
+        self.cadnano_convert_design = None
+        self.logger = None
 
 def parse_args():
     """ Parse command-line arguments."""
     parser = argparse.ArgumentParser()
     parser.add_argument("-if", "--informat",   help="input file format: cadnano, viewer")
     parser.add_argument("-i",  "--infile",     help="input file")
+    parser.add_argument("-is", "--inseqfile",  help="input sequence file")
+    parser.add_argument("-isn","--inseqname",  help="input sequence name")
     parser.add_argument("-o",  "--outfile",    help="output file")
     parser.add_argument("-of", "--outformat",  help="output file format")
     return parser.parse_args()
 
-def read_cadnano_file(converter, file_name):
+def read_cadnano_file(converter, file_name, seq_file_name, seq_name):
     """ Read in a caDNAno file."""
     cadnano_reader = CadnanoReader()
     converter.cadnano_design = cadnano_reader.read_json(file_name)
     converter.cadnano_convert_design = CadnanoConvertDesign()
     converter.dna_structure = converter.cadnano_convert_design.create_structure(converter.cadnano_design)
+
+    if (seq_file_name): 
+        _, file_extension = os.path.splitext(seq_file_name)
+
+        if (file_extension == ".csv"): 
+            modified_structure = False
+            sequence = cadnano_reader.read_csv(seq_file_name)
+            converter.cadnano_convert_design.set_sequence(modified_structure, sequence)
+
+    if (seq_name): 
+        if (seq_name not in dna_sequence_data):
+            converter.logger.error("The sequence name %s is not recognized.", seq_name)
+        modified_structure = False
+        converter.cadnano_convert_design.set_sequence_from_name(modified_structure, seq_name)
 
 def write_viewer_file(converter, file_name):
     """ Write a DNA Design viewer file."""
@@ -74,6 +93,8 @@ converter_write_map = { ConverterFileFormats.VIEWER : write_viewer_file,
 def main():
     logger = _setup_logging()
     converter = Converter()
+    converter.logger = logger
+    infiles = []
 
     # Process command-line arguments.
     args = parse_args()
@@ -103,7 +124,7 @@ def main():
         logger.info("Output file format: %s" % args.outformat)
 
     # read the input file
-    converter_read_map[args.informat](converter, args.infile)
+    converter_read_map[args.informat](converter, args.infile, args.inseqfile, args.inseqname)
 
     # write the output file
     converter_write_map[args.outformat](converter, args.outfile)
