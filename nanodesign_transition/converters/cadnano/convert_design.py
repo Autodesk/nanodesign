@@ -58,6 +58,7 @@ class CadnanoConvertDesign(object):
         self._setup_logging()
         self._timer = _Timer()
         self.dna_structure = None 
+        self.staple_colors = []
 
     def _set_logging_level(self,level):
         """Set logging level."""
@@ -74,6 +75,9 @@ class CadnanoConvertDesign(object):
         formatter = logging.Formatter('[%(name)s] %(levelname)s - %(message)s')
         console_handler.setFormatter(formatter)
         self._logger.addHandler(console_handler)
+
+    def _add_staple_color(self,staple_color, vhelix_num):
+        self.staple_colors.append(self.StapleColor(staple_color,vhelix_num))
 
     def create_structure(self,design):
         """ Create a DNA structure from a caDNAno DNA origami design.
@@ -135,6 +139,7 @@ class CadnanoConvertDesign(object):
 
         # Generate strands 
         dna_topology,strands = self._build_strands(dna_topology)
+        self._set_strands_colors(strands)
         self.dna_structure.strands = strands
         self._logger.info("Number of strands: %d " % len(strands)) 
 
@@ -661,6 +666,7 @@ class CadnanoConvertDesign(object):
             stap_colors = vhelix.staple_colors 
             for color in stap_colors:
                 structure_helix.staple_colors.append(color)
+                self._add_staple_color(color, num)
 
             # Create data for a single helix
             helix_topology, dnode_0, triad_0, id, dnode_full = self._create_single_helix(vhelix, lattice_type)
@@ -987,6 +993,16 @@ class CadnanoConvertDesign(object):
         #__while (True):
         return dna_topology, strands
 
+    def _set_strands_colors(self, strands):
+        for strand in strands:
+            if (strand.is_scaffold):
+                continue 
+            id = strand.tour[0]
+            base = self.dna_structure.base_connectivity[id-1]
+            for color in self.staple_colors:
+                if ((color.vhelix_num == base.h) and (color.vhelix_pos == base.p)): 
+                    strand.color = color.rgb 
+
     def set_sequence_from_name(self, modified_structure, seq_name):
         """ Set the sequence information for the staple and scaffold strands using a known
             origami vector sequence name.
@@ -1241,7 +1257,30 @@ class CadnanoConvertDesign(object):
             self._logger.error('Illegal base.')
         return y
 
+    class StapleColor(object):
+        """ This class stores data for a staple color.
+        """
+        def __init__(self,staple_color, vhelix_num):
+            self.vhelix_num = vhelix_num 
+            self.vhelix_pos = int(staple_color[0])
+            self.color = staple_color[1]
+            red = (self.color>>16) & 0xFF
+            green = (self.color>>8) & 0xFF
+            blue  = (self.color) & 0xFF
+            self.rgb = [red/255.0, green/255.0, blue/255.0]
+            #print("[DnaStapleColor] red %d  green %d  blue %d " % (red, green, blue))
+
+        def match(self,pos):
+            if (self.vhelix_pos == pos):
+               return list(self.rgb)
+            else:
+               return []
+
+
 #__class CadnanoTopology(object)
+
+
+
 
 class _Timer(object):
     """ The Timer class is used to calculare elapsed time between calls to the start and finish methods."""
