@@ -112,6 +112,7 @@ class DnaStructure(object):
                 id = strand.tour[i]
                 base = self.base_connectivity[id-1]
                 across_base_sign = np.sign(base.across)
+                add_domain = False
                 if debug: 
                     print(">>> base id %d  up %d  down %d  across %d  helix %d  pos %d  strand %d" % 
                           (id, base.up, base.down, base.across, base.h, base.p, base.strand))
@@ -131,6 +132,7 @@ class DnaStructure(object):
                             print("++++++ add new domain %d, helix %d ++++++" % (num_domains,curr_helix_id))
                             print("")
                         curr_across_strand_id = across_base.strand
+                        add_domain = True
                         domain = DnaDomain(num_domains,helix)
                         num_domains += 1
                         domain.color = color
@@ -141,7 +143,7 @@ class DnaStructure(object):
                         curr_across_strand_id = across_base.strand
                 #__if (scaffold and (base.across > 0))
 
-                if ((base.h != curr_helix_id) or (across_base_sign != curr_across_base_sign)): 
+                if (add_domain and ((base.h != curr_helix_id) or (across_base_sign != curr_across_base_sign))): 
                     curr_helix_id = base.h
                     curr_across_base_sign = np.sign(base.across)
                     helix = self.structure_helices_map[curr_helix_id]
