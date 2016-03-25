@@ -11,6 +11,7 @@ class VisJsonFields:
     LATTICE_TYPE = "lattice_type"
     STRANDS = "strands"
     BASES   = "bases"
+    COLOR   = "color"
     DOMAINS = "domains"
     STRAND_ID = "strand_id"
     NUMBER_OF_BASES = "number_of_bases"
@@ -21,10 +22,11 @@ class VisJsonFields:
 #                       main                                 #
 #------------------------------------------------------------#
 def main():
-    if len(sys.argv) > 1:
+
+    if (len(sys.argv) == 2):
         file_name = sys.argv[1]
     else:
-        file_name = "fourhelix_vis.json"
+        file_name = "fourhelix_viewer.json"
 
     with open(file_name) as file:
         json_data = json.load(file)
@@ -42,7 +44,7 @@ def main():
         print("")
         print("--------------- vhelix %s --------------" % id)
         domain_list = vhelix[VisJsonFields.DOMAINS]
-        print(">>> num %d" % num) 
+        print(">>> num %d" % num)
         print(">>> number of domains %d" % len(domain_list)) 
         print(">>> domains %s" % str(domain_list)) 
         strand_radius = vhelix["strand_radius"]
@@ -58,14 +60,17 @@ def main():
         bases = strand[VisJsonFields.BASES]
         vhelix_list = strand[VisJsonFields.VIRTUAL_HELICES]
         domain_list = strand[VisJsonFields.DOMAINS]
+        color = strand[VisJsonFields.COLOR]
         print("")
         print(">>> strand %s: scaffold %s nbases %d nvhelix %d ndoms %d doms %s" % (id, is_scaffold, len(bases), len(vhelix_list),
            len(domain_list), str(domain_list) ))
-        print("            : bases : ")
+        print("              color %s" % str(color)) 
+        print("            : bases : ") 
         for base in bases:
             id = base['id']
             coord = base['coordinates']
-            print("            : id %d  coord %s" % (id, str(coord)))
+            seq = base['sequence']
+            print("            : id %d  coord %s  seq %s" % (id, str(coord), seq))
 
     print("")
     print("========================= domains =========================") 
@@ -83,6 +88,7 @@ def main():
         orientation = domain['orientation']
         start_pos = domain['start_position']
         end_pos  = domain['end_position']
+        color = domain[VisJsonFields.COLOR]
 
         #print("")
         print(">>> domain %s: strand %d  nbases %d  bases %s cstrand %d cdomain %d " % 
@@ -91,6 +97,7 @@ def main():
             end_pos[0], end_pos[1], end_pos[2]))
         print("               orientation (%f %f %f) " % (orientation[0], orientation[1], orientation[2]))
         print("               start_base_index %d  end_base_index %d " % (start_base_index, end_base_index))
+        print("               color %s " % (str(color)))
 
 if __name__=="__main__":
     main()
