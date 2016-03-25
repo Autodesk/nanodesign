@@ -10,6 +10,10 @@ Module containing data types (classes) for representing and operating on DNA nan
 import internaldata
 from .internaldata import *
 
+import domain
+from .domain import *
+
 __all__ = []
 __all__.extend( internaldata.__all__ )
+__all__.extend( domain.__all__ )
 

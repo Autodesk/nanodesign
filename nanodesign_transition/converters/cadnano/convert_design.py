@@ -24,9 +24,21 @@ from dna_sequence_data import dna_sequence_data
 from design import CadnanoDesign,CadnanoVirtualHelix,CadnanoBase
 from reader import CadnanoReader 
 from common import CadnanoLatticeType
-from nanodesign.base import DnaBase 
-from nanodesign.strand import DnaStrand
-from nanodesign.dna_structure import DnaStructure,DnaStructureHelix
+
+try:
+    import os.path
+    base_path = os.path.abspath( os.path.dirname(__file__) + '/../../../' )
+    sys.path.append( base_path )
+
+    from nanodesign_transition.base import DnaBase 
+    from nanodesign_transition.strand import DnaStrand
+    from nanodesign_transition.dna_structure import DnaStructure,DnaStructureHelix
+
+    sys.path = sys.path[:-1]
+except ImportError as i:
+    print "Could not get nanodesign_transition module"
+    raise i
+
 
 # The number of columns in the intermediate structure topology table.
 TOPOLOGICAL_TABLE_NUM_COLUMNS = 18

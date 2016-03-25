@@ -11,7 +11,19 @@ from cadnano.reader import CadnanoReader
 from cadnano.convert_design import CadnanoConvertDesign
 from viewer.writer import ViewerWriter 
 from cando.writer import CandoWriter 
-from nanodesign.dna_structure import DnaStructure
+
+try:
+    import os.path
+    base_path = os.path.abspath( os.path.dirname(__file__) + '/../../' )
+    sys.path.append( base_path )
+
+    from nanodesign_transition.dna_structure import DnaStructure
+    sys.path = sys.path[:-1]
+except ImportError as i:
+    print "Could not get nanodesign_transition module"
+    raise i
+
+#from nanodesign_transition.dna_structure import DnaStructure
 from dna_sequence_data import dna_sequence_data
 
 class ConverterFileFormats(object):
