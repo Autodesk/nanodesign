@@ -37,9 +37,12 @@ def main():
     print(">>> number of virtual helices %d" % len(vhelix_list)) 
     for vhelix in vhelix_list:
         id = vhelix["id"]
+        cadnano_info = vhelix["cadnano_info"]
+        num = cadnano_info["num"]
         print("")
         print("--------------- vhelix %s --------------" % id)
         domain_list = vhelix[VisJsonFields.DOMAINS]
+        print(">>> num %d" % num) 
         print(">>> number of domains %d" % len(domain_list)) 
         print(">>> domains %s" % str(domain_list)) 
         strand_radius = vhelix["strand_radius"]
@@ -58,7 +61,11 @@ def main():
         print("")
         print(">>> strand %s: scaffold %s nbases %d nvhelix %d ndoms %d doms %s" % (id, is_scaffold, len(bases), len(vhelix_list),
            len(domain_list), str(domain_list) ))
-        print("            : bases %s " % str(bases)) 
+        print("            : bases : ")
+        for base in bases:
+            id = base['id']
+            coord = base['coordinates']
+            print("            : id %d  coord %s" % (id, str(coord)))
 
     print("")
     print("========================= domains =========================") 
