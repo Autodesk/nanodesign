@@ -23,7 +23,6 @@ except ImportError as i:
     print "Could not get nanodesign_transition module"
     raise i
 
-#from nanodesign_transition.dna_structure import DnaStructure
 from dna_sequence_data import dna_sequence_data
 
 class ConverterFileFormats(object):

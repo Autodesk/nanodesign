@@ -20,7 +20,6 @@ except ImportError as i:
     print "Could not get nanodesign_transition module"
     raise i
 
-#from nanodesign.sequence import DnaSequence
 
 class CadnanoReader(object):
     """The CadnanoReader class."""

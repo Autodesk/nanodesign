@@ -12,18 +12,15 @@ from converters.cadnano.common import CadnanoLatticeType
 
 # temp code to handle objects as they are being transitioned into the main package
 try:
+    # TODO: JS 3/25 This will need to change at some point once everything is transitioned.
+    import os.path
+    base_path = os.path.abspath( os.path.dirname(__file__) + '/../' )
+    sys.path.append(base_path)
     import nanodesign as nd
+    sys.path = sys.path[:-1]
 except ImportError:
-    try:
-        import os.path
-        sys.path.append(os.path.abspath('../'))
-        import nanodesign as nd
-        sys.path = sys.path[:-1]
-    except ImportError:
-        print "Cannot locate nanodesign package, it hasn't been installed in main packages, and is not reachable relative to the nanodesign_transition directory."
-        raise ImportError
-
-
+    print "Cannot locate nanodesign package, it hasn't been installed in main packages, and is not reachable relative to the nanodesign_transition directory."
+    raise ImportError
 
 
 class DnaStructure(object):
