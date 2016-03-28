@@ -112,7 +112,7 @@ class DnaStructure(object):
                 id = strand.tour[i]
                 base = self.base_connectivity[id-1]
                 across_base_sign = np.sign(base.across)
-                add_domain = False
+                domain_added = False
                 if debug: 
                     print(">>> base id %d  up %d  down %d  across %d  helix %d  pos %d  strand %d" % 
                           (id, base.up, base.down, base.across, base.h, base.p, base.strand))
@@ -132,36 +132,44 @@ class DnaStructure(object):
                             print("++++++ add new domain %d, helix %d ++++++" % (num_domains,curr_helix_id))
                             print("")
                         curr_across_strand_id = across_base.strand
-                        add_domain = True
+                        domain_added = True
                         domain = DnaDomain(num_domains,helix)
                         num_domains += 1
                         domain.color = color
                         domain.strand = strand
                         self.domain_list.append(domain)
                         helix.domain_list.append(domain)
+                        domain.base_list.append(base)
+                        base.domain = domain.id
                     elif ( base.across > 0):
                         curr_across_strand_id = across_base.strand
                 #__if (scaffold and (base.across > 0))
 
-                if (add_domain and ((base.h != curr_helix_id) or (across_base_sign != curr_across_base_sign))): 
+                if ((base.h != curr_helix_id) or (across_base_sign != curr_across_base_sign)): 
                     curr_helix_id = base.h
                     curr_across_base_sign = np.sign(base.across)
                     helix = self.structure_helices_map[curr_helix_id]
                     if debug: print("++++++ add new domain %d  helix %d ++++++" % (num_domains,base.h))
+                    domain_added = True
                     domain = DnaDomain(num_domains,helix)
                     num_domains += 1
                     domain.color = color
                     domain.strand = strand
                     self.domain_list.append(domain)
                     helix.domain_list.append(domain)
-                domain.base_list.append(base)
-                base.domain_id = domain.id
+                    domain.base_list.append(base)
+                    base.domain = domain.id
+
+                if (not domain_added):
+                    domain.base_list.append(base)
+                    base.domain = domain.id
             #__for i in xrange(1,len(strand.tour))__
         #__for strand in self.strands__
 
         # set the strand and domain connectivity for the domains
         if debug: print("")
         if debug: print(" number of domains added %d " % (num_domains))
+        print("Number of domains added: %d " % (num_domains))
         for domain in self.domain_list:
             across = -1
             for base in domain.base_list:

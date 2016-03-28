@@ -9,7 +9,7 @@ import re
 import sys
 from common import CadnanoLatticeName,CadnanoLatticeType,CadnanoJsonFields
 from design import CadnanoDesign,CadnanoVirtualHelix,CadnanoBase
-from nanodesign.sequence import DnaSequence
+from nanodesign_transition.sequence import DnaSequence
 
 class CadnanoReader(object):
     """The CadnanoReader class."""

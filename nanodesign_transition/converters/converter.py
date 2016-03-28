@@ -11,7 +11,7 @@ from cadnano.reader import CadnanoReader
 from cadnano.convert_design import CadnanoConvertDesign
 from viewer.writer import ViewerWriter 
 from cando.writer import CandoWriter 
-from nanodesign.dna_structure import DnaStructure
+from nanodesign_transition.dna_structure import DnaStructure
 from dna_sequence_data import dna_sequence_data
 
 class ConverterFileFormats(object):

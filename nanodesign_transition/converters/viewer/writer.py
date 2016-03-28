@@ -6,7 +6,7 @@ import json
 import logging
 import numpy as np
 from cadnano.common import CadnanoLatticeName,CadnanoLatticeType
-from nanodesign.parameters import DnaParameters
+from nanodesign_transition.parameters import DnaParameters
 
 class ViewerWriter(object):
     """ The ViewerWriter class writes out a DNA Design viewer JSON file. 
