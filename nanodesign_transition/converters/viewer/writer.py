@@ -19,7 +19,6 @@ except ImportError as i:
     raise i
 
 
-
 class ViewerWriter(object):
     """ The ViewerWriter class writes out a DNA Design viewer JSON file. 
     """
