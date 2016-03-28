@@ -105,7 +105,7 @@ class CadnanoConvertDesign(object):
         self._timer.start()
         structure_topology, dnode, triad, id_nt_0, helices = self._create_structure_topology_and_geometry(design)
         num_bases = structure_topology.shape[0]
-        self._logger.info("Number of bases in structure_toplogy: %d " % num_bases)
+        self._logger.info("Number of bases in structure_topology: %d " % num_bases)
         self._logger.info("Time to create structure topology table: %s " % self._timer.finish())
         self._logger.info("Number of bases in helix axis: %d " % dnode.shape[0])
 

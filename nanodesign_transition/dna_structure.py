@@ -14,6 +14,7 @@ from converters.cadnano.common import CadnanoLatticeType
 try:
     # TODO: JS 3/25 This will need to change at some point once everything is transitioned.
     import os.path
+    import sys
     base_path = os.path.abspath( os.path.dirname(__file__) + '/../' )
     sys.path.append(base_path)
     import nanodesign as nd
@@ -146,7 +147,7 @@ class DnaStructure(object):
                             print("")
                         curr_across_strand_id = across_base.strand
                         domain_added = True
-                        domain = DnaDomain(num_domains,helix)
+                        domain = nd.Domain(num_domains,helix)
                         num_domains += 1
                         domain.color = color
                         domain.strand = strand
@@ -166,7 +167,7 @@ class DnaStructure(object):
                     if debug: print("++++++ add new domain %d  helix %d ++++++" % (num_domains,base.h))
 
                     domain_added = True
-                    domain = DnaDomain(num_domains,helix)
+                    domain = nd.Domain(num_domains,helix)
                     num_domains += 1
                     domain.color = color
                     domain.strand = strand
@@ -183,8 +184,8 @@ class DnaStructure(object):
 
         # set the strand and domain connectivity for the domains
         if debug: print("")
-        if debug: print(" number of domains added %d " % (num_domains))
-        print("Number of domains added: %d " % (num_domains))
+        if debug: print(" Number of domains added %d " % (num_domains))
+
         for domain in self.domain_list:
             across = -1
             for base in domain.base_list:
