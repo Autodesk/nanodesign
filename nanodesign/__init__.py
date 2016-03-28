@@ -30,6 +30,8 @@ from . import data
 from . import converters
 from . import algorithms
 
+from .data import Domain
+
 # Designate which components will be in the * namespace.
 __all__ = []
 __all__.extend(core.__all__)

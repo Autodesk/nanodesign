@@ -9,7 +9,17 @@ import re
 import sys
 from common import CadnanoLatticeName,CadnanoLatticeType,CadnanoJsonFields
 from design import CadnanoDesign,CadnanoVirtualHelix,CadnanoBase
-from nanodesign.sequence import DnaSequence
+
+try:
+    import os.path
+    base_path = os.path.abspath( os.path.dirname(__file__) + '/../../../' )
+    sys.path.append( base_path )
+    from nanodesign_transition.sequence import DnaSequence
+    sys.path = sys.path[:-1]
+except ImportError as i:
+    print "Could not get nanodesign_transition module"
+    raise i
+
 
 class CadnanoReader(object):
     """The CadnanoReader class."""
@@ -33,7 +43,10 @@ class CadnanoReader(object):
                 DNA origami design JSON file.
         """
         # read the json data from the file.
-        self._logger.info("Reading caDNAno design file: %s " % file_name)
+        # make sure to expand the path first so we can use relative paths or ~ expansion
+        import os.path
+        file_name = os.path.expanduser( file_name )
+        self._logger.info("Reading caDNAno design file: {}".format(file_name))
         with open(file_name) as json_file:
             json_data = json.load(json_file)
 

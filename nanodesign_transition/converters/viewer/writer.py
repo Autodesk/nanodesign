@@ -6,7 +6,18 @@ import json
 import logging
 import numpy as np
 from cadnano.common import CadnanoLatticeName,CadnanoLatticeType
-from nanodesign.parameters import DnaParameters
+
+try:
+    import os.path
+    import sys
+    base_path = os.path.abspath( os.path.dirname(__file__) + '/../../../' )
+    sys.path.append( base_path )
+    from nanodesign_transition.parameters import DnaParameters
+    sys.path = sys.path[:-1]
+except ImportError as i:
+    print "Could not get nanodesign_transition module"
+    raise i
+
 
 class ViewerWriter(object):
     """ The ViewerWriter class writes out a DNA Design viewer JSON file. 

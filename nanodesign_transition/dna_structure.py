@@ -10,6 +10,20 @@ import numpy as np
 from parameters import DnaParameters
 from converters.cadnano.common import CadnanoLatticeType
 
+# temp code to handle objects as they are being transitioned into the main package
+try:
+    # TODO: JS 3/25 This will need to change at some point once everything is transitioned.
+    import os.path
+    import sys
+    base_path = os.path.abspath( os.path.dirname(__file__) + '/../' )
+    sys.path.append(base_path)
+    import nanodesign as nd
+    sys.path = sys.path[:-1]
+except ImportError:
+    print "Cannot locate nanodesign package, it hasn't been installed in main packages, and is not reachable relative to the nanodesign_transition directory."
+    raise ImportError
+
+
 class DnaStructure(object):
     """ This class stores the base connectivity and geometry for a DNA model. 
 
@@ -100,7 +114,7 @@ class DnaStructure(object):
                 print("++++++ add initial domain %d, helix %d ++++++" % (num_domains,curr_helix_id))
                 print(">>> base id %d  up %d  down %d  across %d  helix %d  pos %d  strand %d" % 
                     (id, base.up, base.down, base.across, base.h, base.p, base.strand))
-            domain = DnaDomain(num_domains,helix)
+            domain = nd.Domain(num_domains,helix)
             num_domains += 1
             domain.base_list.append(base)
             domain.color = color
@@ -112,7 +126,7 @@ class DnaStructure(object):
                 id = strand.tour[i]
                 base = self.base_connectivity[id-1]
                 across_base_sign = np.sign(base.across)
-                add_domain = False
+                domain_added = False
                 if debug: 
                     print(">>> base id %d  up %d  down %d  across %d  helix %d  pos %d  strand %d" % 
                           (id, base.up, base.down, base.across, base.h, base.p, base.strand))
@@ -132,36 +146,46 @@ class DnaStructure(object):
                             print("++++++ add new domain %d, helix %d ++++++" % (num_domains,curr_helix_id))
                             print("")
                         curr_across_strand_id = across_base.strand
-                        add_domain = True
-                        domain = DnaDomain(num_domains,helix)
+                        domain_added = True
+                        domain = nd.Domain(num_domains,helix)
                         num_domains += 1
                         domain.color = color
                         domain.strand = strand
                         self.domain_list.append(domain)
                         helix.domain_list.append(domain)
+                        domain.base_list.append(base)
+                        base.domain = domain.id
                     elif ( base.across > 0):
                         curr_across_strand_id = across_base.strand
                 #__if (scaffold and (base.across > 0))
 
-                if (add_domain and ((base.h != curr_helix_id) or (across_base_sign != curr_across_base_sign))): 
+                if ((base.h != curr_helix_id) or (across_base_sign != curr_across_base_sign)): 
                     curr_helix_id = base.h
                     curr_across_base_sign = np.sign(base.across)
                     helix = self.structure_helices_map[curr_helix_id]
+
                     if debug: print("++++++ add new domain %d  helix %d ++++++" % (num_domains,base.h))
-                    domain = DnaDomain(num_domains,helix)
+
+                    domain_added = True
+                    domain = nd.Domain(num_domains,helix)
                     num_domains += 1
                     domain.color = color
                     domain.strand = strand
                     self.domain_list.append(domain)
                     helix.domain_list.append(domain)
-                domain.base_list.append(base)
-                base.domain_id = domain.id
+                    domain.base_list.append(base)
+                    base.domain = domain.id
+
+                if (not domain_added):
+                    domain.base_list.append(base)
+                    base.domain = domain.id
             #__for i in xrange(1,len(strand.tour))__
         #__for strand in self.strands__
 
         # set the strand and domain connectivity for the domains
         if debug: print("")
-        if debug: print(" number of domains added %d " % (num_domains))
+        if debug: print(" Number of domains added %d " % (num_domains))
+
         for domain in self.domain_list:
             across = -1
             for base in domain.base_list:
@@ -227,25 +251,5 @@ class DnaStructureHelix(object):
         self.id_nt = None
         self.helix_topology = None
 
-
-class DnaDomain(object):
-    """ This class stores information for a DNA domain. """
-    def __init__(self, id, helix):
-        self.id = id
-        self.helix = helix
-        self.strand = None
-        self.base_list = []
-        self.color = [0.5,0.5,0.5]
-        self.connected_strand = -1
-        self.connected_domain = -1
-
-    def get_end_points(self):
-        base_pos = self.helix.helix_axis_nodes
-        #print"######## base_pos %d" % len(base_pos)
-        base1 = self.base_list[0].p 
-        base2 = self.base_list[-1].p
-        point1 = base_pos[base1]
-        point2 = base_pos[base2]
-        return point1,point2
 
 
