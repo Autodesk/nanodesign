@@ -50,6 +50,18 @@ class DnaStructure(object):
         self.domain_list = []
         self.dnodes_map = dict()
         self.lattice_type = CadnanoLatticeType.none
+        self._logger = self._setup_logging()
+
+    def _setup_logging(self):
+        """ Set up logging."""
+        logger = logging.getLogger('dna_structure')
+        logger.setLevel(logging.INFO)
+        # create console handler and set format
+        console_handler = logging.StreamHandler()
+        formatter = logging.Formatter('[%(name)s] %(levelname)s - %(message)s')
+        console_handler.setFormatter(formatter)
+        logger.addHandler(console_handler)
+        return logger
 
     def add_structure_helices(self, structure_helices):
         """ Add a list of structural helices. """
@@ -62,6 +74,7 @@ class DnaStructure(object):
         for strand in self.strands:
             strand.dna_structure = self
         self._set_strand_helix_references()
+        self._set_helix_bases()
         self._compute_strand_helix_references()
         self._compute_domains()
 
@@ -69,6 +82,34 @@ class DnaStructure(object):
         if (not self.domain_list): 
             self._compute_domains()
         return self.domain_list
+
+    def get_strand(self,id):
+        """ Get a strand from an id. """
+        for strand in self.strands:
+            if (strand.id == id):
+               return strand
+        #__for strand in self.strands
+        return None
+
+
+
+
+    def _set_helix_bases(self):
+        """ Set the bases for a helix. """
+        for helix in self.structure_helices:
+            num = helix.lattice_num
+            hsize = len(helix.helix_axis_nodes)
+            staple_base_list = [None]*hsize
+            scaffold_base_list = [None]*hsize
+            for base in self.base_connectivity:
+                if (base.h != num):
+                    continue
+                if base.is_scaf:
+                    scaffold_base_list[int(base.p)] = base
+                else:
+                    staple_base_list[int(base.p)] = base
+            helix.staple_base_list = staple_base_list
+            helix.scaffold_base_list = scaffold_base_list
 
     def _set_strand_helix_references(self):
         """ Set the helices referenced by each strand. """
@@ -80,117 +121,89 @@ class DnaStructure(object):
         #__for strand in self.strands__
 
     def _compute_domains(self):
-        """ Compute dna domains, contiguous sequences of nucleic acids separated by crossover junctions."""
+        """ Compute DNA domains. 
+      
+            Domains are computed using the list of bases defined for each structural helix in the model using the base
+            position within the helix. Helix bases are traversed from index 0 regardless of the helix polarity. The list 
+            storing helix bases (staple and scaffold) are the same size for all helices and contain None where bases are 
+            not defined. 
+
+            The boolean array strand_breaks[] is used to mark the location (relative position in the helix) of where a 
+            strand changes its binding to another helix (cross-over), becomes a single strand or begins/ends. Entries in 
+            strand_breaks[] are set to True for each base position in staple and scaffold strands within a helix that 
+            represent a binding change. Pairs of entries in strand_breaks[] are then used to define the boundaries of domains.
+        """
+        #self._logger.setLevel(logging.DEBUG)
+        self._logger.debug("===================== compute domains =====================")
         num_domains = 0
         self.domain_list = []
-        debug = True
-        debug = False
 
-        for strand in self.strands:
-            if debug: print("")
-            if (strand.is_scaffold):
-                #continue 
-                scaffold = True
-                if debug: print("---------- scaffold strand %d ----------" % strand.id)
+        for helix in self.structure_helices:
+            num = helix.lattice_num
+            self._logger.debug("---------- helix num %d ---------- " % num)
+            staple_base_list = helix.staple_base_list 
+            scaffold_base_list = helix.scaffold_base_list
+            helix_size = len(scaffold_base_list)
+            strand_breaks = [False]*helix_size
+            if helix.scaffold_polarity == "3'": 
+                three_to_five = True 
             else:
-                #continue 
-                scaffold = False
-                if debug: print("---------- staple strand %d ----------" % strand.id)
-            color = strand.color
-            id = strand.tour[0]
-            base = self.base_connectivity[id-1]
-            curr_helix_id = base.h
-            helix = self.structure_helices_map[curr_helix_id]
+                three_to_five = False
 
-            across_base = base.across
-            curr_across_base_sign = np.sign(base.across)
-            if ( base.across > 0):
-                across_base = self.base_connectivity[base.across-1]
-                curr_across_strand_id = across_base.strand
-            else:
-                curr_across_strand_id = -1
+            # Add cross-overs for staples.
+            strand_breaks = self._set_strand_breaks(strand_breaks, staple_base_list)
 
-            if debug: 
-                print("++++++ add initial domain %d, helix %d ++++++" % (num_domains,curr_helix_id))
-                print(">>> base id %d  up %d  down %d  across %d  helix %d  pos %d  strand %d" % 
-                    (id, base.up, base.down, base.across, base.h, base.p, base.strand))
-            domain = nd.Domain(num_domains,helix)
-            num_domains += 1
-            domain.base_list.append(base)
-            domain.color = color
-            domain.strand = strand
-            self.domain_list.append(domain)
-            helix.domain_list.append(domain)
+            # Add cross-overs for scaffolds.
+            strand_breaks = self._set_strand_breaks(strand_breaks, scaffold_base_list)
 
-            for i in xrange(1,len(strand.tour)):
-                id = strand.tour[i]
-                base = self.base_connectivity[id-1]
-                across_base_sign = np.sign(base.across)
-                domain_added = False
-                if debug: 
-                    print(">>> base id %d  up %d  down %d  across %d  helix %d  pos %d  strand %d" % 
-                          (id, base.up, base.down, base.across, base.h, base.p, base.strand))
+            # Create domains from pairs of True entries in strand_breaks[].
+            self._logger.debug(">>> create domains:")
+            scaffold = False
 
-                if (scaffold and (base.across > 0)):
-                    across_base = self.base_connectivity[base.across-1]
-                    if debug: 
-                        print(">>> across base %d  helix %d  pos %d  strd %d" %
-                          (across_base.id, across_base.h, across_base.p, across_base.strand))
-                        print("")
+            # First iterate over staple bases, then scaffold bases.
+            for base_list in [staple_base_list, scaffold_base_list]:
+                start = -1
+                # Set how bases are added to a domain: in order or reverse order.
+                if (scaffold):
+                    reverse = three_to_five 
+                else:
+                    reverse = not three_to_five
 
-                    if ((curr_across_strand_id != -1) and (curr_across_strand_id != across_base.strand )):
-                        curr_helix_id = across_base.h
-                        helix = self.structure_helices_map[curr_helix_id]
-                        if debug: 
-                            print("")
-                            print("++++++ add new domain %d, helix %d ++++++" % (num_domains,curr_helix_id))
-                            print("")
-                        curr_across_strand_id = across_base.strand
-                        domain_added = True
+                for i in xrange(0,len(strand_breaks)):
+                    base = base_list[i]
+                    if (not (strand_breaks[i] and base)):
+                        continue 
+                    if (start != -1):
+                        self._logger.debug("    domain: %4d  start pos:%4d  end pos: %4d "  % (num_domains,start,i))
                         domain = nd.Domain(num_domains,helix)
-                        num_domains += 1
-                        domain.color = color
+                        strand = self.get_strand(base.strand)
                         domain.strand = strand
-                        self.domain_list.append(domain)
+                        domain.color = strand.color
                         helix.domain_list.append(domain)
-                        domain.base_list.append(base)
-                        base.domain = domain.id
-                    elif ( base.across > 0):
-                        curr_across_strand_id = across_base.strand
-                #__if (scaffold and (base.across > 0))
+                        self.domain_list.append(domain)
+                        num_domains += 1
+                        for j in xrange(start,i+1):
+                            base = base_list[j]
+                            if (reverse):
+                                domain.base_list.insert(0,base)
+                            else:
+                                domain.base_list.append(base)
+                            base.domain = domain.id
+                        start = -1
+                    else:
+                        start = i
+                #__for i in xrange(0,len(strand_breaks)):
+                scaffold = True
+            #__for base_list in [staple_base_list, scaffold_base_list]
+        self._logger.debug(">>> Created %d domains." % num_domains)
 
-                if ((base.h != curr_helix_id) or (across_base_sign != curr_across_base_sign)): 
-                    curr_helix_id = base.h
-                    curr_across_base_sign = np.sign(base.across)
-                    helix = self.structure_helices_map[curr_helix_id]
-
-                    if debug: print("++++++ add new domain %d  helix %d ++++++" % (num_domains,base.h))
-
-                    domain_added = True
-                    domain = nd.Domain(num_domains,helix)
-                    num_domains += 1
-                    domain.color = color
-                    domain.strand = strand
-                    self.domain_list.append(domain)
-                    helix.domain_list.append(domain)
-                    domain.base_list.append(base)
-                    base.domain = domain.id
-
-                if (not domain_added):
-                    domain.base_list.append(base)
-                    base.domain = domain.id
-            #__for i in xrange(1,len(strand.tour))__
-        #__for strand in self.strands__
-
-        # set the strand and domain connectivity for the domains
-        if debug: print("")
-        if debug: print(" Number of domains added %d " % (num_domains))
-
+        # set the strand and domain each domain is connected to.
         for domain in self.domain_list:
             across = -1
             for base in domain.base_list:
                 if (base.across != -1):
                     across = base.across
+                    break
             #__for base in domain.base_list
             conn_dom = -1
             conn_strand = -1
@@ -200,19 +213,81 @@ class DnaStructure(object):
                 conn_strand = across_base.strand
             domain.connected_strand = conn_strand
             domain.connected_domain = conn_dom
-            if debug:
-                print("")
-                print(">>> domain %d: strand %d helix %d  nbases %d  base across: %d  conn strand/dom %d %d" % 
-                    (domain.id, domain.strand.id, domain.helix.id, len(domain.base_list), across, conn_strand,
-                     conn_dom ))
-
-        #sys.exit(0)
     #__def _compute_domains(self)
 
-    #--------------------------------------------------
-    # set the virtual helices referenced by each strand
-    #--------------------------------------------------
+    def _set_strand_breaks(self, strand_breaks, base_list):
+        """ Set the location of a change in strand binding.
+
+            A strand break occurs if a strand:
+                1) crosses over to another helix 
+                2) ends/begins                   
+                3) becomes a single strand      
+
+            Arguments:
+                strand_breaks (list[bool]): The locations of strand binding change. 
+                base_list (list[DnaBase]): The list bases in a helix. 
+
+            Returns:
+                strand_breaks (list[bool]): The locations of strand binding change. 
+        """
+        # Find the location of the first base in the helix.
+        start_pos = next((i for i in xrange(0,len(base_list)) if base_list[i] != None),-1)
+        base = base_list[start_pos]
+        across_base = base.across
+        curr_across_base_sign = np.sign(base.across)
+        strand_breaks[start_pos] = True
+
+        # Set the locations of binding changes for each base.
+        for i in xrange(start_pos+1,len(base_list)):
+            base = base_list[i]
+            if (not base):
+                continue
+            across_base_sign = np.sign(base.across)
+
+            # Check for a cross-over or end/start of a strand.
+            if self._check_base_crossover(base):
+                curr_across_base_sign = np.sign(base.across)
+                strand_breaks[i] = True
+
+            # A change in the base across sign signals that a single strand is starting/ending.
+            elif (across_base_sign != curr_across_base_sign):
+                 curr_across_base_sign = np.sign(base.across)
+                 strand_breaks[i-1] = True
+                 strand_breaks[i] = True
+        #__for i in xrange(start_pos+1,len(base_list)):
+        return strand_breaks 
+
+    def _check_base_crossover(self,base):
+        """ Check if a base marks a cross-over to another helix or the end/start of a strand.
+
+            A -1 for a bases's down/up signifies that a strand is starting or ending. A change in 
+            a base's up/down helix signifies a cross-over. 
+
+            Arguments:
+                base (DnaBase): The base to check for a cross-over. 
+
+            Returns: True if the base crosses over to another helix or ends/begins.
+        """
+        down = base.down
+        if (down == -1):
+            return True
+
+        down_base = self.base_connectivity[down-1]
+        if (down_base.h != base.h):
+            return True
+
+        up = base.up
+        if (up == -1):
+            return True
+        up_base = self.base_connectivity[up-1]
+
+        if (up_base.h != base.h):
+            return True
+
+        return False
+
     def _compute_strand_helix_references(self):
+        """ Set the virtual helices referenced by each strand. """
         for strand in self.strands:
             for id in strand.tour:
                 base = self.base_connectivity[id-1]
@@ -227,11 +302,13 @@ class DnaStructure(object):
 class DnaStructureHelix(object):
     """ This class stores information for a DNA structure helix. 
 
-        A structure helix is a region in a DNA structure that forms a cylindrical structural element.
-        composed of two DNA helices.
+        A structure helix is a region in a DNA structure that forms a cylindrical structural element. It can be composed of 
+        one or two DNA strands. 
 
         Attributes:
             id (int): Helix ID (1 - number of helices in a structure).
+            staple_base_list (list[DnaBase]): The list storing helix staple bases. This list is the same size for all helices. 
+            scaffold_base_list (list[DnaBase]): The list storing helix scaffold bases. This list is the same size for all helices. 
     """ 
     def __init__(self, id):
         self.id = id
@@ -244,6 +321,8 @@ class DnaStructureHelix(object):
         self.helix_axis_nodes = None
         self.domain_list = []
         self.scaffold_polarity = "3'"
+        self.staple_base_list = []
+        self.scaffold_base_list = []
 
         # note [davep] are we using these?
         self.start_pos = -1
