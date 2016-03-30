@@ -42,6 +42,7 @@ class DnaStructure(object):
         self.helix_axis_nodes = None
         self.helix_axis_frames = None
         self.strands = None
+        self.strands_map = dict()
         self.id_nt = None
         self.structure_helices = []
         self.structure_helices_map = dict()
@@ -85,14 +86,13 @@ class DnaStructure(object):
 
     def get_strand(self,id):
         """ Get a strand from an id. """
-        for strand in self.strands:
-            if (strand.id == id):
-               return strand
-        #__for strand in self.strands
-        return None
-
-
-
+        if not self.strands_map:
+            for strand in self.strands:
+                self.strands_map[strand.id] = strand 
+        if id not in self.strands_map:
+            self._logger.error("Failed to find strand id %d." % id)
+            return None
+        return self.strands_map[id]
 
     def _set_helix_bases(self):
         """ Set the bases for a helix. """
@@ -195,7 +195,7 @@ class DnaStructure(object):
                 #__for i in xrange(0,len(strand_breaks)):
                 scaffold = True
             #__for base_list in [staple_base_list, scaffold_base_list]
-        self._logger.debug(">>> Created %d domains." % num_domains)
+        self._logger.info(">>> Created %d domains." % num_domains)
 
         # set the strand and domain each domain is connected to.
         for domain in self.domain_list:
