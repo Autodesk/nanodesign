@@ -181,22 +181,39 @@ class DnaStructure(object):
                         continue 
                     if (start != -1):
                         self._logger.debug("    domain: %4d  start pos:%4d  end pos: %4d "  % (num_domains,start,i))
-                        domain = nd.Domain(num_domains,helix)
-                        strand = self.get_strand(base.strand)
-                        domain.strand = strand
-                        domain.color = strand.color
-                        helix.domain_list.append(domain)
-                        self.domain_list.append(domain)
-                        num_domains += 1
+
+                        # assemble the bases within the domain and assign their domain identity
+                        domain_bases = []
+                        domain_id = num_domains  # domain indexing starts at 0,
+                                                 # so this one hasn't been
+                                                 # assigned yet and we should
+                                                 # increment it at the end of
+                                                 # this segment
+
+                        # across = -1
                         for j in xrange(start,i+1):
                             base = base_list[j]
                             if not base:
                                 continue 
                             if (reverse):
-                                domain.base_list.insert(0,base)
+                                domain_bases.insert(0,base)
                             else:
-                                domain.base_list.append(base)
-                            base.domain = domain.id
+                                domain_bases.append(base)
+                            base.domain = domain_id
+                            # if base.across != -1:
+                            #     if across != -1:
+                            #         assert across == base.across
+                            #     across = base.across
+
+                        strand = self.get_strand(base.strand)
+
+                        # work out the connected domain / connected strand (if any)
+                        domain = nd.Domain(num_domains,helix, strand, domain_bases)
+                        # TODO: (JMS 3/30) can we also pass the info on connected strand / connected domain here?
+
+                        helix.domain_list.append(domain)
+                        self.domain_list.append(domain)
+                        num_domains += 1
                         start = -1
                     else:
                         start = i

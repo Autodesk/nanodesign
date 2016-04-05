@@ -92,7 +92,8 @@ class ViewerWriter(object):
                      'start_base_index'  : start_base_index,
                      'end_base_index'    : end_base_index,
                      'connected_strand'  : domain.connected_strand,
-                     'connected_domain'  : domain.connected_domain
+                     'connected_domain'  : domain.connected_domain,
+                     'melting_temperature' : "{:.2f}".format(domain.melting_temperature())
                    }
             domains_info.append(info)
         #__for domain in dna_structure.domain_list

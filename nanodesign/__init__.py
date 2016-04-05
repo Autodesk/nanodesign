@@ -23,17 +23,21 @@ algorithms
 from __future__ import print_function
 
 # Load the basic core elements, as well as subpackages.
-from . import core
-from .core import *
+#from . import core
+#from .core import *
 
 from . import data
 from . import converters
 from . import algorithms
 
+
 from .data import Domain
+
+from .data import energy_model
+from .data import convert_temperature_K_to_C
 
 # Designate which components will be in the * namespace.
 __all__ = []
-__all__.extend(core.__all__)
+#__all__.extend(core.__all__)
 __all__.extend(['data','converters','algorithms'])
 
