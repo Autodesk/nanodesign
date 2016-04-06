@@ -21,6 +21,7 @@ class DnaStrand(object):
         self.translations = []
         self.color = [1.0,1.0,1.0]
         self.helix_list = dict()
+        self.base_id_list = dict()
         self.dna_structure = None
         self.base_coords = None
 
@@ -76,5 +77,15 @@ class DnaStrand(object):
                 self.base_coords[i] = nodes[base.p]
         #__if (not self.base_coords)
         return self.base_coords
+
+    def get_base_index(self, base):
+        """ Get the index into the strand for the given base. """
+        if (not self.base_id_list):
+            num_bases = len(self.tour)
+            for i in xrange(0,num_bases):
+                id = self.tour[i]
+                base = self.dna_structure.base_connectivity[id-1]
+                self.base_id_list[id] = i
+        return self.base_id_list[base.id]
 
 
