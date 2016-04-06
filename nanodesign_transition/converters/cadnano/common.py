@@ -5,6 +5,10 @@ caDNAno common definitions.
 This module defines some common definitions used to process caDNAno DNA origami design JSON files. 
 """
 
+class CadnanoStrandType:
+    SCAFFOLD = 0
+    STAPLE   = 1
+
 class CadnanoLatticeName:
     """Cadnano lattice names"""
     NONE      = "none"

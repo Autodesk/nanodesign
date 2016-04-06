@@ -2,10 +2,13 @@
 """ 
 This module is used to write DNA Design viewer JSON files. 
 """
+import collections
 import json
 import logging
 import numpy as np
+from math import pi
 from cadnano.common import CadnanoLatticeName,CadnanoLatticeType
+
 
 try:
     import os.path
@@ -105,20 +108,28 @@ class ViewerWriter(object):
             length = np.linalg.norm(point1-point2)
             frame = helix.end_frames[:,:,0]
             domain_info = [ domain.id for domain in helix.domain_list ]
+            connectivity_info = self._get_helix_conn_info(helix)
+            possible_staple_crossovers = helix.possible_staple_crossovers
+            possible_scaffold_crossovers = helix.possible_scaffold_crossovers
 
-            info = { 'id'                : helix.id,
-                     'length'            : length,
-                     'strand_radius'     : DnaParameters.strand_radius,
-                     'base_pair_rise'    : DnaParameters.base_pair_rise,
-                     'start_position'    : list(point1),
-                     'orientation'       : [frame[0,2], frame[1,2], frame[2,2]],
-                     'end_position'      : list(point2),
-                     'scaffold_polarity' : helix.scaffold_polarity,
-                     'cadnano_info'      : { 'row' : helix.lattice_row, 'col' : helix.lattice_col, 
-                                             'num' : helix.lattice_num },
-                     'domains' : domain_info
+            info = { 'id'                 : helix.id,
+                     'length'             : length,
+                     'strand_radius'      : DnaParameters.strand_radius,
+                     'base_pair_rise'     : DnaParameters.base_pair_rise,
+                     'start_position'     : list(point1),
+                     'orientation'        : [frame[0,2], frame[1,2], frame[2,2]],
+                     'end_position'       : list(point2),
+                     'scaffold_polarity'  : helix.scaffold_polarity,
+                     'cadnano_info'       : { 'row' : helix.lattice_row, 'col' : helix.lattice_col, 
+                                              'num' : helix.lattice_num },
+                     'domains'            : domain_info,
+                     'helix_connectivity' : connectivity_info,
+                     'num_possible_staple_crossovers' : len(possible_staple_crossovers),
+                     'num_possible_scaffold_crossovers' : len(possible_scaffold_crossovers)
                    }
+
             helices_info.append(info)
+
         return helices_info
 
     def _get_strand_info(self, dna_structure):
@@ -147,6 +158,145 @@ class ViewerWriter(object):
 
             strand_info_list.append(info)
         return strand_info_list
+
+    def _get_helix_conn_info(self, helix):
+        """ Get the information to write for helix connectivity.
+        """
+        self._logger.setLevel(logging.DEBUG)
+        self._logger.debug("==================== get conn information for helix num %d ===================" % helix.lattice_num) 
+        dna_structure = self.dna_structure
+        lattice = dna_structure.lattice
+        num_neigh = lattice.number_of_neighbors
+        self._logger.debug("Number of lattice directions: %d " % num_neigh) 
+        helix_connectivity = helix.helix_connectivity 
+        possible_staple_crossovers = helix.possible_staple_crossovers 
+        possible_scaffold_crossovers = helix.possible_scaffold_crossovers
+        self._logger.debug("Number of possible staple crossovers: %d " % len(possible_staple_crossovers)) 
+        self._logger.debug("Number of possible scaffold crossovers: %d " % len(possible_scaffold_crossovers)) 
+        self._logger.debug("Number of connected helices: %d " % len(helix_connectivity)) 
+
+        # Create an array with size the number of possible helix neighors (4 for square lattice, 3 for honeycomb).
+        helix_conn_array = [None]*num_neigh
+        ang_inc = pi / num_neigh
+
+        # Iterate over the helix connections filling in the appropriate element in helix_conn_array[]. 
+        for connection in helix_connectivity: 
+            to_helix = connection.to_helix
+            nindex = lattice.get_neighbor_index(helix.lattice_row, helix.lattice_col, to_helix.lattice_row, to_helix.lattice_col)
+            angle = ang_inc * nindex 
+            dir = connection.direction
+            num_staple = 0 
+            num_scaffold = 0 
+            crossovers = connection.crossovers
+            for crossover in crossovers:
+                if crossover.crossover_base.is_scaf:
+                    num_scaffold += 1 
+                else:
+                    num_staple += 1 
+            self._logger.debug(">>> Connected helix: num: %d  row: %d  col:%d " % (to_helix.lattice_num, to_helix.lattice_row,
+                to_helix.lattice_col)) 
+            self._logger.debug("    Nindex: %d " % nindex) 
+            self._logger.debug("    Direction: (%g %g %g) " % (dir[0], dir[1], dir[2])) 
+
+            crossover_info = self._get_crossover_info(connection)
+
+            conn_info = { 'helix_id'   : to_helix.id,
+                          'helix_num'  : to_helix.lattice_num,
+                          'angle'      : angle,
+                          'direction'  : list(dir),
+                          'crossovers' : crossover_info
+                        } 
+
+            helix_conn_array[nindex] = conn_info 
+
+        #__for connection in helix_connectivity
+
+        self._logger.debug(" Helix conn array: %s" % str(helix_conn_array)) 
+        return helix_conn_array 
+
+    def _get_crossover_info(self, connection):
+        """ Get the helix crossover information to be written to a file. 
+        """
+        from_helix = connection.from_helix
+        to_helix = connection.to_helix
+        crossovers = connection.crossovers
+        start_pos = from_helix.start_pos
+        self._logger.debug("    Start position: %d " % start_pos)
+
+        # Create a list of staple and scaffold crossovers.
+        staples = {} 
+        scaffolds = {} 
+        for crossover in crossovers:
+            base = crossover.crossover_base
+            if base.is_scaf:
+                 scaffolds[base.p] = crossover
+            else:
+                staples[base.p] = crossover
+        self._logger.debug("    Number of design crossovers: %d  staple: %d  scaffold: %d " % (len(crossovers), 
+             len(staples), len(scaffolds))) 
+
+        # Add staple information. Double crossovers will occur in pairs separated by 
+        # a single position.
+        crossover_info = [] 
+        sorted_staples = collections.OrderedDict(sorted(staples.items()))
+        self._logger.debug("    Staple crossovers: ") 
+        pos = sorted_staples.keys()
+        self._get_crossover_strand_info(start_pos, pos, staples, crossover_info)
+        print("########## staple crossover_info: size: %d" % len(crossover_info)) 
+        print("           data: %s" % str(crossover_info)) 
+
+        # Add scaffold information.
+        sorted_scaffolds = collections.OrderedDict(sorted(scaffolds.items()))
+        self._logger.debug("    Scaffold crossovers: ") 
+        pos = sorted_scaffolds.keys()
+        self._get_crossover_strand_info(start_pos, pos, scaffolds, crossover_info)
+        print("########## scaffold crossover_info: size: %d" % len(crossover_info)) 
+        print("           data: %s" % str(crossover_info)) 
+
+        return crossover_info 
+
+    def _get_crossover_strand_info(self, start_pos, pos, crossovers, crossover_info):
+        num_pos = len(pos)
+        n = 0
+        while n < num_pos:
+            pos1 = pos[n]
+            crossover1 = crossovers[pos1]
+            base1 = crossover1.crossover_base
+            strand1_id = crossover1.strand.id
+            strand1_index = crossover1.strand.get_base_index(base1)
+            add_pair = False
+            if n != num_pos-1:
+                pos2 = pos[n+1]
+                if pos2-pos1 == 1:
+                    crossover2 = crossovers[pos2]
+                    base2 = crossover2.crossover_base
+                    strand2_id = crossover2.strand.id
+                    strand2_index = crossover2.strand.get_base_index(base2)
+                    self._logger.debug("        n: %d  pos1: %d  pos2: %d " % (n, pos1, pos2))
+                    self._logger.debug("               strand1: %d  index: %d " % (strand1_id, strand1_index))
+                    self._logger.debug("               strand2: %d  index: %d " % (strand2_id, strand2_index))
+                    add_pair = True 
+                    n += 2
+
+            if not add_pair:
+                self._logger.debug("        n: %d  pos1: %d  str: %d" % (n, pos1, strand1_id))
+                self._logger.debug("               strand1: %d  index: %d " % (strand1_id, strand1_index))
+                pos2 = None
+                strand2_id = None
+                strand2_index = None 
+                n += 1
+
+            info = { "vhelix_base_index"        : pos1 - start_pos,
+                     "first_strand_ID"          : strand1_id,
+                     "first_strand_base_index"  : strand1_index,
+                     "second_strand_ID"         : strand2_id,
+                     "second_strand_base_index" : strand2_index
+                   }
+
+            crossover_info.append(info)
+        #__while n < num_pos
+
+        return crossover_info
 
     def _setup_logging(self):
         """ Set up logging."""

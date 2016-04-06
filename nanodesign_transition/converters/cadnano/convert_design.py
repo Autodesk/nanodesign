@@ -33,6 +33,7 @@ try:
     from nanodesign_transition.base import DnaBase 
     from nanodesign_transition.strand import DnaStrand
     from nanodesign_transition.dna_structure import DnaStructure,DnaStructureHelix
+    from nanodesign_transition.lattice import Lattice,SquareLattice,HoneycombLattice
 
     sys.path = sys.path[:-1]
 except ImportError as i:
@@ -123,8 +124,8 @@ class CadnanoConvertDesign(object):
         dna_topology = self._create_dna_topology(structure_topology)
         self._logger.info("Time to create topology table: %s " % self._timer.finish())
 
-        #if (True):
         if (False):
+        #if (True):
             print("---------- dna_topology before inserts/deletes ----------")
             for i in xrange(0,len(dna_topology)):
                 base = dna_topology[i];
@@ -138,6 +139,7 @@ class CadnanoConvertDesign(object):
         self.dna_structure.helix_axis_frames = triad
         self.dna_structure.id_nt = id_nt
         self.dna_structure.lattice_type = design.lattice_type
+        self.dna_structure.lattice = Lattice.create_lattice(design.lattice_type)
         self.dna_structure.add_structure_helices(helices)
 
         # Remove deleted bases
@@ -158,6 +160,9 @@ class CadnanoConvertDesign(object):
         # Calculate staple ends 
         staple_ends = self._calculate_staple_ends(dna_topology)
         self.dna_structure.staple_ends = staple_ends
+
+        # Set possible cross-overs. 
+        self._set_possible_crossovers(design)
  
         return self.dna_structure
 
@@ -207,8 +212,8 @@ class CadnanoConvertDesign(object):
                 self._logger.error('Duplication.')
 
             # helix, position, scaffold/staple
-            base.h = structure_topology[i,1]
-            base.p = structure_topology[i,2]
+            base.h = int(structure_topology[i,1])
+            base.p = int(structure_topology[i,2])
 
             if (structure_topology[i,3] == 0):
                 base.is_scaf = True
@@ -683,6 +688,23 @@ class CadnanoConvertDesign(object):
             # Create data for a single helix
             helix_topology, dnode_0, triad_0, id, dnode_full = self._create_single_helix(vhelix, lattice_type)
 
+            # Find first position of scaffold and staple.
+            start_scaffold = -1
+            for i in xrange(0,len(helix_topology)):
+                if (int(helix_topology[i,3]) == 0):
+                    start_scaffold = int(helix_topology[i,2])
+                    break
+            #__for i in xrange(0,len(helix_topology))
+            start_staple = -1
+            for i in xrange(0,len(helix_topology)):
+                if (int(helix_topology[i,3]) == 1):
+                    start_staple = int(helix_topology[i,2])
+                    break
+            #__for i in xrange(0,len(helix_topology))
+            structure_helix.start_staple = start_staple
+            structure_helix.start_scaffold = start_scaffold
+            structure_helix.start_pos = min(start_scaffold,start_staple)
+
             # Define the geometry of the helix by setting its end coordinates.
             structure_helix.end_coordinates[0] = dnode_0[0]
             structure_helix.end_coordinates[1] = dnode_0[-1]
@@ -915,6 +937,17 @@ class CadnanoConvertDesign(object):
 
         return scaffold_coords, staple_coords, dnode, triad
 
+    def _calculate_lattice_directions(self):
+        """ Calculate the unit vectors pointing to neighboring cells.
+        """
+        if (lattice_type == CadnanoLatticeType.honeycomb):
+            dx =  sqrt(3.0) 
+            dz = -3.0 
+
+        elif (lattice_type == CadnanoLatticeType.square):
+            dx =  2.0 
+            dz = -2.0 
+
     def _calculate_staple_ends(self, dna_topology):
         dna_topology,strands = self._build_strands(dna_topology)
         num_strands = len(strands)
@@ -933,6 +966,34 @@ class CadnanoConvertDesign(object):
                 staple_ends = np.concatenate((staple_ends, [[i+1, h0, p0, h1, p1]]), axis=0)
         #__for i in xrange(0,num_strands)__
         return staple_ends
+
+    def _set_possible_crossovers(self,design):
+        """ Set the possible cross-overs for scaffold and staple strands.
+        """
+        self._logger.setLevel(logging.DEBUG)
+        self._logger.debug("-------------------- set_possible_crossovers --------------------")
+        scaffold_crossovers = []
+        staple_crossovers = [] 
+        structure_helices = self.dna_structure.structure_helices
+        structure_helices_coord_map = self.dna_structure.structure_helices_coord_map
+        for vhelix in design.helices:
+            num = vhelix.num 
+            col = vhelix.col
+            row = vhelix.row
+            self._logger.debug(">>> vhelix: num: %d  row: %d  col: %d " % (num, row, col))
+            staple_crossovers = vhelix.possible_staple_crossovers
+            scaffold_crossovers = vhelix.possible_scaffold_crossovers
+            self._logger.debug("            num staple cross-overs: %d " % len(staple_crossovers)) 
+            shelix = structure_helices_coord_map[(row,col)]
+            for cross_vh,index in staple_crossovers:
+                self._logger.debug("            staple cross-over: %d,%d " % (cross_vh.num,index))
+                cross_sh = structure_helices_coord_map[(cross_vh.row,cross_vh.col)]
+                shelix.possible_staple_crossovers.append((cross_sh,index))
+            self._logger.debug("            num scaffold cross-overs: %d " % len(scaffold_crossovers)) 
+            for cross_vh,index in scaffold_crossovers:
+                self._logger.debug("            scaffold cross-over: %d,%d " % (cross_vh.num,index))
+                cross_sh = structure_helices_coord_map[(cross_vh.row,cross_vh.col)]
+                shelix.possible_scaffold_crossovers.append((cross_sh,index))
 
     def _build_strands(self,dna_topology):
         """ Build strands. 
