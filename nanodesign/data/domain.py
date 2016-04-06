@@ -51,11 +51,15 @@ class Domain(object):
             return -500.0
 
         # If we have any "N" bases in our sequence, also return a nonphysical melting temperature:
-        if "N" in self.sequence:
-            return -500.0
+        if "N" in self.sequence or 'n' in self.sequence:
+            return -501.0
 
         def rev_complement( seq ):
-            comp = {"G":"C","C":"G","A":"T","T":"A"}
+            comp = {"G":"C","C":"G",
+                    "A":"T","T":"A", 
+                    "g":"c","c":"g",
+                    "a":"t","t":"a",
+                    "N":"N","n":"n"}
             rev = []
             for i in xrange(len(seq)):
                 rev.append(comp[seq[len(seq)-i-1]])

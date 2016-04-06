@@ -153,7 +153,7 @@ class EnergyModel(object):
         
         # more details on this derivation will be added to the doc string later.
         # TODO JMS 4/1.
-        import pdb
+        #import pdb
         #        pdb.set_trace()
         eff_staple_conc_at_tm = staple_conc - .5 * scaffold_conc
         conc_derived_term =  BOLTZMANN_CONSTANT * math.log( eff_staple_conc_at_tm )
