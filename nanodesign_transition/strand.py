@@ -37,7 +37,7 @@ class DnaStrand(object):
         #print("[DnaStrand] is_scaffold " + str(self.is_scaffold))
         domains_info = []
         domain_list = self.get_domains()
-        for id,domain in domain_list.iteritems():
+        for domain in domain_list:
            did = domain.id
            domains_info.append(did) 
            #print("[DnaStrand] domain id %d  info %s " % (id, domain.get_) 
@@ -60,7 +60,25 @@ class DnaStrand(object):
                    #print("[DnaStrand] add domain id %d " % id) 
            #__for domain in domain_list
         #__for id, helix in self.helix_list.iteritems
-        return domain_list
+
+        # Create a domain list sorted by strand position.
+        domain_base_pos = {}
+        for id in domain_list:
+            domain = domain_list[id]
+            base = domain.base_list[0]
+            bindex = self.get_base_index(base)
+            domain_base_pos[bindex] = domain
+            #print("[DnaStrand] >>> base.p: %d " % base.p)
+
+        domain_sorted_list = []
+        for pos in sorted(domain_base_pos):
+            domain_sorted_list.append(domain_base_pos[pos])
+            #print ">>> %s: %s" % (pos, domain_base_pos[pos].id)
+            #print( ">>> bases %d: " % domain_base_pos[pos].id)
+            #for base in domain_base_pos[pos].base_list:
+            #    print(">>> base id: %d  vh: %d  pos: %d" % (base.id, base.h, base.p))
+
+        return domain_sorted_list
 
     def get_base_coords(self):
         """ Get the coordinates of bases along the dna helix axis. """

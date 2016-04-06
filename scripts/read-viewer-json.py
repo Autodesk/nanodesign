@@ -105,23 +105,32 @@ def main():
     print("========================= strands =========================") 
     strand_list = json_data[VisJsonFields.STRANDS]
     print(">>> number of strands %d" % len(strand_list)) 
+    domains_list = json_data[VisJsonFields.DOMAINS]
     for strand in strand_list:
         id = strand["id"]
         is_scaffold = strand[VisJsonFields.IS_SCAFFLOD]
         bases = strand[VisJsonFields.BASES]
         vhelix_list = strand[VisJsonFields.VIRTUAL_HELICES]
-        domain_list = strand[VisJsonFields.DOMAINS]
+        strand_domain_list = strand[VisJsonFields.DOMAINS]
+        num_strand_domain_bases = 0
+        for domain_id in strand_domain_list:
+            domain = domains_list[domain_id]
+            num_bases = domain["number_of_bases"]
+            num_strand_domain_bases += num_bases 
         color = strand[VisJsonFields.COLOR]
         print("")
         print(">>> strand %s: scaffold: %s nbases: %d nvhelix: %d " % (id, is_scaffold, len(bases), len(vhelix_list)))
-        print("              number of domains: %d  domains: %s" % (len(domain_list), str(domain_list)))
+        print("              number of domains: %d  domains: %s" % (len(domain_list), str(strand_domain_list)))
         print("              color: %g %g %g" % (color[0],color[1],color[2])) 
         print("              bases: ") 
+        print("              total number of domain bases: %d" % num_strand_domain_bases ) 
+        n = 0
         for base in bases:
             id = base['id']
             coord = base['coordinates']
             seq = base['sequence']
-            print("              id %4d  coord (%6g, %6g, %6g) seq %s" % (id, coord[0],coord[1],coord[2], seq))
+            print("              %d: id %4d  coord (%6g, %6g, %6g) seq %s" % (n, id, coord[0],coord[1],coord[2], seq))
+            n += 1
 
     print("")
     print("========================= domains =========================") 

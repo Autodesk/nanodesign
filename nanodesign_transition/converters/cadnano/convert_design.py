@@ -970,7 +970,8 @@ class CadnanoConvertDesign(object):
     def _set_possible_crossovers(self,design):
         """ Set the possible cross-overs for scaffold and staple strands.
         """
-        self._logger.setLevel(logging.DEBUG)
+        #self._logger.setLevel(logging.DEBUG)
+        self._logger.setLevel(logging.INFO)
         self._logger.debug("-------------------- set_possible_crossovers --------------------")
         scaffold_crossovers = []
         staple_crossovers = [] 

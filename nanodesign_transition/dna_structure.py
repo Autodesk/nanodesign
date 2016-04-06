@@ -138,6 +138,7 @@ class DnaStructure(object):
             strand_breaks[] are set to True for each base position in staple and scaffold strands within a helix that 
             represent a binding change. Pairs of entries in strand_breaks[] are then used to define the boundaries of domains.
         """
+        self._logger.setLevel(logging.INFO)
         #self._logger.setLevel(logging.DEBUG)
         self._logger.debug("===================== compute domains =====================")
         num_domains = 0
