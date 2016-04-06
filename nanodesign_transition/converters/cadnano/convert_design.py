@@ -1264,11 +1264,12 @@ class CadnanoConvertDesign(object):
             start[1] = sequence[i].start[1]
             row = _find_row(start, staple_ends[:,1:3])[0]
             istrand = int(staple_ends[row,0])
-            tour = strands[istrand-1].tour
+            strand = strands[istrand-1]
+            tour = strand.tour
 
             if (modified_structure):
                 for j in xrange(0,len(strands[istrand-1].tour)):
-                    k = int(strands[istrand-1].tour[j])-1
+                    k = itour[j]-1
                     base_connectivity[k].seq = seq.letters[j]
                     if (self.base_connectivity[k].across >= 0):
                         k_across = self.base_connectivity[k].across

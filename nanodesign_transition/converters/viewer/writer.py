@@ -162,7 +162,7 @@ class ViewerWriter(object):
     def _get_helix_conn_info(self, helix):
         """ Get the information to write for helix connectivity.
         """
-        self._logger.setLevel(logging.DEBUG)
+        #self._logger.setLevel(logging.DEBUG)
         self._logger.debug("==================== get conn information for helix num %d ===================" % helix.lattice_num) 
         dna_structure = self.dna_structure
         lattice = dna_structure.lattice
@@ -211,7 +211,7 @@ class ViewerWriter(object):
 
         #__for connection in helix_connectivity
 
-        self._logger.debug(" Helix conn array: %s" % str(helix_conn_array)) 
+        #self._logger.debug(" Helix conn array: %s" % str(helix_conn_array)) 
         return helix_conn_array 
 
     def _get_crossover_info(self, connection):
@@ -242,16 +242,16 @@ class ViewerWriter(object):
         self._logger.debug("    Staple crossovers: ") 
         pos = sorted_staples.keys()
         self._get_crossover_strand_info(start_pos, pos, staples, crossover_info)
-        print("########## staple crossover_info: size: %d" % len(crossover_info)) 
-        print("           data: %s" % str(crossover_info)) 
+        #print("########## staple crossover_info: size: %d" % len(crossover_info)) 
+        #print("           data: %s" % str(crossover_info)) 
 
         # Add scaffold information.
         sorted_scaffolds = collections.OrderedDict(sorted(scaffolds.items()))
         self._logger.debug("    Scaffold crossovers: ") 
         pos = sorted_scaffolds.keys()
         self._get_crossover_strand_info(start_pos, pos, scaffolds, crossover_info)
-        print("########## scaffold crossover_info: size: %d" % len(crossover_info)) 
-        print("           data: %s" % str(crossover_info)) 
+        #print("########## scaffold crossover_info: size: %d" % len(crossover_info)) 
+        #print("           data: %s" % str(crossover_info)) 
 
         return crossover_info 
 

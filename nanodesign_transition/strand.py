@@ -17,6 +17,7 @@ class DnaStrand(object):
         self.tour = []
         self.is_main = []
         self.seq = []
+        self.insert_seq = []
         self.rotations = []
         self.translations = []
         self.color = [1.0,1.0,1.0]
@@ -68,16 +69,12 @@ class DnaStrand(object):
             base = domain.base_list[0]
             bindex = self.get_base_index(base)
             domain_base_pos[bindex] = domain
-            #print("[DnaStrand] >>> base.p: %d " % base.p)
-
+        #print("######## sorted domains ##########")
         domain_sorted_list = []
         for pos in sorted(domain_base_pos):
+            domain = domain_base_pos[pos]
             domain_sorted_list.append(domain_base_pos[pos])
-            #print ">>> %s: %s" % (pos, domain_base_pos[pos].id)
-            #print( ">>> bases %d: " % domain_base_pos[pos].id)
-            #for base in domain_base_pos[pos].base_list:
-            #    print(">>> base id: %d  vh: %d  pos: %d" % (base.id, base.h, base.p))
-
+            #print(">>> domain id: %d" % (domain.id))
         return domain_sorted_list
 
     def get_base_coords(self):
@@ -102,7 +99,6 @@ class DnaStrand(object):
             num_bases = len(self.tour)
             for i in xrange(0,num_bases):
                 id = self.tour[i]
-                base = self.dna_structure.base_connectivity[id-1]
                 self.base_id_list[id] = i
         return self.base_id_list[base.id]
 

@@ -121,6 +121,8 @@ class SquareLattice(Lattice):
         if nval in cls.index_map:
             nindex = cls.index_map.index(nval)
         else:
+            print("[Lattice:get_neighbor_index] **** WARNING: Can't find lattice neighbor for: row: %d  col: %d  nrow: %d  ncol: %d" %
+                (row, col, nrow, ncol))
             nindex = None
         return nindex 
 
@@ -139,7 +141,7 @@ class HoneycombLattice(Lattice):
     scaffold_high = [ [2, 12], [9, 19], [5, 16] ]
     staple_low    = [ [6], [13], [20] ]
     staple_high   = [ [7], [14], [0]  ]
-    index_map = [ (1,0), (0,1), (0,-1) ]
+    index_map     = [ (1,0), (0,1), (0,-1), (-1,0) ]
 
     @classmethod
     def get_neighbors(cls,row,col):
@@ -201,7 +203,10 @@ class HoneycombLattice(Lattice):
         nval = (nrow-row, ncol-col)
         if nval in cls.index_map:
             nindex = cls.index_map.index(nval)
+            if nindex == 3: nindex = 0 
         else:
+            print("[Lattice:get_neighbor_index] **** WARNING: Can't find lattice neighbor for: row: %d  col: %d  nrow: %d  ncol: %d" %
+                (row, col, nrow, ncol))
             nindex = None
         return nindex 
 
