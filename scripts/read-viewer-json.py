@@ -13,6 +13,7 @@ class VisJsonFields:
     BASES   = "bases"
     COLOR   = "color"
     DOMAINS = "domains"
+    HELIX_CONNECTIVITY = "helix_connectivity"
     STRAND_ID = "strand_id"
     NUMBER_OF_BASES = "number_of_bases"
     VIRTUAL_HELICES = "virtual_helices"
@@ -58,27 +59,78 @@ def main():
                     strand_id = domain["strand_id"]
             print("id: %4d  nbases: %3d  strand: %3d  connected to domain: %4d" % (domain_id, num_bases, strand_id, connected_domain))
 
+        helix_connectivity = vhelix[VisJsonFields.HELIX_CONNECTIVITY]
+        num_possible_staple_crossovers = vhelix['num_possible_staple_crossovers']
+        num_possible_scaffold_crossovers = vhelix['num_possible_scaffold_crossovers']
+        num_conn = 0
+        for connection in helix_connectivity:
+           if connection: 
+               num_conn += 1
+        print(">>> number of possible staple crossovers: %d" % num_possible_staple_crossovers) 
+        print(">>> number of possible scaffold crossovers: %d" % num_possible_scaffold_crossovers) 
+        print(">>> number of connected helices: %d" % num_conn) 
+        print(">>> helix connections: ") 
+        for connection in helix_connectivity:
+           if not connection: 
+               continue 
+           helix_id = connection['helix_id']
+           helix_num = connection['helix_num']
+           angle = connection['angle']
+           dir = connection['direction']
+           crossovers = connection['crossovers']
+           print("helix id: %d  num: %d  dir: (%g %g %g)  angle: %g" % (helix_id, helix_num, dir[0], dir[1], dir[2], angle))
+           if not crossovers: 
+               print("    crossovers: None") 
+               continue 
+           print("    number of crossovers: %d" % len(crossovers)) 
+           #print("    crossovers data: %s" % str(crossovers)) 
+           print("    crossovers:")
+           n = 1
+           for crossover in crossovers:
+               vhelix_base_index = crossover['vhelix_base_index']
+               strand1_ID = crossover['first_strand_ID']
+               strand1_bindex = crossover['first_strand_base_index']
+               strand2_ID = crossover['second_strand_ID']
+               strand2_bindex = crossover['second_strand_base_index']
+               print("    %d: vhelix_base_index: %d  strand1_ID: %d  strand1_bindex: %d" %  
+                   (n, vhelix_base_index, strand1_ID, strand1_bindex))
+               if strand2_ID:
+                   print("       strand2_ID: %d  strand2_bindex: %d" % (strand2_ID, strand2_bindex))
+               n += 1
+           #_for crossover in crossovers
+        #__for connection in helix_connectivity
+    #__for vhelix in vhelix_list
+
     print("")
     print("========================= strands =========================") 
     strand_list = json_data[VisJsonFields.STRANDS]
     print(">>> number of strands %d" % len(strand_list)) 
+    domains_list = json_data[VisJsonFields.DOMAINS]
     for strand in strand_list:
         id = strand["id"]
         is_scaffold = strand[VisJsonFields.IS_SCAFFLOD]
         bases = strand[VisJsonFields.BASES]
         vhelix_list = strand[VisJsonFields.VIRTUAL_HELICES]
-        domain_list = strand[VisJsonFields.DOMAINS]
+        strand_domain_list = strand[VisJsonFields.DOMAINS]
+        num_strand_domain_bases = 0
+        for domain_id in strand_domain_list:
+            domain = domains_list[domain_id]
+            num_bases = domain["number_of_bases"]
+            num_strand_domain_bases += num_bases 
         color = strand[VisJsonFields.COLOR]
         print("")
         print(">>> strand %s: scaffold: %s nbases: %d nvhelix: %d " % (id, is_scaffold, len(bases), len(vhelix_list)))
-        print("              number of domains: %d  domains: %s" % (len(domain_list), str(domain_list)))
+        print("              number of domains: %d  domains: %s" % (len(domain_list), str(strand_domain_list)))
         print("              color: %g %g %g" % (color[0],color[1],color[2])) 
         print("              bases: ") 
+        print("              total number of domain bases: %d" % num_strand_domain_bases ) 
+        n = 0
         for base in bases:
             id = base['id']
             coord = base['coordinates']
             seq = base['sequence']
-            print("              id %4d  coord (%6g, %6g, %6g) seq %s" % (id, coord[0],coord[1],coord[2], seq))
+            print("              %d: id %4d  coord (%6g, %6g, %6g) seq %s" % (n, id, coord[0],coord[1],coord[2], seq))
+            n += 1
 
     print("")
     print("========================= domains =========================") 

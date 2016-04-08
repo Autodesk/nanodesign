@@ -17,10 +17,12 @@ class DnaStrand(object):
         self.tour = []
         self.is_main = []
         self.seq = []
+        self.insert_seq = []
         self.rotations = []
         self.translations = []
         self.color = [1.0,1.0,1.0]
         self.helix_list = dict()
+        self.base_id_list = dict()
         self.dna_structure = None
         self.base_coords = None
 
@@ -36,7 +38,7 @@ class DnaStrand(object):
         #print("[DnaStrand] is_scaffold " + str(self.is_scaffold))
         domains_info = []
         domain_list = self.get_domains()
-        for id,domain in domain_list.iteritems():
+        for domain in domain_list:
            did = domain.id
            domains_info.append(did) 
            #print("[DnaStrand] domain id %d  info %s " % (id, domain.get_) 
@@ -59,7 +61,21 @@ class DnaStrand(object):
                    #print("[DnaStrand] add domain id %d " % id) 
            #__for domain in domain_list
         #__for id, helix in self.helix_list.iteritems
-        return domain_list
+
+        # Create a domain list sorted by strand position.
+        domain_base_pos = {}
+        for id in domain_list:
+            domain = domain_list[id]
+            base = domain.base_list[0]
+            bindex = self.get_base_index(base)
+            domain_base_pos[bindex] = domain
+        #print("######## sorted domains ##########")
+        domain_sorted_list = []
+        for pos in sorted(domain_base_pos):
+            domain = domain_base_pos[pos]
+            domain_sorted_list.append(domain_base_pos[pos])
+            #print(">>> domain id: %d" % (domain.id))
+        return domain_sorted_list
 
     def get_base_coords(self):
         """ Get the coordinates of bases along the dna helix axis. """
@@ -76,5 +92,14 @@ class DnaStrand(object):
                 self.base_coords[i] = nodes[base.p]
         #__if (not self.base_coords)
         return self.base_coords
+
+    def get_base_index(self, base):
+        """ Get the index into the strand for the given base. """
+        if (not self.base_id_list):
+            num_bases = len(self.tour)
+            for i in xrange(0,num_bases):
+                id = self.tour[i]
+                self.base_id_list[id] = i
+        return self.base_id_list[base.id]
 
 

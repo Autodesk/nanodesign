@@ -52,6 +52,10 @@ class CadnanoReader(object):
 
         # parse the json data into a CadnanoDesign object.
         design = self.parse_json_data(json_data)
+
+        # Calculate the possible crossovers.
+        design.calculate_possible_crossovers()
+
         return design 
 
     def read_csv(self,file_name):
@@ -104,6 +108,7 @@ class CadnanoReader(object):
         design = CadnanoDesign()
         num_bases = len(json_data[CadnanoJsonFields.VSTRANDS][0][CadnanoJsonFields.SCAF])
         self._logger.info("Number of bases in a virtual helix: %d " % num_bases)
+        design.max_base_id = num_bases-1 
 
         # determine lattice type
         if ( (num_bases % 21 == 0) and (num_bases % 32) == 0):
@@ -128,16 +133,20 @@ class CadnanoReader(object):
             deletions = json_helix[CadnanoJsonFields.SKIP]
             insertions = json_helix[CadnanoJsonFields.LOOP]
             helix = CadnanoVirtualHelix(num_helix, num, row, col, insertions, deletions)
-            design.helices.append(helix)
             self._logger.debug("==================== virtual helix %d ==================== " % num_helix) 
             self._logger.debug("num %d: " % num) 
             self._logger.debug("row %d: " % row) 
             self._logger.debug("col %d: " % col) 
-            self._logger.debug("number of insertions %d: " % insertions.count(-1))
-            self._logger.debug("number of deletions %d: " % deletions.count(-1))
+            self._logger.debug("Number of insertions %d: " % insertions.count(-1))
+            self._logger.debug("Number of deletions %d: " % deletions.count(-1))
 
-            # parse scaffold information
+            # Check for a vhelix with no bases.
             scaffold = json_helix[CadnanoJsonFields.SCAF]
+            staples = json_helix[CadnanoJsonFields.STAP]
+            if scaffold.count([-1,-1,-1,-1]) + staples.count([-1,-1,-1,-1]) == len(scaffold) + len(staples): 
+                continue
+
+            # Parse scaffold information
             num_scaffold = len(scaffold)
             for json_base in scaffold:
                 initial_strand = json_base[0]
@@ -153,7 +162,6 @@ class CadnanoReader(object):
             #__for json_base in scaffold
 
             # parse staple information 
-            staples = json_helix[CadnanoJsonFields.STAP]
             num_staples = len(staples)
             for json_base in staples:
                 initial_strand = json_base[0]
@@ -165,6 +173,11 @@ class CadnanoReader(object):
                 helix.staple_strands.append(base)
                 bsum = sum(json_base)
             #__for json_base in staples
+
+            design.helices.append(helix)
+
+            self._logger.debug("Number of scaffold bases: %d " % num_scaffold_bases) 
+            self._logger.debug("Number of deletions %d: " % deletions.count(-1))
 
             # parse staple colors
             helix.staple_colors = json_helix[CadnanoJsonFields.STAP_COLORS]
