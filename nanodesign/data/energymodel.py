@@ -13,6 +13,10 @@ def convert_temperature_K_to_C( temperature_in_K ):
 
 
 def str_by_twos( iterable ):
+    """Iterate over a string by consecutive pairs. Used for stack energy
+calculations and maybe should be local there, but there may be other areas of
+use. Looked for an equivalent function in itertools and didn't find anything
+obvious."""
     iterable = iter(iterable)
     cur_item  = iterable.next()
     next_item = iterable.next()
@@ -26,7 +30,7 @@ def str_by_twos( iterable ):
 
 class EnergyModel(object):
     def __init__(self):
-
+        # TODO: (JMS 4/8/16) Add docstring.
         
         # These energies are from the following papers:
         # For Watson-Crick pairs, Table 1 and 2 in:
@@ -123,6 +127,15 @@ class EnergyModel(object):
         Returns:
             3-tuple containing the computed dG_37, dH, and dS.
         """
+
+        # TODO (JMS 4/8/16): Need to remove the duplicate dG calculations;
+        # currently I get different results for calculating at a specific
+        # temperature (37 deg C) vs what the reference dG has. It doesn't appear
+        # to be a rounding/floating point issue, but something is off. However,
+        # it does seem to agree roughly with Nupack calculations using the same
+        # energy model.
+
+
         dG_37 = 0.0
         dG_check = 0.0
         dH = 0.0
@@ -153,8 +166,7 @@ class EnergyModel(object):
         
         # more details on this derivation will be added to the doc string later.
         # TODO JMS 4/1.
-        #import pdb
-        #        pdb.set_trace()
+
         eff_staple_conc_at_tm = staple_conc - .5 * scaffold_conc
         conc_derived_term =  BOLTZMANN_CONSTANT * math.log( eff_staple_conc_at_tm )
         denominator = dS/1000.0 + conc_derived_term  # important unit conversion for dS

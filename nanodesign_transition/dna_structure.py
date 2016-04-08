@@ -200,14 +200,8 @@ class DnaStructure(object):
                             else:
                                 domain_bases.append(base)
                             base.domain = domain_id
-                            # if base.across != -1:
-                            #     if across != -1:
-                            #         assert across == base.across
-                            #     across = base.across
 
                         strand = self.get_strand(base.strand)
-
-                        # work out the connected domain / connected strand (if any)
                         domain = nd.Domain(num_domains,helix, strand, domain_bases)
                         # TODO: (JMS 3/30) can we also pass the info on connected strand / connected domain here?
 
