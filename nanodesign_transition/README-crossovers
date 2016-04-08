@@ -1,0 +1,55 @@
+
+Classes that are used in the crossover calculation and writing results for the viewer: 
+
+    converters/cadnano/design.py 
+    converters/cadnano/convert_design.py 
+    converters/viewer/writer.py
+    dna_structure.py
+    lattice.py
+
+
+lattice.py
+----------
+This defines the SquareLattice and HoneycombLattice classes that store data needed to calculate possible crossovers.
+There are also some functions that are used to process lattice coordinates: get_neighbors(), get_neighbor_index(), etc.
+
+
+converters/cadnano/design.py 
+----------------------------
+The possible crossovers for scaffold and staple strands are calculated in nanodesign_transition/converters/cadnano/design.py 
+using the function
+
+    CadnanoDesign.calculate_possible_crossovers()
+
+The crossovers are stored in CadnanoVirtualHelix objects as a list of tuples (neigh_vhelix,index), where neigh_vhelix is
+the CadnanoVirtualHelix object of a neighboring vhelix and index is the location in virtual helix where the crossover occurs.
+
+The crossover calculation uses the CadnanoDesign.get_neighbor_helices() function to determine a vhelix's neighboring vhelices. 
+This function uses the Lattice.get_neighbors() function.
+
+
+converters/cadnano/convert_design.py 
+------------------------------------
+The possible crossovers for scaffold and staple strands for the DnaStructureHelix objects of the DnaStructure object are set 
+using the CadnanoConvertDesign._set_possible_crossovers() function.
+
+
+dna_structure.py
+----------------
+The helix connectivty is first calculated using DnaStructure._set_helix_connectivity() (called from DnaStructure.compute_aux_data()).
+
+The scaffold and staple design crossovers are calculated for all helices using DnaStructure._compute_helix_design_crossovers();  
+crossovers for each helix is calculated in DnaStructureHelix.compute_design_crossovers().
+
+New classes: DnaHelixConnection, DnaCrossover.
+
+
+converters/viewer/writer.py
+---------------------------
+Crossover information is created using the ViewerWriter._get_helices_info() function. The functions 
+ViewerWriter._get_helix_conn_info(), ViewerWriter._get_crossover_strand_info() and ViewerWriter._get_crossover_info() 
+are used to create information needed by the viewer to visualize crossover density.
+
+
+
+
