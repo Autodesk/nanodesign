@@ -13,7 +13,11 @@ from .internaldata import *
 import domain
 from .domain import *
 
+import energymodel
+from .energymodel import *
+
 __all__ = []
 __all__.extend( internaldata.__all__ )
 __all__.extend( domain.__all__ )
+__all__.extend( energymodel.__all__ )
 
