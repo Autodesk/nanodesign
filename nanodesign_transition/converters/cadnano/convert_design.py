@@ -688,13 +688,17 @@ class CadnanoConvertDesign(object):
             # Create data for a single helix
             helix_topology, dnode_0, triad_0, id, dnode_full = self._create_single_helix(vhelix, lattice_type)
 
-            # Find first position of scaffold and staple.
+            # Find start/end positions of the scaffold strands.
             start_scaffold = -1
+            end_scaffold = -1
             for i in xrange(0,len(helix_topology)):
-                if (int(helix_topology[i,3]) == 0):
-                    start_scaffold = int(helix_topology[i,2])
-                    break
+                if int(helix_topology[i,3]) == 0: 
+                    if start_scaffold == -1:
+                        start_scaffold = int(helix_topology[i,2])
+                    end_scaffold = int(helix_topology[i,2])
             #__for i in xrange(0,len(helix_topology))
+
+            # Find the start position of the staple strands.
             start_staple = -1
             for i in xrange(0,len(helix_topology)):
                 if (int(helix_topology[i,3]) == 1):
@@ -706,8 +710,11 @@ class CadnanoConvertDesign(object):
             structure_helix.start_pos = min(start_scaffold,start_staple)
 
             # Define the geometry of the helix by setting its end coordinates.
-            structure_helix.end_coordinates[0] = dnode_0[0]
-            structure_helix.end_coordinates[1] = dnode_0[-1]
+            #structure_helix.end_coordinates[0] = dnode_0[0]
+            #structure_helix.end_coordinates[1] = dnode_0[-1]
+            structure_helix.end_coordinates[0] = dnode_full[start_scaffold]
+            structure_helix.end_coordinates[1] = dnode_full[end_scaffold]
+
             structure_helix.end_frames[:,:,0] = triad_0[:,:,0]
             structure_helix.end_frames[:,:,1] = triad_0[:,:,-1]
             structure_helix.helix_axis_nodes = dnode_full 
@@ -1092,8 +1099,8 @@ class CadnanoConvertDesign(object):
                 modified_structure (bool): If true then the structure has been modified for insertions and deletions. 
                 seq_name (string): The name of the sequence as defined in the dna_sequence_data dictionary. 
         """
-        #self._logger.setLevel(logging.DEBUG)
-        self._logger.setLevel(logging.INFO)
+        self._logger.setLevel(logging.DEBUG)
+        #self._logger.setLevel(logging.INFO)
 
         sequence = dna_sequence_data.get(seq_name,None)
         seq_index = 0
@@ -1104,8 +1111,8 @@ class CadnanoConvertDesign(object):
         dna_structure = self.dna_structure 
         base_connectivity = dna_structure.base_connectivity
         strands = dna_structure.strands 
-        ordered_traverse = False
         ordered_traverse = True
+        ordered_traverse = False
 
         for strand in strands:
             if (not strand.is_scaffold):
@@ -1207,6 +1214,7 @@ class CadnanoConvertDesign(object):
                         seq_index += 1
 
                     base.seq = letter 
+                    self._logger.debug("base id %d  vh %d  pos %d  seq %s", base.id, base.h, base.p, base.seq)
 
                     if (seq_index == sequence_length): 
                         seq_index = 0
