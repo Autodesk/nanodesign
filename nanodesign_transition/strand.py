@@ -100,6 +100,9 @@ class DnaStrand(object):
             for i in xrange(0,num_bases):
                 id = self.tour[i]
                 self.base_id_list[id] = i
+        if base.id not in self.base_id_list:
+            sys.stderr.write("[strand::get_base_index] **** WARNING: base %d not found in strand %d.\n" % (base.id, self.id))
+            return None
         return self.base_id_list[base.id]
 
 
