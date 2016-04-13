@@ -303,15 +303,24 @@ class DnaStructure(object):
                 strand.add_helix(helix)
         #__for strand in self.strands__
 
-
     def _set_helix_connectivity(self):
         """ For each helix set the list of helices it is connected to. """ 
+        debug = True
+        debug = False
+        if debug: print("[DnaModel::==================== set_vhelix_connectivity==================== ] ")
         for helix1 in self.structure_helices:
+            if debug: print(" ----- vhelix num %d -----" % helix1.lattice_num)
             helix_connectivity = []
+            row = helix1.lattice_row
+            col = helix1.lattice_col 
             for helix2 in self.structure_helices:
-                if (abs(helix1.lattice_row-helix2.lattice_row) + abs(helix1.lattice_col-helix2.lattice_col)) == 1:
+                if helix1 == helix2: 
+                    continue 
+                if (abs(row-helix2.lattice_row) + abs(col-helix2.lattice_col) < 2) and \
+                    self.lattice.get_neighbor_index(row, col, helix2.lattice_row, helix2.lattice_col) != -1:
                     connection = DnaHelixConnection(helix1,helix2)
                     helix_connectivity.append(connection)
+                    if debug: print("connected to %d " % helix2.lattice_num)
             helix1.helix_connectivity = helix_connectivity
 
     def _compute_helix_design_crossovers(self):
