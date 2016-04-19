@@ -234,6 +234,24 @@ class DnaStructure(object):
         # Check if the computed domains are consistent with the strands they were computed from.
         self.check_domains()
 
+        # Set the strand and domain each domain is connected to.
+        for domain in self.domain_list:
+            across = -1
+            for base in domain.base_list:
+                if (base.across != -1):
+                    across = base.across
+                    break
+            #__for base in domain.base_list
+            conn_dom = -1
+            conn_strand = -1
+            if (across != -1):
+                across_base = self.base_connectivity[across-1]
+                conn_dom = across_base.domain
+                conn_strand = across_base.strand
+            domain.connected_strand = conn_strand
+            domain.connected_domain = conn_dom
+        #__for domain in self.domain_list
+
     def _check_base_crossover(self, base):
         """ Check if there is a crossover to a different helix at the given base.
 
