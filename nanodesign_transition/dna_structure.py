@@ -231,7 +231,7 @@ class DnaStructure(object):
 
         self._logger.info("Number of domains computed: %d " % len(self.domain_list))
 
-        # Check if the computed domains are consistant with the strands they were computed from.
+        # Check if the computed domains are consistent with the strands they were computed from.
         self.check_domains()
 
     def _check_base_crossover(self, base):
@@ -256,7 +256,7 @@ class DnaStructure(object):
         return False
 
     def check_domains(self):
-        """ Check that the bases in the domains created for a structure are consistant with the bases in the strand
+        """ Check that the bases in the domains created for a structure are consistent with the bases in the strand
             they are part of.
 
             The combination of the bases in a list of domains for a strand should equal the number of base and follow the 
