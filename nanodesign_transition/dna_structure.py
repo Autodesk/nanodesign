@@ -126,184 +126,230 @@ class DnaStructure(object):
         #__for strand in self.strands__
 
     def _compute_domains(self):
-        """ Compute DNA domains. 
-      
-            Domains are computed using the list of bases defined for each structural helix in the model using the base
-            position within the helix. Helix bases are traversed from index 0 regardless of the helix polarity. The list 
-            storing helix bases (staple and scaffold) are the same size for all helices and contain None where bases are 
-            not defined. 
+        """ Compute DNA domains from strands. 
 
-            The boolean array strand_breaks[] is used to mark the location (relative position in the helix) of where a 
-            strand changes its binding to another helix (cross-over), becomes a single strand or begins/ends. Entries in 
-            strand_breaks[] are set to True for each base position in staple and scaffold strands within a helix that 
-            represent a binding change. Pairs of entries in strand_breaks[] are then used to define the boundaries of domains.
-        """
+            Domains are computed by traversing the bases in the scaffold and staple strands of a structure. 
+            Domain are bounded by a single->double or double->single strand transitions, crossovers between 
+            helices or strand termination. 
+
+            Domains are created using an integer ID starting from 0. 
+            Domain objects are stored in self.domain_list[]. A list of domains is also created for each strand.
+        """ 
         self._logger.setLevel(logging.INFO)
         #self._logger.setLevel(logging.DEBUG)
         self._logger.debug("===================== compute domains =====================")
-        num_domains = 0
+        domain_id = 0
         self.domain_list = []
 
-        for helix in self.structure_helices:
-            num = helix.lattice_num
-            self._logger.debug("---------- helix num %d ---------- " % num)
-            staple_base_list = helix.staple_base_list 
-            scaffold_base_list = helix.scaffold_base_list
-            helix_size = len(scaffold_base_list)
-            strand_breaks = [False]*helix_size
-            if helix.scaffold_polarity == "3'": 
-                three_to_five = True 
+        # Iterate over the scaffold and staple strands of a structure. 
+        for strand in self.strands:
+            self._logger.debug("")
+            if ( strand.is_scaffold):
+                self._logger.debug("==================== scaffold strand %d ====================" % strand.id)
             else:
-                three_to_five = False
+                self._logger.debug("==================== staple strand %d ====================" % strand.id)
 
-            # Add cross-overs for staples.
-            strand_breaks = self._set_strand_breaks(strand_breaks, staple_base_list)
+            start_base = self.base_connectivity[strand.tour[0]-1]
+            end_base = self.base_connectivity[strand.tour[-1]-1]
+            self._logger.debug("Strand number of bases: %3d" % len(strand.tour))
+            self._logger.debug("Strand start: h: %3d  p: %3d" % (start_base.h, start_base.p))
+            self._logger.debug("Strand end: h: %3d  p: %3d" % (end_base.h, end_base.p))
 
-            # Add cross-overs for scaffolds.
-            strand_breaks = self._set_strand_breaks(strand_breaks, scaffold_base_list)
+            # Initialize the domain base list.
+            id = strand.tour[0]
+            base = self.base_connectivity[id-1]
+            curr_across_sign = np.sign(base.across)
+            domain_bases = [ base ]
 
-            # Create domains from pairs of True entries in strand_breaks[].
-            self._logger.debug(">>> create domains:")
-            scaffold = False
+            # Traverse the bases in a strand and create domains.
+            for i in xrange(1,len(strand.tour)):
+                id = strand.tour[i]
+                base = self.base_connectivity[id-1]
+                across_sign = np.sign(base.across)
+                add_curr_base = True
 
-            # First iterate over staple bases, then scaffold bases.
-            for base_list in [staple_base_list, scaffold_base_list]:
-                start = -1
-                # Set how bases are added to a domain: in order or reverse order.
-                if (scaffold):
-                    reverse = three_to_five 
-                else:
-                    reverse = not three_to_five
+                # If no domain bases then just continue after checking for sign change.
+                if len(domain_bases) == 0:
+                    domain_bases.append(base)
+                    if curr_across_sign != across_sign:
+                        curr_across_sign = across_sign
+                    continue
 
-                for i in xrange(0,len(strand_breaks)):
-                    base = base_list[i]
-                    if (not (strand_breaks[i] and base)):
-                        continue 
-                    if (start != -1):
-                        self._logger.debug("    domain: %4d  start pos:%4d  end pos: %4d "  % (num_domains,start,i))
+                # Check for a single->double or double->single strand transition.
+                if curr_across_sign != across_sign:
+                    self._add_domain(domain_id, strand, domain_bases, "sign change")
+                    domain_id += 1
+                    domain_bases = []
+                    curr_across_sign = across_sign
 
-                        # assemble the bases within the domain and assign their domain identity
+                # Check for a crossover between helices for this base.
+                elif self._check_base_crossover(base):
+                    last_base = domain_bases[-1]
+                    # Make sure the current base is in the same helix.
+                    if base.h == last_base.h:
+                        domain_bases.append(base)
+                        add_curr_base = False
+                    self._add_domain(domain_id, strand, domain_bases, "base crossover")
+                    domain_id += 1
+                    domain_bases = []
+
+                # Check the base paired to this base for: crossover or termination.
+                elif base.across > 0:
+                    abase = self.base_connectivity[base.across-1]
+                    if self._check_base_crossover(abase):
+                        domain_bases.append(base)
+                        add_curr_base = False
+                        self._add_domain(domain_id, strand, domain_bases, "abase crossover")
+                        domain_id += 1
                         domain_bases = []
-                        domain_id = num_domains  # domain indexing starts at 0,
-                                                 # so this one hasn't been
-                                                 # assigned yet and we should
-                                                 # increment it at the end of
-                                                 # this segment
-
-                        # across = -1
-                        for j in xrange(start,i+1):
-                            base = base_list[j]
-                            if not base:
-                                continue 
-                            if (reverse):
-                                domain_bases.insert(0,base)
-                            else:
+                    # If a strand terminates make sure the current base is in the same strand. 
+                    elif (abase.down == -1) or (abase.up == -1):
+                        last_base = domain_bases[-1]
+                        if last_base.across != -1:
+                            last_abase = self.base_connectivity[last_base.across-1]
+                            if abase.strand == last_abase.strand:
                                 domain_bases.append(base)
-                            base.domain = domain_id
+                                add_curr_base = False
+                        else:
+                            domain_bases.append(base)
+                            add_curr_base = False
+                        self._add_domain(domain_id, strand, domain_bases, "abase start/end")
+                        domain_id += 1
+                        domain_bases = []
+                #__if curr_across_sign != across_sign
 
-                        strand = self.get_strand(base.strand)
-                        domain = nd.Domain(num_domains,helix, strand, domain_bases)
-                        # TODO: (JMS 3/30) can we also pass the info on connected strand / connected domain here?
+                # Add the current base to the current list of domain bases.
+                if add_curr_base:
+                    domain_bases.append(base)
+            #__for i in xrange(1,len(strand.tour))
 
-                        helix.domain_list.append(domain)
-                        self.domain_list.append(domain)
-                        num_domains += 1
-                        start = -1
-                    else:
-                        start = i
-                #__for i in xrange(0,len(strand_breaks)):
-                scaffold = True
-            #__for base_list in [staple_base_list, scaffold_base_list]
-        self._logger.info(">>> Created %d domains." % num_domains)
+            # Add a domain for any remaining bases.
+            if len(domain_bases) != 0:
+                self._add_domain(domain_id, strand, domain_bases, "remaining")
+                domain_id += 1
+        #__for strand in self.strands__
 
-        # set the strand and domain each domain is connected to.
-        for domain in self.domain_list:
-            across = -1
-            for base in domain.base_list:
-                if (base.across != -1):
-                    across = base.across
-                    break
-            #__for base in domain.base_list
-            conn_dom = -1
-            conn_strand = -1
-            if (across != -1):
-                across_base = self.base_connectivity[across-1]
-                conn_dom = across_base.domain
-                conn_strand = across_base.strand
-            domain.connected_strand = conn_strand
-            domain.connected_domain = conn_dom
-    #__def _compute_domains(self)
+        self._logger.info("Number of domains computed: %d " % len(self.domain_list))
 
-    def _set_strand_breaks(self, strand_breaks, base_list):
-        """ Set the location of a change in strand binding.
+        # Check if the computed domains are consistant with the strands they were computed from.
+        self.check_domains()
 
-            A strand break occurs if a strand:
-                1) crosses over to another helix 
-                2) ends/begins                   
-                3) becomes a single strand      
+    def _check_base_crossover(self, base):
+        """ Check if there is a crossover to a different helix at the given base.
 
             Arguments:
-                strand_breaks (list[bool]): The locations of strand binding change. 
-                base_list (list[DnaBase]): The list bases in a helix. 
+                base (DnaBase): The base to check for a crossover.
 
-            Returns:
-                strand_breaks (list[bool]): The locations of strand binding change. 
-        """
-        # Find the location of the first base in the helix.
-        start_pos = next((i for i in xrange(0,len(base_list)) if base_list[i] != None),-1)
-        base = base_list[start_pos]
-        across_base = base.across
-        curr_across_base_sign = np.sign(base.across)
-        strand_breaks[start_pos] = True
-
-        # Set the locations of binding changes for each base.
-        for i in xrange(start_pos+1,len(base_list)):
-            base = base_list[i]
-            if (not base):
-                continue
-            across_base_sign = np.sign(base.across)
-
-            # Check for a cross-over or end/start of a strand.
-            if self._check_base_crossover(base):
-                curr_across_base_sign = np.sign(base.across)
-                strand_breaks[i] = True
-
-            # A change in the base across sign signals that a single strand is starting/ending.
-            elif (across_base_sign != curr_across_base_sign):
-                 curr_across_base_sign = np.sign(base.across)
-                 strand_breaks[i-1] = True
-                 strand_breaks[i] = True
-        #__for i in xrange(start_pos+1,len(base_list)):
-        return strand_breaks 
-
-    def _check_base_crossover(self,base):
-        """ Check if a base marks a cross-over to another helix or the end/start of a strand.
-
-            A -1 for a bases's down/up signifies that a strand is starting or ending. A change in 
-            a base's up/down helix signifies a cross-over. 
-
-            Arguments:
-                base (DnaBase): The base to check for a cross-over. 
-
-            Returns: True if the base crosses over to another helix or ends/begins.
+            Returns True if there is a crossover at the base.
         """
         down = base.down
-        if (down == -1):
+        if base.down == -1:
+            return False
+        if self.base_connectivity[base.down-1].h != base.h:
             return True
 
-        down_base = self.base_connectivity[down-1]
-        if (down_base.h != base.h):
-            return True
-
-        up = base.up
-        if (up == -1):
-            return True
-        up_base = self.base_connectivity[up-1]
-
-        if (up_base.h != base.h):
+        if base.up == -1:
+            return False
+        if self.base_connectivity[base.up-1].h != base.h:
             return True
 
         return False
+
+    def check_domains(self):
+        """ Check that the bases in the domains created for a structure are consistant with the bases in the strand
+            they are part of.
+
+            The combination of the bases in a list of domains for a strand should equal the number of base and follow the 
+            order of bases in that strand. In addition each domain should only contain bases for a single helix. 
+        """
+        self._logger.setLevel(logging.INFO)
+        #self._logger.setLevel(logging.DEBUG)
+        self._logger.debug("============================== check domains ============================== " )
+        num_failures = 0
+        for strand in self.strands:
+            self._logger.debug("-------------------- strand %d -------------------- " % strand.id)
+            domain_list = strand.get_domains()
+            self._logger.debug("Number of domains: %d" % len(domain_list))
+
+            # Get the combined domain bases and check that each domain is in only one helix.
+            domain_base_ids = []
+            for domain in domain_list:
+                helix = domain.base_list[0].h
+                helix_list = [ helix ]
+                self._logger.debug("Domain %d: number of bases: %d" % (domain.id, len(domain.base_list)))
+                for base in domain.base_list:
+                    if base.h != helix:
+                        helix = base.h
+                        helix_list.append(helix)
+                    domain_base_ids.append(base.id)
+                if len(helix_list) != 1:
+                    self._logger.error("The domain %d references more than one helix: %s" % str(helix_list))
+            #_for domain in domain_list
+
+            if len(strand.tour) != len(domain_base_ids):
+                self._logger.error("The number of domain bases %d does not equal the number of strand bases %d." %
+                    (len(domain_base_ids), len(strand.tour)))
+                self._logger.error("Strand bases: %s" % (str(strand.tour)))
+                self._logger.error("Domain bases: %s" % (str(domain_base_ids)))
+                num_failures += 1
+                continue 
+
+            # Check that the combined domain bases are equal to the bases in the strand. 
+            match_failed = False
+            for sbid,dbid in zip(strand.tour,domain_base_ids):
+                if sbid != dbid: 
+                    match_failed = True
+                    self._logger.error("The domain base %d does not match the strand base %d." % (dbid, sbid))
+                    num_failures += 1
+                    break
+            #__for sbid,dbid in zip(strand.tour,domain_base_ids)
+
+            # For a failed match check if domain bases are out of order.
+            if match_failed:
+                id_set = set()
+                for id in strand.tour:
+                    id_set.add(id)
+                num_match_failed = 0
+                for id in domain_base_ids:
+                    if id not in id_set:
+                        num_match_failed += 1
+                if num_match_failed == 0:
+                    self._logger.error("Check failed: Domain bases match strand bases but are not in the same order.")
+            else:
+                self._logger.debug("Check passed: domain bases match strand bases.")
+            #__if match_failed
+        #__for strand in self.strands
+
+        if num_failures == 0:
+            self._logger.info("Domain consistency check: all domains passed.")
+        else:
+            self._logger.error("Domain consistency check: %d domains failed." % num_failures)
+
+    def _add_domain(self, id, strand, base_list, msg=""):
+        """ Create a DnaDomain object from a list of bases. 
+
+            Arguments:
+                id (int): The domain ID; starts from 0.
+                strand (DnaStrand): The strand the domain is in.
+                base_list (list[DnaBase]): The list of bases in the domain.
+                msg (string): An optional string used for debugging. 
+
+            The new domain object is added to self.domain_list and to the list of domains for the helix and 
+            strand it is contained in.
+        """ 
+        start_pos = base_list[0].p
+        end_pos = base_list[-1].p
+        self._logger.debug("++++ add domain %d   %s" % (id,msg))
+        self._logger.debug("     vh:  %4d  -  %4d" % (base_list[0].h, base_list[-1].h))
+        self._logger.debug("     pos: %4d  -  %4d" % (base_list[0].p, base_list[-1].p))
+        base = base_list[0]
+        helix = self.structure_helices_map[base.h]
+        domain = nd.Domain(id, helix, strand, base_list)
+        helix.domain_list.append(domain)
+        strand.domain_list.append(domain)
+        for base in base_list:
+            base.domain = domain.id
+        self.domain_list.append(domain)
 
     def _compute_strand_helix_references(self):
         """ Set the virtual helices referenced by each strand. """
@@ -316,11 +362,9 @@ class DnaStructure(object):
 
     def _set_helix_connectivity(self):
         """ For each helix set the list of helices it is connected to. """ 
-        debug = True
-        debug = False
-        if debug: print("[DnaModel::==================== set_vhelix_connectivity==================== ] ")
+        self._logger.debug("[DnaModel::==================== set_vhelix_connectivity==================== ] ")
         for helix1 in self.structure_helices:
-            if debug: print(" ----- vhelix num %d -----" % helix1.lattice_num)
+            self._logger.debug(" ----- vhelix num %d -----" % helix1.lattice_num)
             helix_connectivity = []
             row = helix1.lattice_row
             col = helix1.lattice_col 
@@ -331,7 +375,7 @@ class DnaStructure(object):
                     self.lattice.get_neighbor_index(row, col, helix2.lattice_row, helix2.lattice_col) != -1:
                     connection = DnaHelixConnection(helix1,helix2)
                     helix_connectivity.append(connection)
-                    if debug: print("connected to %d " % helix2.lattice_num)
+                    self._logger.debug("connected to %d " % helix2.lattice_num)
             helix1.helix_connectivity = helix_connectivity
 
     def _compute_helix_design_crossovers(self):
