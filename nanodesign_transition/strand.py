@@ -25,6 +25,7 @@ class DnaStrand(object):
         self.base_id_list = dict()
         self.dna_structure = None
         self.base_coords = None
+        self.domain_list = []
 
     def add_helix(self, helix): 
         id = helix.lattice_num
@@ -37,8 +38,7 @@ class DnaStrand(object):
         #print("[DnaStrand] ---------- get domains info ----------")
         #print("[DnaStrand] is_scaffold " + str(self.is_scaffold))
         domains_info = []
-        domain_list = self.get_domains()
-        for domain in domain_list:
+        for domain in self.domain_list:
            did = domain.id
            domains_info.append(did) 
            #print("[DnaStrand] domain id %d  info %s " % (id, domain.get_) 
