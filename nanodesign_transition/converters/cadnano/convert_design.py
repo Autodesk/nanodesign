@@ -110,9 +110,26 @@ class CadnanoConvertDesign(object):
         self._logger.info("Time to create structure topology table: %s " % self._timer.finish())
         self._logger.info("Number of bases in helix axis: %d " % dnode.shape[0])
 
+        # Create maps from a base helix number and position in that helix to a global 
+        # index into the structure_topology array. This is used to convert a helix-based
+        # base indexing to a global ID.
+        curr_bases = structure_topology[:,1:4]
+        scaffold_base_map = {}
+        staple_base_map = {}
+        for i in xrange(0,num_bases):
+            num = int(curr_bases[i,0])
+            pos = int(curr_bases[i,1])
+            type = int(curr_bases[i,2])
+            if type == StrandType.SCAFFOLD:
+                scaffold_base_map[(num,pos)] = i
+            else:
+                staple_base_map[(num,pos)] = i
+        #__for i in xrange(0,num_bases)
+        base_maps = [ scaffold_base_map, staple_base_map ]
+
         # Create the nucleotide map table.
         self._timer.start()
-        id_nt = self._create_nt_map_table(structure_topology, dnode, id_nt_0)
+        id_nt = self._create_nt_map_table(base_maps, dnode, id_nt_0)
         self._logger.info("Time to create map table: %s " % self._timer.finish())
 
         # Renumber base IDs.
@@ -121,16 +138,16 @@ class CadnanoConvertDesign(object):
 
         # Create the DNA topology table.
         self._timer.start()
-        dna_topology = self._create_dna_topology(structure_topology)
+        dna_topology = self._create_dna_topology(structure_topology, base_maps)
         self._logger.info("Time to create topology table: %s " % self._timer.finish())
-
-        if (False):
-        #if (True):
+        print_topology = False
+        if print_topology:
             print("---------- dna_topology before inserts/deletes ----------")
             for i in xrange(0,len(dna_topology)):
                 base = dna_topology[i];
                 print("%d:  id=%d  up=%d  down=%d  across=%d  h=%d  p=%d  isScaf=%d" % 
                     (i+1, base.id, base.up, base.down, base.across, base.h, base.p, base.is_scaf) )
+        #__if print_topology
 
         # store the topology and geometry information into a DnaStructure object.
         self.dna_structure = DnaStructure()
@@ -166,7 +183,7 @@ class CadnanoConvertDesign(object):
  
         return self.dna_structure
 
-    def _create_dna_topology(self,structure_topology):
+    def _create_dna_topology(self, structure_topology, base_maps):
         """ Create the DNA topology table. """
         num_bases = structure_topology.shape[0]
         dna_topology = []
@@ -178,38 +195,30 @@ class CadnanoConvertDesign(object):
             #----- get 5' neighbor -----#
             five_neigh = structure_topology[i,4:7]
             curr_bases = structure_topology[:,1:4]
-            tmp = _find_row(five_neigh, curr_bases)
+            loc = self._find_base_location(five_neigh, base_maps)
 
-            if (len(tmp) == 1):
-                base.up = int(tmp[0])+1
-            elif (len(tmp) == 0):
+            if loc == -1:
                 base.up = -1
             else:
-                logger.error('Duplication.')
+                base.up = loc + 1
 
             #----- get 3' neighbor -----#
             three_neigh = structure_topology[i,7:10]
-            curr_bases = structure_topology[:,1:4]
-            tmp = _find_row(three_neigh, curr_bases)
+            loc = self._find_base_location(three_neigh, base_maps)
 
-            if (len(tmp) == 1):
-                base.down = int(tmp[0])+1
-            elif (len(tmp) == 0):
+            if loc == -1:
                 base.down = -1
             else:
-                logger.error('Duplication.')
+                base.down = loc + 1
 
             #----- Watson-Crick neighbor -----#
             wc_neigh = structure_topology[i,10:13]
-            curr_bases = structure_topology[:,1:4]
-            tmp = _find_row(wc_neigh, curr_bases)
+            loc = self._find_base_location(wc_neigh, base_maps)
 
-            if (len(tmp) == 1):
-                base.across = int(tmp[0])+1
-            elif (len(tmp) == 0):
+            if loc == -1:
                 base.across = -1
             else:
-                self._logger.error('Duplication.')
+                base.across = loc + 1
 
             # helix, position, scaffold/staple
             base.h = int(structure_topology[i,1])
@@ -730,18 +739,42 @@ class CadnanoConvertDesign(object):
         #__for vhelix in vhelices
         return structure_toplogy, dnode, triad, id_nt_0, structure_helices
 
-    def _create_nt_map_table(self, structure_topology, dnode, id_nt_0):
+    def _create_nt_map_table(self, base_maps, dnode, id_nt_0):
         """ Create the map table (id_nt). """
         n_bp = dnode.shape[0]
         id_nt = np.zeros((n_bp, 2), dtype=int)
         for i in xrange(0,n_bp):
-            # scaffold nucleotide
-            tmp = _find_row(id_nt_0[i,0:3], structure_topology[:,1:4])
-            id_nt[i,0] = tmp
-            # staple nucleotide
-            tmp = _find_row(id_nt_0[i,3:6], structure_topology[:,1:4])
-            id_nt[i,1] = tmp;
+            # Scaffold nucleotide
+            base_data = id_nt_0[i,0:3]
+            id_nt[i,0] = self._find_base_location(base_data, base_maps)
+            # Staple nucleotide
+            base_data = id_nt_0[i,3:6]
+            id_nt[i,1] = self._find_base_location(base_data, base_maps)
         return id_nt 
+
+    def _find_base_location(self, base_data, base_maps):
+        """ Find the location in the base topology array of the given base using the helix number it is in 
+            and its position within that helix. 
+
+            This is used to convert a helix-based base indexing using a helix number and position to a global ID.
+            The query is a tuple (helix num, position). For a base with no up, down or across base the query
+            will be (-1,-1) and the location returned -1.
+
+            Arguments:
+                base_data (list(float)[3]): A list of three values representing the helix number, position 
+                    within that helix and a flag if it is from a scaffold(0) or a staple(1) strand.
+                base_maps (list(dict)[2]): A list of two base maps: 0:scaffold, 1:staple. 
+
+            Returns the index into the base topology array of the given base.
+        """
+        query = tuple(int(base_data[j]) for j in xrange(0,2))
+        strand_type = int(base_data[2])
+        base_map = base_maps[strand_type]
+        if query not in base_map:
+            loc = -1
+        else:
+            loc = base_map[query]
+        return loc
 
     def _create_single_helix(self, vhelix, lattice_type):
         scaffolds = vhelix.scaffold_strands 
@@ -1277,7 +1310,7 @@ class CadnanoConvertDesign(object):
 
             if (modified_structure):
                 for j in xrange(0,len(strands[istrand-1].tour)):
-                    k = itour[j]-1
+                    k = tour[j]-1
                     base_connectivity[k].seq = seq.letters[j]
                     if (self.base_connectivity[k].across >= 0):
                         k_across = self.base_connectivity[k].across
