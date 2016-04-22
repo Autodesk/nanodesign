@@ -18,7 +18,7 @@ RUN apt-get install python2.7 python2.7-dev python-pip -y
 
 # Any pip installs can go here. Currently no requirements.
 # RUN pip install --upgrade biopython
-# RUN pip install --upgrade numpy
+RUN pip install --upgrade numpy
 
 ENV MODULE /nanodesign
 
