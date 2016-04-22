@@ -768,8 +768,8 @@ class CadnanoConvertDesign(object):
             Returns the index into the base topology array of the given base.
         """
         query = tuple(int(base_data[j]) for j in xrange(0,2))
-        type = int(base_data[2])
-        base_map = base_maps[type]
+        strand_type = int(base_data[2])
+        base_map = base_maps[strand_type]
         if query not in base_map:
             loc = -1
         else:
