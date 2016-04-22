@@ -756,6 +756,10 @@ class CadnanoConvertDesign(object):
         """ Find the location in the base topology array of the given base using the helix number it is in 
             and its position within that helix. 
 
+            This is used to convert a helix-based base indexing using a helix number and position to a global ID.
+            The query is a tuple (helix num, position). For a base with no up, down or across base the query
+            will be (-1,-1) and the location returned -1.
+
             Arguments:
                 base_data (list(float)[3]): A list of three values representing the helix number, position 
                     within that helix and a flag if it is from a scaffold(0) or a staple(1) strand.
