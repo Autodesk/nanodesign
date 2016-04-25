@@ -514,11 +514,17 @@ class DnaHelixConnection(object):
             However, for lattice-based geometries the directions can be calculated implicitly using a lookup table.
         """
         #print("[DnaHelixConnection] --------- compute direction ---------") 
-        # Get the first helix axis and a point on that axis.
+        # Get the first helix axis and a point on that axis from the staple bases. 
+        # If there is no staple then use the scaffold.
         helix1 = self.from_helix
-        #print(">>> helix1: num: %d  row: %d  col: %d" % (helix1.lattice_num, helix1.lattice_row, helix1.lattice_col)) 
+        #print(">>> helix1: num: %d  row: %d  col: %d" % (helix1.lattice_num, helix1.lattice_row, helix1.lattice_col))
         start_pos = next((i for i in xrange(0,len(helix1.staple_base_list)) if helix1.staple_base_list[i] != None),-1)
-        helix1_base = helix1.staple_base_list[start_pos]
+        if start_pos == -1: 
+            start_pos = next((i for i in xrange(0,len(helix1.scaffold_base_list)) if helix1.scaffold_base_list[i] != None),-1)
+            helix1_base = helix1.scaffold_base_list[start_pos]
+        else:
+            helix1_base = helix1.staple_base_list[start_pos]
+        #print("    start pos %d" % start_pos) 
         pt1 = helix1.helix_axis_nodes[helix1_base.p]
         axis1 = [helix1.end_frames[0,2,0], helix1.end_frames[1,2,0], helix1.end_frames[2,2,0]]
 
@@ -526,7 +532,12 @@ class DnaHelixConnection(object):
         helix2 = self.to_helix
         #print(">>> helix2: num: %d  row: %d  col: %d" % (helix2.lattice_num, helix2.lattice_row, helix2.lattice_col))
         start_pos = next((i for i in xrange(0,len(helix2.staple_base_list)) if helix2.staple_base_list[i] != None),-1)
-        helix2_base = helix2.staple_base_list[start_pos]
+        if start_pos == -1: 
+            start_pos = next((i for i in xrange(0,len(helix2.scaffold_base_list)) if helix2.scaffold_base_list[i] != None),-1)
+            helix2_base = helix2.scaffold_base_list[start_pos]
+        else:
+            helix2_base = helix2.staple_base_list[start_pos]
+        #print("    start pos %d" % start_pos) 
         pt2 = helix2.helix_axis_nodes[helix2_base.p]
         axis2 = [helix2.end_frames[0,2,0], helix2.end_frames[1,2,0], helix2.end_frames[2,2,0]]
         axis2_length = np.linalg.norm(axis2)
@@ -537,7 +548,7 @@ class DnaHelixConnection(object):
         a2pt = pt2 + np.dot(axis2,d)
         self.direction = a2pt - pt1
         self.direction = self.direction / np.linalg.norm(self.direction)
-        #print(">>> direction: %g %g %g" % (self.direction[0], self.direction[1], self.direction[2]))
+        #print("Helix connection %d to %d direction %g %g %g" % (helix1.lattice_num, helix2.lattice_num, self.direction[0], self.direction[1], self.direction[2]))
 
 class DnaCrossover(object):
     """ This class stores information for a cross-over between two helices.
@@ -550,7 +561,4 @@ class DnaCrossover(object):
         self.helix_connection = helix_connection
         self.crossover_base = crossover_base
         self.strand = strand
-
-
-
 

@@ -695,7 +695,7 @@ class CadnanoConvertDesign(object):
                 self._add_staple_color(color, num)
 
             # Create data for a single helix
-            helix_topology, dnode_0, triad_0, id, dnode_full = self._create_single_helix(vhelix, lattice_type)
+            helix_topology, dnode_0, triad_0, id, dnode_full, triad_full = self._create_single_helix(vhelix, lattice_type)
 
             # Find start/end positions of the scaffold strands.
             start_scaffold = -1
@@ -717,18 +717,32 @@ class CadnanoConvertDesign(object):
             structure_helix.start_staple = start_staple
             structure_helix.start_scaffold = start_scaffold
             structure_helix.start_pos = min(start_scaffold,start_staple)
+            self._logger.debug("Start scaffold %d" % start_scaffold) 
+            self._logger.debug("Start staple   %d" % start_staple) 
 
             # Define the geometry of the helix by setting its end coordinates.
-            #structure_helix.end_coordinates[0] = dnode_0[0]
-            #structure_helix.end_coordinates[1] = dnode_0[-1]
-            structure_helix.end_coordinates[0] = dnode_full[start_scaffold]
-            structure_helix.end_coordinates[1] = dnode_full[end_scaffold]
-
-            structure_helix.end_frames[:,:,0] = triad_0[:,:,0]
-            structure_helix.end_frames[:,:,1] = triad_0[:,:,-1]
             structure_helix.helix_axis_nodes = dnode_full 
+            if start_scaffold != -1:
+                start_strand = start_scaffold
+                end_strand = end_scaffold
+            elif start_staple != -1:
+                start_strand = start_staple
+                end_strand = end_staple
+            else:
+                start_strand = -1
+                end_strand = -1 
+            if start_strand != -1:
+                structure_helix.end_coordinates[0] = dnode_full[start_strand]
+                structure_helix.end_coordinates[1] = dnode_full[end_strand]
+                structure_helix.end_frames[:,:,0] = triad_full[:,:,start_strand]
+                structure_helix.end_frames[:,:,1] = triad_full[:,:,end_strand]
+            else:
+                structure_helix.end_coordinates[0] = None
+                structure_helix.end_coordinates[1] = None 
+                structure_helix.end_frames[:,:,0] = None
+                structure_helix.end_frames[:,:,1] = None
 
-            # Append results to the global table
+            # Append results to the global table.
             structure_toplogy = np.concatenate((structure_toplogy, helix_topology), axis=0)
             dnode = np.concatenate((dnode, dnode_0), axis=0)
             triad = np.concatenate((triad, triad_0), axis=2)
@@ -777,6 +791,22 @@ class CadnanoConvertDesign(object):
         return loc
 
     def _create_single_helix(self, vhelix, lattice_type):
+        """ Create the geometry for a single cadnano virtual helix.
+
+            Arguments:
+                vhelix (CadnanoVirtualHelix): A cadnano virtual helix.
+                lattice_type (CadnanoLatticeType): Cadnano lattice type. 
+
+            Returns: 
+                helix_topology (Nx18 numpy float array): An array storing IDs, coordinates, and connectivity for each base 
+                    defined in the the virtual helix.  
+                dnode (Nx3 numpy float array): An array of helix axis coordinates for base-paired bases in the virtual helix.
+                triad (Nx3x3 numpy float array): An array of helix coordinate frames for base-paired bases in the virtual helix.
+                id_nt_0 (Nx6 numpy float array): An array of base pair connectivity. 
+                dnode_0 (NBx3 numpy float array): An array of helix axis coordinates for all bases in the virtual helix.
+                triad_0 (NBx3x3 numpy float array): An array of helix coordinate frames for all bases in the virtual helix.
+        """
+        #self._logger.debug("------------------- _create_single_helix ------------------- " )
         scaffolds = vhelix.scaffold_strands 
         staples = vhelix.staple_strands 
         deletions = vhelix.deletions 
@@ -789,7 +819,7 @@ class CadnanoConvertDesign(object):
         #self._logger.debug("vstrand.row=%d" % row)
         #self._logger.debug("vstrand.col=%d" % col)
 
-        # generate the coordinates for the scaffold and staple bases
+        # Generate the coordinates for the scaffold and staple bases.
         dnode = np.empty((0, 3), dtype=float)
         triad = np.empty((3, 3,0), dtype=float)
         scaffold_coords, staple_coords, dnode_0, triad_0 = self._generate_coordinates(lattice_type, row, col, num, num_bases)
@@ -805,12 +835,12 @@ class CadnanoConvertDesign(object):
             current_scaffold = scaffolds[i] 
             current_staple = staples[i] 
 
-            # if the base exists in the scaffold strand
-            #if ((current_scaffold[0] >= 0) or (current_scaffold[2] >= 0)):
-            if ((current_scaffold.initial_strand >= 0) or (current_scaffold.final_strand >= 0)):
+            # If the base exists in the scaffold strand
+            if (current_scaffold.initial_strand >= 0) or (current_scaffold.final_strand >= 0):
+                #self._logger.debug("%d: add scaffold id %d" % (i,uid+1))
                 uid = uid + 1
                 helix_topology[uid,0] = uid+1
-                # set helix ID, lattice ID, and strand type: 0 for scaffold, 1 for staple
+                # Set helix ID, lattice ID, and strand type: 0 for scaffold, 1 for staple
                 helix_topology[uid,1] = num
                 helix_topology[uid,2] = (i-1) + 1  # use 1-based IDs
                 helix_topology[uid,3] = StrandType.SCAFFOLD
@@ -837,7 +867,7 @@ class CadnanoConvertDesign(object):
                     helix_topology[uid,11] = -1
                     helix_topology[uid,12] = 1
 
-                # coordinate
+                # Coordinate
                 helix_topology[uid,13] = scaffold_coords[i,0]
                 helix_topology[uid,14] = scaffold_coords[i,1]
                 helix_topology[uid,15] = scaffold_coords[i,2]
@@ -891,7 +921,7 @@ class CadnanoConvertDesign(object):
                 helix_topology[uid,17] = insertions[i]
             #__if ((current_staple[0] >= 0) or (current_staple[2] >= 0))__
 
-            # check if a basepair exists
+            # Set infomation for a base-paired base.
             if ( ((current_scaffold.initial_strand >= 0) or (current_scaffold.final_strand >= 0)) and 
                  ((current_staple.initial_strand >= 0) or (current_staple.final_strand >=0 ))):
                 dnode = np.concatenate((dnode, dnode_0[[i],:]), axis=0)
@@ -900,15 +930,16 @@ class CadnanoConvertDesign(object):
                 id_nt_0 = np.concatenate((id_nt_0, [ida]), axis=0)
         #__for i in xrange(0,num_lattice)__
 
-        # remove rows at the end that don't contain any information.
+        # Remove rows at the end that don't contain any information.
         helix_topology = np.delete(helix_topology, np.s_[uid+1:2*num_bases:1],0)
-        return helix_topology, dnode, triad, id_nt_0, dnode_0
+        return helix_topology, dnode, triad, id_nt_0, dnode_0, triad_0
 
     def _generate_coordinates(self, lattice_type, row, col, strand_num, num_lattice):
         """Generate the coordinates for base pair positions along a helix and atom
            positions along the dna helix.
         """
         #self._logger.debug("-------------------- generate_coordinates --------------------")
+        #self._logger.debug("num_lattice %d" % num_lattice)
         r_strand = 1.25      # half the distance between the axes of two neighboring DNA helices
         r_helix = 1.0        # radius of DNA helices (nm)
         dist_bp = 0.34       # rise between two neighboring base-pairs (nm)
