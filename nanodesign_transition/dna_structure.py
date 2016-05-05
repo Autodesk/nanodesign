@@ -5,6 +5,8 @@ This module defines the classes used to define the connectivity and geometry of 
 A DNA structure consists of a number of scaffold and staple strands (DNA origami), or oligo strands alone, bound together 
 to form a designed geometric shape.
 """
+from collections import OrderedDict
+import json
 import logging
 import numpy as np
 from parameters import DnaParameters
@@ -401,6 +403,113 @@ class DnaStructure(object):
         """
         for helix in self.structure_helices:
             helix.compute_design_crossovers(self)
+
+    def write(self, file_name, write_json_format):
+        """ Write the structure information to a file. 
+            Structure information is written to files in JSON and plain text formats.
+        """
+
+        # Compute auxillary data to calculate domains.
+        self. compute_aux_data()
+
+        # Write structure information in JSON format.
+        if write_json_format:
+            self._logger.info("Writing DNA strcuture to file %s." % file_name)
+            base_list = []
+            for base in self.base_connectivity:
+                base_info = OrderedDict()
+                base_info['id'] = base.id
+                base_info['helix'] = base.h
+                base_info['pos'] = base.p
+                base_info['up'] = base.up
+                base_info['down'] = base.down
+                base_info['across'] = base.across
+                base_info['sequence'] = base.seq
+                base_list.append(base_info)
+            #__for base in self.base_connectivity
+
+            strand_list = []
+            for strand in self.strands:
+                strand_info = OrderedDict()
+                strand_info['id'] = strand.id
+                strand_info['scaffold'] = strand.is_scaffold
+                strand_info['bases'] = strand.tour
+                strand_info['domain_ids'] = [domain.id for domain in strand.domain_list ]
+                strand_list.append(strand_info)
+
+            domain_list = []
+            for domain in self.domain_list:
+                domain_info = OrderedDict()
+                domain_info['id'] = domain.id
+                domain_info['bases'] = [base.id for base in domain.base_list]
+                domain_list.append(domain_info)
+
+            structure = OrderedDict()
+            structure['num_bases'] = len(base_list)
+            structure['num_strands'] = len(strand_list)
+            structure['num_domains'] = len(domain_list)
+            structure['bases'] = base_list
+            structure['strands'] = strand_list
+            structure['domains'] = domain_list 
+
+            with open(file_name, 'w') as outfile:
+                json.dump(structure, outfile, indent=4, separators=(',', ': '), sort_keys=False)
+
+        # Write structure information in plain text format.
+        file_name = file_name.replace("json", "txt")
+        self._logger.info("Writing DNA structure in text format to file %s." % file_name)
+        with open(file_name, 'w') as outfile:
+            outfile.write("# number of bases %d\n" % len(self.base_connectivity))
+            outfile.write("# number of strands %d\n" % len(self.strands))
+            outfile.write("# number of domains %d\n" % len(self.domain_list))
+            outfile.write("# bases: id   helix  pos   up   down  across  seq   scaf\n")
+            for base in self.base_connectivity:
+                outfile.write("%4d %5d %5d %5d %5d %5d  %5s  %5d\n" % \
+                    (base.id, base.h, base.p, base.up, base.down, base.across, base.seq, base.is_scaf))
+            outfile.write("# strands: id  scaf  numBases:[baseIDs]  numDomains:[domainIDs]\n")
+            for strand in self.strands:
+                outfile.write("strand %4d %2d \n" % (strand.id, strand.is_scaffold))
+                outfile.write("%d:%s\n" % (len(strand.tour), str(strand.tour)))
+                outfile.write("%d:%s\n" % (len(strand.domain_list), [domain.id for domain in strand.domain_list ]))
+            outfile.write("# domains: id  numBases:[baseIDs]\n")
+            for domain in self.domain_list:
+                outfile.write("domain %4d   %d:%s\n" % \
+                    (domain.id, len(domain.base_list), [base.id for base in domain.base_list]))
+        #__with open(file_name, 'w') as outfile
+
+    def write_topology(self, file_name, write_json_format):
+        """ Write the base information with base connectivity to a file. 
+            Base information is written to files in JSON and plain text formats.
+        """
+        # Write base information in JSON format.
+        if write_json_format:
+            self._logger.info("Writing DNA base connectivity in JSON format to file %s." % file_name)
+            base_list = []
+            for base in self.base_connectivity:
+                base_info = OrderedDict()
+                base_info['id'] = base.id 
+                base_info['helix'] = base.h 
+                base_info['pos'] = base.p 
+                base_info['up'] = base.up
+                base_info['down'] = base.down
+                base_info['across'] = base.across
+                base_info['sequence'] = base.seq 
+                base_list.append(base_info)
+            #__for base in self.base_connectivity
+
+            topology = { 'bases' : base_list } 
+            with open(file_name, 'w') as outfile:
+                json.dump(topology, outfile, indent=4, separators=(',', ': '), sort_keys=False)
+
+        # Write base information in plain text format.
+        file_name = file_name.replace("json", "txt")
+        self._logger.info("Writing DNA base connectivity in plain text format to file %s." % file_name)
+        with open(file_name, 'w') as outfile:
+            outfile.write("# id   helix  pos   up   down  across  seq   scaf\n")
+            for base in self.base_connectivity:
+                outfile.write("%4d %5d %5d %5d %5d %5d  %5s  %5d\n" % \
+                    (base.id, base.h, base.p, base.up, base.down, base.across, base.seq, base.is_scaf))
+        #__with open(file_name, 'w') as outfile
 
 #__class DnaStructure(object):
 
