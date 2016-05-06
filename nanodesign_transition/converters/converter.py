@@ -27,11 +27,13 @@ from dna_sequence_data import dna_sequence_data
 
 class ConverterFileFormats(object):
     """ File format names to convert to/from. """
-    UNKNOWN = "unknown"
-    CADNANO = "cadnano"
-    CANDO   = "cando"
-    VIEWER  = "viewer"
-    names = [ CADNANO, CANDO, VIEWER ]
+    UNKNOWN   = "unknown"
+    CADNANO   = "cadnano"
+    CANDO     = "cando"
+    STRUCTURE = "structure"
+    TOPOLOGY  = "topology"
+    VIEWER    = "viewer"
+    names = [ CADNANO, CANDO, STRUCTURE, TOPOLOGY, VIEWER ]
 
 class Converter(object):
     """ This class stores objects for various models created when reading from a file.
@@ -79,6 +81,14 @@ def write_viewer_file(converter, file_name):
     viewer_writer = ViewerWriter(converter.dna_structure)
     viewer_writer.write(file_name)
 
+def write_topology_file(converter, file_name):
+    """ Write a DNA topology file."""
+    converter.dna_structure.write_topology(file_name,write_json_format=True)
+
+def write_structure_file(converter, file_name):
+    """ Write a DNA structure file."""
+    converter.dna_structure.write(file_name,write_json_format=True)
+
 def write_cando_file(converter, file_name):
     """ Write a CanDo .cndo file."""
     cando_writer = CandoWriter(converter.dna_structure)
@@ -96,9 +106,11 @@ def _setup_logging():
     logger.addHandler(console_handler)
     return logger
 
-converter_read_map = { ConverterFileFormats.CADNANO : read_cadnano_file }
-converter_write_map = { ConverterFileFormats.VIEWER : write_viewer_file,
-                        ConverterFileFormats.CANDO  : write_cando_file
+converter_read_map = { ConverterFileFormats.CADNANO    : read_cadnano_file }
+converter_write_map = { ConverterFileFormats.VIEWER    : write_viewer_file,
+                        ConverterFileFormats.CANDO     : write_cando_file,
+                        ConverterFileFormats.STRUCTURE : write_structure_file,
+                        ConverterFileFormats.TOPOLOGY  : write_topology_file
                       }
 
 def main():
