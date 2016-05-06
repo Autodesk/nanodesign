@@ -112,7 +112,7 @@ class CadnanoReader(object):
 
         # determine lattice type
         if ( (num_bases % 21 == 0) and (num_bases % 32) == 0):
-            lattice_type = LatticeType.honeycomb
+            lattice_type = CadnanoLatticeType.honeycomb
         elif (num_bases % 32 == 0):
             lattice_type = CadnanoLatticeType.square
         elif (num_bases % 21) == 0:
