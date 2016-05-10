@@ -1216,10 +1216,10 @@ class CadnanoConvertDesign(object):
                     if (not modified_structure):
                         if (across >= 0):
                             if (base.skip != 0):
-                                self._logger.debug("**** deleted base: id %d " % base.id)
+                                self._logger.debug("deleted base: id %d " % base.id)
                                 letter = 'N'
                             elif (base.loop != 0):
-                                self._logger.debug("**** inserted base: id %d " % base.id)
+                                self._logger.debug("inserted base: id %d " % base.id)
                                 strand.insert_seq.append(seq.letters[seq_index+1])
                                 seq_index += 2
                             else:
@@ -1266,10 +1266,10 @@ class CadnanoConvertDesign(object):
 
                     if (not modified_structure):
                         if (base.skip != 0):
-                            self._logger.debug("**** deleted base: id %d  vh %d  pos %d", base.id, base.h, base.p)
+                            self._logger.debug("deleted base: id %d  vh %d  pos %d", base.id, base.h, base.p)
                             letter = 'N'
                         elif (base.loop != 0):
-                            self._logger.debug("**** inserted base: id %d  vh %d  pos %d " % base.id, base.h, base.p)
+                            self._logger.debug("inserted base: id %d  vh %d  pos %d", base.id, base.h, base.p)
                             strand.insert_seq.append(seq.letters[seq_index+1])
                             seq_index += 2
                         else:
