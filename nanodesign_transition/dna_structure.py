@@ -11,6 +11,7 @@ import logging
 import numpy as np
 from parameters import DnaParameters
 from converters.cadnano.common import CadnanoLatticeType
+from dna_structure_helix import DnaStructureHelix,DnaHelixConnection
 
 # temp code to handle objects as they are being transitioned into the main package
 try:
@@ -20,60 +21,101 @@ try:
     base_path = os.path.abspath( os.path.dirname(__file__) + '/../' )
     sys.path.append(base_path)
     import nanodesign as nd
+    from nanodesign_transition.lattice import Lattice
     sys.path = sys.path[:-1]
 except ImportError:
     print "Cannot locate nanodesign package, it hasn't been installed in main packages, and is not reachable relative to the nanodesign_transition directory."
     raise ImportError
 
-
 class DnaStructure(object):
     """ This class stores the base connectivity and geometry for a DNA model. 
 
         Attributes:
-            base_connectivity (DnaBase): A list of DnaBase objects.
-            helix_axis_nodes (numpy Nx3 float darray): The coordinates of base nodes along a helix axis. 
-            helix_axis_frames (numpy 3x3xN float darray): The reference frames of bases along a helix axis. The reference frame
-                    is a right-handed coordinate frame (e1,e2,e3) attached to each base. e1 points in the direction of the major 
-                    groove, e2 runs along the long helix axis and e3 = e1 x e2.
-            strands (DnaStrand): A list a DnaStrand objects. 
+            base_connectivity (List[DnaBase]): The list of DnaBase objects for the structure.
+            domain_list (List[Domain]): The list of Domain objects for the structure.
+            helix_axis_nodes (NumPy Nx3 ndarray[float]): The coordinates of paired base nodes along a helix axis. 
+            helix_axis_frames (NumPy 3x3xN ndarray[float]): The reference frames of paired bases along a helix axis. The reference 
+                    frame is a right-handed coordinate frame (e1,e2,e3) attached to each base. e1 points in the direction of the 
+                    major groove, e2 runs along the long helix axis and e3 = e1 x e2.
+            id_nt (NumPy Nx2 ndarray[int]): The base IDs for scaffold bases and their paired staple base.
+            lattice_type (CadnanoLatticeType): The lattice type the geometry of this structure is derived from. 
+            lattice (Lattice): The Lattice object used for calculating lattice-dependent data (e.g. neighboring lattice
+                locations).  
+            parameters (DnaParameters): Stores information for DNA parameters (e.g. helix radius).
+            strands (List[DnaStrand]): The list a DnaStrand objects. 
+            strands_map (Dict[DnaStrand]): The dictionary that maps strand IDs to DnaStrand objects.
     """ 
 
-    def __init__(self, name="dna structure"):
+    def __init__(self, name, base_connectivity, helices, helix_axis_nodes=None, helix_axis_frames=None, id_nt=None):
+        """ Initialize a DnaStructure object. 
+
+            The helix_axis_nodes, helix_axis_frames, id_nt arguments are optional and are not used for any algorithms 
+            or visualization. They may be needed for writing the DNA structure to other formats (e.g. CanDo).
+
+            Arguments:
+                name (string): The name of the structure.
+                base_connectivity (List[DnaBase]): The list of DNA bases for the structure. 
+                helices (List[DnaStructureHelix]): The list of helices for the structure. 
+                helix_axis_nodes (NumPy 3x3xN ndarray[float]): The coordinates of paired base nodes along a helix axis. 
+                helix_axis_frames (NumPy 3x3xN ndarray[float]): The reference frames of paired bases along a helix axis. 
+                id_nt (NumPy Nx2 ndarray[int]): The base IDs for scaffold bases and their paired staple base.
+        """ 
         self.name = name
-        self.base_connectivity = None
-        self.helix_axis_nodes = None
-        self.helix_axis_frames = None
-        self.strands = None
-        self.strands_map = dict()
-        self.id_nt = None
-        self.structure_helices = []
-        self.structure_helices_map = dict()
-        self.structure_helices_coord_map = dict()
-        self.parameters = DnaParameters()
-        self.staple_colors = []
-        self.domain_list = []
-        self.dnodes_map = dict()
         self.lattice_type = CadnanoLatticeType.none
         self.lattice = None
+        self.parameters = DnaParameters()
+        self.base_connectivity = base_connectivity
+        self.helix_axis_nodes = helix_axis_nodes
+        self.helix_axis_frames = helix_axis_frames
+        self.id_nt = id_nt
+        self.structure_helices_map = dict()
+        self.structure_helices_coord_map = dict()
+        self.strands = None
+        self.strands_map = dict()
+        self.domain_list = []
         self._logger = self._setup_logging()
+        self._add_structure_helices(helices)
 
     def _setup_logging(self):
         """ Set up logging."""
-        logger = logging.getLogger('dna_structure')
+        logger = logging.getLogger(__name__)
+        #logger = logging.getLogger('dna_structure')
         logger.setLevel(logging.INFO)
-        # create console handler and set format
+        # Create console handler and set format.
         console_handler = logging.StreamHandler()
         formatter = logging.Formatter('[%(name)s] %(levelname)s - %(message)s')
         console_handler.setFormatter(formatter)
         logger.addHandler(console_handler)
         return logger
 
-    def add_structure_helices(self, structure_helices):
-        """ Add a list of structural helices. """
+    def _add_structure_helices(self, structure_helices):
+        """ Add a list of structural helices. 
+
+            The structural helices are stored in two dictionaries, one used to look up a helix 
+            using a helix num and the other used to look up a helix using a lattice (row,col) 
+            coordinate.
+            # TODO (DaveP) We need to remove references to lattice-based geometry.
+
+            Arguments:
+               structure_helices (list[DnaStructureHelix]): The list of structural helices for the structure.
+        """
         for helix in structure_helices:
-            self.structure_helices.append(helix)
             self.structure_helices_map[helix.lattice_num] = helix
             self.structure_helices_coord_map[(helix.lattice_row,helix.lattice_col)] = helix
+
+    def set_lattice_type(self, lattice_type):
+        """ Set the lattice type the geometry of this structure is derived from. 
+
+            A Lattice object is created from the given lattice type. It is used to calculate 
+            lattice-dependent data such as crossover locations and the neighboring lattice 
+            coordinates for a given coordinate.
+
+            Arguments:
+                lattice_type(CadnanoLatticeType): The type of lattice (e.g. square, honeycomb). 
+
+        """
+        self.lattice_type = lattice_type
+        self.lattice = Lattice.create_lattice(lattice_type)
 
     def compute_aux_data(self):
         """ Compute auxiallry data. """
@@ -103,8 +145,8 @@ class DnaStructure(object):
 
     def _set_helix_bases(self):
         """ Set the bases for a helix. """
-        for helix in self.structure_helices:
-            num = helix.lattice_num
+        for num,helix in self.structure_helices_map.items():
+            #num = helix.lattice_num
             hsize = len(helix.helix_axis_nodes)
             staple_base_list = [None]*hsize
             scaffold_base_list = [None]*hsize
@@ -288,7 +330,7 @@ class DnaStructure(object):
         num_failures = 0
         for strand in self.strands:
             self._logger.debug("-------------------- strand %d -------------------- " % strand.id)
-            domain_list = strand.get_domains()
+            domain_list = strand.domain_list
             self._logger.debug("Number of domains: %d" % len(domain_list))
 
             # Get the combined domain bases and check that each domain is in only one helix.
@@ -348,14 +390,15 @@ class DnaStructure(object):
     def _add_domain(self, id, strand, base_list, msg=""):
         """ Create a DnaDomain object from a list of bases. 
 
+            The new domain object is added to self.domain_list and to the list of domains for the helix and 
+            strand it is contained in.
+
             Arguments:
                 id (int): The domain ID; starts from 0.
                 strand (DnaStrand): The strand the domain is in.
                 base_list (list[DnaBase]): The list of bases in the domain.
                 msg (string): An optional string used for debugging. 
 
-            The new domain object is added to self.domain_list and to the list of domains for the helix and 
-            strand it is contained in.
         """ 
         start_pos = base_list[0].p
         end_pos = base_list[-1].p
@@ -365,7 +408,7 @@ class DnaStructure(object):
         base = base_list[0]
         helix = self.structure_helices_map[base.h]
         domain = nd.Domain(id, helix, strand, base_list)
-        helix.domain_list.append(domain)
+        #helix.domain_list.append(domain)
         strand.domain_list.append(domain)
         for base in base_list:
             base.domain = domain.id
@@ -383,12 +426,12 @@ class DnaStructure(object):
     def _set_helix_connectivity(self):
         """ For each helix set the list of helices it is connected to. """ 
         self._logger.debug("[DnaModel::==================== set_vhelix_connectivity==================== ] ")
-        for helix1 in self.structure_helices:
+        for helix1 in self.structure_helices_map.itervalues():
             self._logger.debug(" ----- vhelix num %d -----" % helix1.lattice_num)
             helix_connectivity = []
             row = helix1.lattice_row
             col = helix1.lattice_col 
-            for helix2 in self.structure_helices:
+            for helix2 in self.structure_helices_map.itervalues():
                 if helix1 == helix2: 
                     continue 
                 if (abs(row-helix2.lattice_row) + abs(col-helix2.lattice_col) < 2) and \
@@ -401,7 +444,7 @@ class DnaStructure(object):
     def _compute_helix_design_crossovers(self):
         """ Compute the design cross-overs for all helices.
         """
-        for helix in self.structure_helices:
+        for helix in self.structure_helices_map.itervalues():
             helix.compute_design_crossovers(self)
 
     def write(self, file_name, write_json_format):
@@ -512,162 +555,4 @@ class DnaStructure(object):
         #__with open(file_name, 'w') as outfile
 
 #__class DnaStructure(object):
-
-
-class DnaStructureHelix(object):
-    """ This class stores information for a DNA structure helix. 
-
-        A structure helix is a region in a DNA structure that forms a cylindrical structural element. It can be composed of 
-        one or two DNA strands. 
-
-        Attributes:
-            id (int): Helix ID (1 - number of helices in a structure).
-            staple_base_list (list[DnaBase]): The list storing helix staple bases. This list is the same size for all helices. 
-            scaffold_base_list (list[DnaBase]): The list storing helix scaffold bases. This list is the same size for all helices. 
-    """ 
-    def __init__(self, id):
-        self.id = id
-        self.lattice_row = -1
-        self.lattice_col = -1
-        self.lattice_num = -1
-        self.staple_colors = []
-        self.end_coordinates = np.zeros((2,3), dtype=float)
-        self.end_frames = np.zeros((3,3,2), dtype=float)
-        self.helix_axis_nodes = None
-        self.domain_list = []
-        self.scaffold_polarity = "3'"
-        self.staple_base_list = []
-        self.scaffold_base_list = []
-        self.helix_connectivity = []
-        self.start_pos = -1
-        self.start_staple = -1
-        self.start_scaffold = -1
-        self.possible_staple_crossovers = []
-        self.possible_scaffold_crossovers = []
-
-        # note [davep] are we using these?
-        self.triad = None
-        self.id_nt = None
-        self.helix_topology = None
-
-    def _setup_logging(self,name):
-        """ Set up logging."""
-        logger = logging.getLogger(name)
-        logger.setLevel(logging.INFO)
-        # create console handler and set format
-        console_handler = logging.StreamHandler()
-        formatter = logging.Formatter('[%(name)s] %(levelname)s - %(message)s')
-        console_handler.setFormatter(formatter)
-        logger.addHandler(console_handler)
-        return logger
-
-    def compute_design_crossovers(self,dna_structure):
-        logger = self._setup_logging('DnaStructureHelix'+str(self.id))
-        #logger.setLevel(logging.DEBUG)
-        logger.debug("=================== compute design cross-overs helix num %d ===================" % self.lattice_num)
-        logger.debug(">>> helix polarity %s " % self.scaffold_polarity)
-        logger.debug(">>> helix connectivity: %d " % len(self.helix_connectivity)) 
-        base_connectivity = dna_structure.base_connectivity
-        strands = dna_structure.strands
-        for connection in self.helix_connectivity:
-            num = connection.to_helix.lattice_num
-            logger.debug(">>> crossover helix num %d" % num)
-            logger.debug(">>> num staple bases: %d" % len(self.staple_base_list))
-            last_crossover = None
-            for base_list in [self.staple_base_list,self.scaffold_base_list]:
-                for base in base_list:
-                    if not base:
-                        continue
-                    down = base.down
-                    up = base.up
-
-                    if (down != -1):
-                        down_base = base_connectivity[down-1]
-                        if (down_base.h != base.h) and (down_base.h == num):
-                            logger.debug("base:%4d  p:%4d  h:%4d" % (base.id, base.p, base.h))
-                            logger.debug("  xd:%4d  p:%4d  h:%4d" % (down_base.id, down_base.p, down_base.h))
-                            strand = dna_structure.get_strand(base.strand)
-                            crossover = DnaCrossover(self,connection,base,strand)
-                            connection.crossovers.append(crossover)
-                    #__if (down != -1)
-
-                    if (up != -1):
-                        up_base = base_connectivity[up-1]
-                        if (up_base.h != base.h) and (up_base.h == num):
-                            logger.debug("base:%4d  p:%4d  h:%4d" % (base.id, base.p, base.h))
-                            logger.debug("  xu:%4d  p:%4d  h:%4d" % (up_base.id, up_base.p, up_base.h))
-                            strand = dna_structure.get_strand(base.strand)
-                            crossover = DnaCrossover(self,connection,base,strand)
-                            connection.crossovers.append(crossover)
-                    #__if (up != -1)
-
-                #__for base in self.base_list
-            #__for base_list in [self.staple_base_list,self.scaffold_base_list]
-            logger.debug(">>> added %d crossovers " % len(connection.crossovers))
-        #__for connection in self.helix_connectivity:
-
-class DnaHelixConnection(object):
-    """ This class stores information for connected helices.
-    """
-    def __init__(self, helix1, helix2):
-        self.from_helix = helix1
-        self.to_helix = helix2
-        self.direction = None
-        self._compute_direction()
-        self.crossovers = []
-
-    def _compute_direction(self):
-        """ Compute the unit vector in the direction of the adjacent helix.
-            
-            This function uses helix axes to compute the direction so it can be used for lattice or off-lattice geometries.
-            However, for lattice-based geometries the directions can be calculated implicitly using a lookup table.
-        """
-        #print("[DnaHelixConnection] --------- compute direction ---------") 
-        # Get the first helix axis and a point on that axis from the staple bases. 
-        # If there is no staple then use the scaffold.
-        helix1 = self.from_helix
-        #print(">>> helix1: num: %d  row: %d  col: %d" % (helix1.lattice_num, helix1.lattice_row, helix1.lattice_col))
-        start_pos = next((i for i in xrange(0,len(helix1.staple_base_list)) if helix1.staple_base_list[i] != None),-1)
-        if start_pos == -1: 
-            start_pos = next((i for i in xrange(0,len(helix1.scaffold_base_list)) if helix1.scaffold_base_list[i] != None),-1)
-            helix1_base = helix1.scaffold_base_list[start_pos]
-        else:
-            helix1_base = helix1.staple_base_list[start_pos]
-        #print("    start pos %d" % start_pos) 
-        pt1 = helix1.helix_axis_nodes[helix1_base.p]
-        axis1 = [helix1.end_frames[0,2,0], helix1.end_frames[1,2,0], helix1.end_frames[2,2,0]]
-
-        # Get the second (adjacent) helix axis and a point on that axis.
-        helix2 = self.to_helix
-        #print(">>> helix2: num: %d  row: %d  col: %d" % (helix2.lattice_num, helix2.lattice_row, helix2.lattice_col))
-        start_pos = next((i for i in xrange(0,len(helix2.staple_base_list)) if helix2.staple_base_list[i] != None),-1)
-        if start_pos == -1: 
-            start_pos = next((i for i in xrange(0,len(helix2.scaffold_base_list)) if helix2.scaffold_base_list[i] != None),-1)
-            helix2_base = helix2.scaffold_base_list[start_pos]
-        else:
-            helix2_base = helix2.staple_base_list[start_pos]
-        #print("    start pos %d" % start_pos) 
-        pt2 = helix2.helix_axis_nodes[helix2_base.p]
-        axis2 = [helix2.end_frames[0,2,0], helix2.end_frames[1,2,0], helix2.end_frames[2,2,0]]
-        axis2_length = np.linalg.norm(axis2)
-
-        # Compute the unit vector in the direction of the adjacent helix.
-        vec = pt1 - pt2
-        d = np.dot(axis2,vec) / axis2_length
-        a2pt = pt2 + np.dot(axis2,d)
-        self.direction = a2pt - pt1
-        self.direction = self.direction / np.linalg.norm(self.direction)
-        #print("Helix connection %d to %d direction %g %g %g" % (helix1.lattice_num, helix2.lattice_num, self.direction[0], self.direction[1], self.direction[2]))
-
-class DnaCrossover(object):
-    """ This class stores information for a cross-over between two helices.
-
-        Attributes:
-            helix (DnaStructureHelix): 
-    """
-    def __init__(self, helix, helix_connection, crossover_base, strand):
-        self.helix = helix
-        self.helix_connection = helix_connection
-        self.crossover_base = crossover_base
-        self.strand = strand
 

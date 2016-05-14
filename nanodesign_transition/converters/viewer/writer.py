@@ -103,12 +103,12 @@ class ViewerWriter(object):
         """ Get JSON serialized data for helix objects. """
         helices_info = []
    
-        for helix in dna_structure.structure_helices:
+        for helix in dna_structure.structure_helices_map.itervalues():
             point1 = helix.end_coordinates[0]
             point2 = helix.end_coordinates[1]
             length = np.linalg.norm(point1-point2)
             frame = helix.end_frames[:,:,0]
-            domain_info = [ domain.id for domain in helix.domain_list ]
+            domain_ids = sorted(helix.get_domain_ids())
             connectivity_info = self._get_helix_conn_info(helix)
             possible_staple_crossovers = helix.possible_staple_crossovers
             possible_scaffold_crossovers = helix.possible_scaffold_crossovers
@@ -123,7 +123,7 @@ class ViewerWriter(object):
                      'scaffold_polarity'  : helix.scaffold_polarity,
                      'cadnano_info'       : { 'row' : helix.lattice_row, 'col' : helix.lattice_col, 
                                               'num' : helix.lattice_num },
-                     'domains'            : domain_info,
+                     'domains'            : domain_ids,
                      'helix_connectivity' : connectivity_info,
                      'num_possible_staple_crossovers' : len(possible_staple_crossovers),
                      'num_possible_scaffold_crossovers' : len(possible_scaffold_crossovers)
@@ -138,7 +138,7 @@ class ViewerWriter(object):
         """
         strand_info_list = []
         for strand in dna_structure.strands:
-            domains_info = strand.get_domains_info()
+            domain_ids = [domain.id for domain in strand.domain_list]
             base_coords = strand.get_base_coords()
             base_info = []
             for i in xrange(0,len(strand.tour)):
@@ -152,7 +152,7 @@ class ViewerWriter(object):
                      'is_circular'     : strand.is_circular,
                      'number_of_bases' : len(strand.tour),
                      'virtual_helices' : list(strand.helix_list.keys()),
-                     'domains'         : domains_info,
+                     'domains'         : domain_ids,
                      'bases'           : base_info,
                      'color'           : strand.color
                    }
@@ -221,7 +221,7 @@ class ViewerWriter(object):
         from_helix = connection.from_helix
         to_helix = connection.to_helix
         crossovers = connection.crossovers
-        start_pos = from_helix.start_pos
+        start_pos = from_helix.get_start_pos()
         self._logger.debug("    Start position: %d " % start_pos)
 
         # Create a list of staple and scaffold crossovers.
@@ -301,7 +301,8 @@ class ViewerWriter(object):
 
     def _setup_logging(self):
         """ Set up logging."""
-        self._logger = logging.getLogger('viewer:writer')
+        self._logger = logging.getLogger(__name__)
+        #self._logger = logging.getLogger('viewer:writer')
         self._logger.setLevel(self._logging_level)
 
         # create console handler and set format

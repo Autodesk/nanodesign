@@ -19,3 +19,7 @@ class DnaParameters:
     base_pair_twist_angle = 360 / 10.5
     minor_groove_angle = 120.0
 
+class DnaPolarity:
+    FIVE_PRIME = "5'"
+    THREE_PRIME = "3'"
+
