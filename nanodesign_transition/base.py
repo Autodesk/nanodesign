@@ -17,19 +17,18 @@ class DnaBase(object):
     """ This class stores information for a DNA base. 
 
         Attributes:
-            id (int): ID
-            up (int): 5' neighbor
-            down (int): 3' neighbor
-            across (int): The Watson-Crick neighbor base ID.
-            coord (numpy.ndarray shape=(3,)): 3D coordinate on the DNA helix backbone 
-            skip (int): deletion
-            loop (int): insertion
-            h (int): Helix ID (start from 0)
-            p (int): Position in a helix (start from 0)
-            is_scaf (bool): If this base is on a scaffold. 
-            strand (int): 
-            residue (int):
+            across (int): The base ID of the base's Watson-Crick neighbor.
+            domain (int): The domain ID the base is in.
+            down (int): The base ID of the base's 3' neighbor.
+            h (int): The ID of the helix the base is in. 
+            id (int): The base ID.
+            is_scaf (bool): If True then this base is in a scaffold strand. 
+            loop (int): The number of insertions at this base.
+            p (int): The helix position of the base.
             seq (string): A one character string representing the base sequence nucleotide. 
+            skip (int): The number of deletions at this base.
+            strand (int): The strand ID the base is in.
+            up (int): The base ID of the base's 5' neighbor.
     """
 
     def __init__( self, id, up=0, down=0, across=0, seq='N'):
@@ -40,14 +39,9 @@ class DnaBase(object):
         self.seq = seq
         self.strand = -1
         self.domain = -1
-        self.residue = 0
         self.loop = 0
         self.skip = 0
         self.h = -1
         self.p = -1
         self.is_scaf = False
-        self.coord = np.array([0.0,0.0,0.0],dtype=float)
-
-    def set_domain_id(self, id):
-        self.domain = id
 

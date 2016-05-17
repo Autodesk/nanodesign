@@ -34,6 +34,7 @@ try:
     from nanodesign_transition.strand import DnaStrand
     from nanodesign_transition.dna_structure import DnaStructure,DnaStructureHelix
     from nanodesign_transition.lattice import Lattice,SquareLattice,HoneycombLattice
+    from nanodesign_transition.parameters import DnaPolarity
 
     sys.path = sys.path[:-1]
 except ImportError as i:
@@ -79,7 +80,8 @@ class CadnanoConvertDesign(object):
 
     def _setup_logging(self):
         """ Set up logging."""
-        self._logger = logging.getLogger('cadnano:convert_design')
+        self._logger = logging.getLogger(__name__)
+        #self._logger = logging.getLogger('cadnano:convert_design')
         self._logger.setLevel(self._logging_level)
 
         # Create a console handler and set format.
@@ -149,15 +151,10 @@ class CadnanoConvertDesign(object):
                     (i+1, base.id, base.up, base.down, base.across, base.h, base.p, base.is_scaf) )
         #__if print_topology
 
-        # store the topology and geometry information into a DnaStructure object.
-        self.dna_structure = DnaStructure()
-        self.dna_structure.base_connectivity = dna_topology
-        self.dna_structure.helix_axis_nodes = dnode 
-        self.dna_structure.helix_axis_frames = triad
-        self.dna_structure.id_nt = id_nt
-        self.dna_structure.lattice_type = design.lattice_type
-        self.dna_structure.lattice = Lattice.create_lattice(design.lattice_type)
-        self.dna_structure.add_structure_helices(helices)
+        # Create a DnaStructure object to store the base topology and geometry information.
+        name = "dna structure"
+        self.dna_structure = DnaStructure(name, dna_topology, helices, dnode, triad, id_nt)
+        self.dna_structure.set_lattice_type(design.lattice_type)
 
         # Remove deleted bases
         delete_and_insert = False
@@ -232,8 +229,7 @@ class CadnanoConvertDesign(object):
                 logger.error('Exception.')
 
             # coordinate
-            # note: where is this set?
-            #base.coord = structure_topology[i,13:16]
+            base.coord = structure_topology[i,13:16]
 
             # deletion
             base.skip = int(structure_topology[i,16])
@@ -676,22 +672,17 @@ class CadnanoConvertDesign(object):
             self._logger.debug("num: %d " % num)
             self._logger.debug("row: %d " % row)
             self._logger.debug("col: %d " % col)
-            structure_helix = DnaStructureHelix(num_vhelices)
-            structure_helix.lattice_num = num
-            structure_helix.lattice_row = row
-            structure_helix.lattice_col = col
 
             if ( num % 2 == 0 ):
-                structure_helix.scaffold_polarity = "5'"
+                scaffold_polarity = DnaPolarity.FIVE_PRIME
                 self._logger.debug("scaffold polarity 5' to 3'")
             else:
-                structure_helix.scaffold_polarity = "3'"
+                scaffold_polarity = DnaPolarity.THREE_PRIME
                 self._logger.debug("scaffold polarity 3' to 5'")
 
             # Set staple colors
             stap_colors = vhelix.staple_colors 
             for color in stap_colors:
-                structure_helix.staple_colors.append(color)
                 self._add_staple_color(color, num)
 
             # Create data for a single helix
@@ -707,21 +698,15 @@ class CadnanoConvertDesign(object):
                     end_scaffold = int(helix_topology[i,2])
             #__for i in xrange(0,len(helix_topology))
 
-            # Find the start position of the staple strands.
+            # Find the start and end positions of the staple strands.
             start_staple = -1
             for i in xrange(0,len(helix_topology)):
                 if (int(helix_topology[i,3]) == 1):
-                    start_staple = int(helix_topology[i,2])
-                    break
+                    if start_staple == -1:
+                        start_staple = int(helix_topology[i,2])
+                    end_staple = int(helix_topology[i,2])
             #__for i in xrange(0,len(helix_topology))
-            structure_helix.start_staple = start_staple
-            structure_helix.start_scaffold = start_scaffold
-            structure_helix.start_pos = min(start_scaffold,start_staple)
-            self._logger.debug("Start scaffold %d" % start_scaffold) 
-            self._logger.debug("Start staple   %d" % start_staple) 
 
-            # Define the geometry of the helix by setting its end coordinates.
-            structure_helix.helix_axis_nodes = dnode_full 
             if start_scaffold != -1:
                 start_strand = start_scaffold
                 end_strand = end_scaffold
@@ -731,16 +716,15 @@ class CadnanoConvertDesign(object):
             else:
                 start_strand = -1
                 end_strand = -1 
-            if start_strand != -1:
-                structure_helix.end_coordinates[0] = dnode_full[start_strand]
-                structure_helix.end_coordinates[1] = dnode_full[end_strand]
-                structure_helix.end_frames[:,:,0] = triad_full[:,:,start_strand]
-                structure_helix.end_frames[:,:,1] = triad_full[:,:,end_strand]
-            else:
-                structure_helix.end_coordinates[0] = None
-                structure_helix.end_coordinates[1] = None 
-                structure_helix.end_frames[:,:,0] = None
-                structure_helix.end_frames[:,:,1] = None
+
+            # Create a DNA structure object that stores the helix information. 
+            # Set the caDNAno information outside of the constructor because
+            # this will be abstracted out in the future.
+            # TODO (DaveP) Remove references to lattice-based geometry.
+            structure_helix = DnaStructureHelix(num_vhelices, scaffold_polarity, dnode_full, triad_full, start_strand, end_strand)
+            structure_helix.lattice_num = num
+            structure_helix.lattice_row = row
+            structure_helix.lattice_col = col
 
             # Append results to the global table.
             structure_toplogy = np.concatenate((structure_toplogy, helix_topology), axis=0)
@@ -948,8 +932,8 @@ class CadnanoConvertDesign(object):
 
         # positions of the scaffold nucleotide and staple nucleotide
         # in the local reference frame.
-        scaf_local = r_helix * np.array([cos(180-ang_minor/2), sin(180-ang_minor/2), 0.0]).transpose();
-        stap_local = r_helix * np.array([cos(180+ang_minor/2), sin(180+ang_minor/2), 0.0]).transpose();
+        scaf_local = r_helix * np.array([cos(_deg2rad(ang_minor/2)),     sin(_deg2rad(ang_minor/2)),     0.0]).transpose()
+        stap_local = r_helix * np.array([cos(_deg2rad(180+ang_minor/2)), sin(_deg2rad(180+ang_minor/2)), 0.0]).transpose()
 
         if (lattice_type == CadnanoLatticeType.honeycomb):
             xpos =  sqrt(3.0) * col * r_strand
@@ -1046,7 +1030,7 @@ class CadnanoConvertDesign(object):
         self._logger.debug("-------------------- set_possible_crossovers --------------------")
         scaffold_crossovers = []
         staple_crossovers = [] 
-        structure_helices = self.dna_structure.structure_helices
+        #structure_helices = self.dna_structure.structure_helices
         structure_helices_coord_map = self.dna_structure.structure_helices_coord_map
         for vhelix in design.helices:
             num = vhelix.num 
@@ -1108,14 +1092,13 @@ class CadnanoConvertDesign(object):
                 sys.stderr.write('[build_strand] **** ERROR: Exception.')
                 return None,None
 
-            # Walk through the current strand
+            # Walk through the current strand.
             n_residue = 1
             strand.tour.append(curr_base.id)
             curr_base.strand = n_strand
-            curr_base.residue = n_residue
             is_visited[curr_base.id-1] = True
 
-            # Each loop adds a new base
+            # Each loop adds a new base.
             while ( (not strand.is_circular and (curr_base.down >= 0)) or 
                     (strand.is_circular and (curr_base.down != init_baseID)) ):
                 curr_base = dna_topology[curr_base.down-1]
@@ -1130,7 +1113,6 @@ class CadnanoConvertDesign(object):
                 n_residue = n_residue + 1
                 strand.tour.append(curr_base.id)
                 curr_base.strand = n_strand
-                curr_base.residue = n_residue
                 is_visited[curr_base.id-1] = True
             #__while((not strand.is_circular 
 
