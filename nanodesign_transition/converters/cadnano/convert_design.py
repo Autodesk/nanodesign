@@ -229,8 +229,7 @@ class CadnanoConvertDesign(object):
                 logger.error('Exception.')
 
             # coordinate
-            # note: where is this set?
-            #base.coord = structure_topology[i,13:16]
+            base.coord = structure_topology[i,13:16]
 
             # deletion
             base.skip = int(structure_topology[i,16])
@@ -933,8 +932,8 @@ class CadnanoConvertDesign(object):
 
         # positions of the scaffold nucleotide and staple nucleotide
         # in the local reference frame.
-        scaf_local = r_helix * np.array([cos(180-ang_minor/2), sin(180-ang_minor/2), 0.0]).transpose();
-        stap_local = r_helix * np.array([cos(180+ang_minor/2), sin(180+ang_minor/2), 0.0]).transpose();
+        scaf_local = r_helix * np.array([cos(_deg2rad(ang_minor/2)),     sin(_deg2rad(ang_minor/2)),     0.0]).transpose()
+        stap_local = r_helix * np.array([cos(_deg2rad(180+ang_minor/2)), sin(_deg2rad(180+ang_minor/2)), 0.0]).transpose()
 
         if (lattice_type == CadnanoLatticeType.honeycomb):
             xpos =  sqrt(3.0) * col * r_strand

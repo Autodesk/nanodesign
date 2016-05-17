@@ -11,6 +11,7 @@ from cadnano.reader import CadnanoReader
 from cadnano.convert_design import CadnanoConvertDesign
 from viewer.writer import ViewerWriter 
 from cando.writer import CandoWriter 
+from simdna.writer import SimDnaWriter 
 
 try:
     import os.path
@@ -30,6 +31,7 @@ class ConverterFileFormats(object):
     UNKNOWN   = "unknown"
     CADNANO   = "cadnano"
     CANDO     = "cando"
+    SIMDNA    = "simdna"
     STRUCTURE = "structure"
     TOPOLOGY  = "topology"
     VIEWER    = "viewer"
@@ -81,6 +83,11 @@ def write_viewer_file(converter, file_name):
     viewer_writer = ViewerWriter(converter.dna_structure)
     viewer_writer.write(file_name)
 
+def write_simdna_file(converter, file_name):
+    """ Write a SimDNA pairs file."""
+    simdna_writer = SimDnaWriter(converter.dna_structure)
+    simdna_writer.write(file_name)
+
 def write_topology_file(converter, file_name):
     """ Write a DNA topology file."""
     converter.dna_structure.write_topology(file_name,write_json_format=True)
@@ -107,8 +114,10 @@ def _setup_logging():
     return logger
 
 converter_read_map = { ConverterFileFormats.CADNANO    : read_cadnano_file }
+
 converter_write_map = { ConverterFileFormats.VIEWER    : write_viewer_file,
                         ConverterFileFormats.CANDO     : write_cando_file,
+                        ConverterFileFormats.SIMDNA    : write_simdna_file,
                         ConverterFileFormats.STRUCTURE : write_structure_file,
                         ConverterFileFormats.TOPOLOGY  : write_topology_file
                       }

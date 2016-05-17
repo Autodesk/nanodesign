@@ -146,7 +146,6 @@ class DnaStructure(object):
     def _set_helix_bases(self):
         """ Set the bases for a helix. """
         for num,helix in self.structure_helices_map.items():
-            #num = helix.lattice_num
             hsize = len(helix.helix_axis_nodes)
             staple_base_list = [None]*hsize
             scaffold_base_list = [None]*hsize
@@ -408,7 +407,6 @@ class DnaStructure(object):
         base = base_list[0]
         helix = self.structure_helices_map[base.h]
         domain = nd.Domain(id, helix, strand, base_list)
-        #helix.domain_list.append(domain)
         strand.domain_list.append(domain)
         for base in base_list:
             base.domain = domain.id

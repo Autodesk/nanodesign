@@ -20,6 +20,14 @@ class DnaParameters:
     minor_groove_angle = 120.0
 
 class DnaPolarity:
+    """ This class defines constants used to describe the polarity of a DNA strand. 
+
+        Attributes:
+            FIVE_PRIME (string): The direction of a DNA strand is from 5'->3'. When indexing the bases in a helix this means 
+                indexes increase in the 5'->3' direction.
+            THREE_PRIME (string): The direction of a DNA strand is from 3'->5'. When indexing the bases in a helix this means 
+                indexes increase in the 3'->5' direction.
+    """
     FIVE_PRIME = "5'"
     THREE_PRIME = "3'"
 
