@@ -8,6 +8,7 @@ import json
 import logging
 import argparse
 from cadnano.reader import CadnanoReader
+from cadnano.writer import CadnanoWriter
 from cadnano.convert_design import CadnanoConvertDesign
 from viewer.writer import ViewerWriter 
 from cando.writer import CandoWriter 
@@ -101,6 +102,11 @@ def write_cando_file(converter, file_name):
     cando_writer = CandoWriter(converter.dna_structure)
     cando_writer.write(file_name)
 
+def write_cadnano_file(converter, file_name):
+    """ Write a caDNAno JSON file."""
+    cadnano_writer = CadnanoWriter(converter.dna_structure)
+    cadnano_writer.write(file_name)
+
 def _setup_logging():
     """ Set up logging."""
     logger = logging.getLogger('nanodesign.converter')
@@ -116,6 +122,7 @@ def _setup_logging():
 converter_read_map = { ConverterFileFormats.CADNANO    : read_cadnano_file }
 
 converter_write_map = { ConverterFileFormats.VIEWER    : write_viewer_file,
+                        ConverterFileFormats.CADNANO   : write_cadnano_file,
                         ConverterFileFormats.CANDO     : write_cando_file,
                         ConverterFileFormats.SIMDNA    : write_simdna_file,
                         ConverterFileFormats.STRUCTURE : write_structure_file,
