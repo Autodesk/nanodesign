@@ -1202,7 +1202,7 @@ class CadnanoConvertDesign(object):
                                 letter = 'N'
                             elif (base.loop != 0):
                                 self._logger.debug("inserted base: id %d " % base.id)
-                                strand.insert_seq.append(seq.letters[seq_index+1])
+                                strand.insert_seq.append(sequence[seq_index+1])
                                 seq_index += 2
                             else:
                                 seq_index += 1
@@ -1252,7 +1252,7 @@ class CadnanoConvertDesign(object):
                             letter = 'N'
                         elif (base.loop != 0):
                             self._logger.debug("inserted base: id %d  vh %d  pos %d", base.id, base.h, base.p)
-                            strand.insert_seq.append(seq.letters[seq_index+1])
+                            strand.insert_seq.append(sequence[seq_index+1])
                             seq_index += 2
                         else:
                             seq_index += 1
