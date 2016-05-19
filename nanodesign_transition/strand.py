@@ -21,6 +21,7 @@ class DnaStrand(object):
         helix_list (Dict): The list of helices the strand passes through. The dictionary maps helix IDs 
             to DnaStructureHelix objects.
         id (int): The strand ID. 
+        insert_seq (List[string]): The list of sequence letters inserted into this strand. 
         is_circular (bool): If True then the strand is circular, returning to its starting postion.
         is_scaffold (bool): If True then the strand is a scaffold strand.
         tour (List[int]): The list of base IDs making up the strand. 
@@ -36,6 +37,7 @@ class DnaStrand(object):
         self.base_id_list = dict()
         self.dna_structure = None
         self.domain_list = []
+        self.insert_seq = []
 
     def add_helix(self, helix): 
         id = helix.lattice_num
