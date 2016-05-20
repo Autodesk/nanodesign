@@ -591,7 +591,7 @@ def compare_float_lists(list1, list2, tol=1e-9):
         return False
 
     for val1,val2 in zip(list1, list2):
-        if abs(float(val1)-float(val2)) > tol:
+        if abs(val1-val2) > tol:
             return False
     #__for val1,val2 in zip(list1, list2)
 
