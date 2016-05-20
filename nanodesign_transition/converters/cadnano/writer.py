@@ -133,7 +133,7 @@ class CadnanoWriter(object):
         return base_info 
 
     def _get_loop_info(self, base_list):
-        """ Get the loop (insert) information for each base. """"
+        """ Get the loop (insert) information for each base. """
         loop_info = []
         for base in base_list:
             if base:
@@ -143,7 +143,7 @@ class CadnanoWriter(object):
         return loop_info
 
     def _get_skip_info(self, base_list):
-        """ Get the skip (deletion) information for each base. """"
+        """ Get the skip (deletion) information for each base. """
         skip_info = []
         for base in base_list:
             if base:
