@@ -15,6 +15,8 @@ import json
 import os
 import sys
 import logging
+import math
+
 
 class Domain(object):
     """ The Domain class defines the data and methods for a DNA structure domain.
@@ -69,13 +71,13 @@ class Domain(object):
             self.num_errors += 1
 
         # Compare float lists.
-        if cmp(self.orientation,domain.orientation):
+        if not compare_float_lists(self.orientation,domain.orientation):
            logger.error("'%s' values are not equal: %s != %s" % (self.ORIENTATION, self.orientation, domain.orientation))
            self.num_errors += 1
-        if cmp(self.start_pos,domain.start_pos):
+        if not compare_float_lists(self.start_pos,domain.start_pos):
            logger.error("'%s' values are not equal: %s != %s" % (self.START_POS, self.start_pos, domain.start_pos))
            self.num_errors += 1
-        if cmp(self.end_pos,domain.end_pos):
+        if not compare_float_lists(self.end_pos,domain.end_pos):
            logger.error("'%s' values are not equal: %s != %s" % (self.END_POS, self.end_pos, domain.end_pos))
            self.num_errors += 1
 
@@ -104,7 +106,7 @@ class Base(object):
         if self.bad_data or base.bad_data:
             return
         self.num_errors += compare_dicts(self.__dict__, base.__dict__)
-        if cmp(self.coord,base.coord):
+        if not compare_float_lists(self.coord,base.coord):
            logger.error("Base id %d '%s' values are not equal: %s != %s" % (self.id, self.COORDS, self.coord, base.coord))
            self.num_errors += 1
 
@@ -255,7 +257,7 @@ class HelixConnectivity(object):
         self.num_errors += compare_dicts(self.__dict__, helix_conn.__dict__)
 
         # Compare directions. 
-        if cmp(self.dir,helix_conn.dir):
+        if not compare_float_lists(self.dir,helix_conn.dir):
            logger.error("'%s' values are not equal: %s != %s" % (self.DIRECTION, self.dir, helix_conn.dir))
            self.num_errors += 1
 
@@ -350,13 +352,13 @@ class Helix(object):
         self.num_errors += compare_dicts(self.__dict__, helix.__dict__)
 
         # Compare orientations, start and end positions. 
-        if cmp(self.orientation,helix.orientation):
+        if not compare_float_lists(self.orientation,helix.orientation):
             logger.error("'%s' values are not equal: %s != %s" % (self.ORIENTATION, self.orientation, helix.orientation))
             self.num_errors += 1
-        if cmp(self.start_pos,helix.start_pos):
+        if not compare_float_lists(self.start_pos,helix.start_pos):
             logger.error("'%s' values are not equal: %s != %s" % (self.START_POS, self.start_pos, helix.start_pos))
             self.num_errors += 1
-        if cmp(self.end_pos,helix.end_pos):
+        if not compare_float_lists(self.end_pos,helix.end_pos):
             logger.error("'%s' values are not equal: %s != %s" % (self.END_POS, self.end_pos, helix.end_pos))
             self.num_errors += 1
 
@@ -581,6 +583,20 @@ def compare_dicts(dict1, dict2):
             num_errors += 1
     return num_errors
 
+def compare_float_lists(list1, list2, tol=1e-9):
+    """ Compare two float lists. 
+        This function is used to compare two float lists, usually representing a vector. 
+    """
+    if len(list1) != len(list2):
+        return False
+
+    for val1,val2 in zip(list1, list2):
+        if abs(val1-val2) > tol:
+            return False
+    #__for val1,val2 in zip(list1, list2)
+
+    return True
+
 def compare_lists(name, list1, list2, check_order):
     """ Compare two integer lists. 
 
@@ -597,7 +613,7 @@ def compare_lists(name, list1, list2, check_order):
         logger.error("'%s' lists contain different values: %s" % (name, list(ldiff)))
         return False
 
-    # Check if the ordering of the list is the same.
+    # Check if the ordering of the lists are the same.
     if check_order and cmp(list1,list2):
         logger.error("'%s' list values are not in the same order: %s != %s" % (name, list1, list2)) 
         return False
