@@ -102,8 +102,10 @@ class ViewerWriter(object):
     def _get_helices_info(self, dna_structure):
         """ Get JSON serialized data for helix objects. """
         helices_info = []
-   
-        for helix in dna_structure.structure_helices_map.itervalues():
+        # Need helices sorted by ID for indexing into helix arryay.
+        helix_list = sorted(list(dna_structure.structure_helices_map.values()), key=lambda x: x.id)
+
+        for helix in helix_list: 
             point1 = helix.end_coordinates[0]
             point2 = helix.end_coordinates[1]
             length = np.linalg.norm(point1-point2)
