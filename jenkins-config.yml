@@ -27,7 +27,7 @@ build-manifest-file: build-manifest.txt
 
 # set false to only push a image tagged for the envrionment
 tag-latest: true
-lib-prefix: quay.io/autodesk/
+lib-prefix: quay.io/bionano/
 lib-push-config: --config /var/jenkins_home/.docker
 
 # This project doesn't produce npm consumable outputs
