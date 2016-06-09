@@ -1,0 +1,11 @@
+{
+  "name": "nanodesign",
+  "version": "1.0.0",
+  "description": "nanodesign computeworkder",
+  "repository": {
+    "type": "git",
+    "url": "https://git.autodesk.com/bionano/nanodesign.git"
+  },
+  "author": "Autodesk, Inc.",
+  "license": "Autodesk, Inc."
+}
