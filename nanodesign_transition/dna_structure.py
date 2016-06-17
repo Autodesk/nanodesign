@@ -184,6 +184,9 @@ class DnaStructure(object):
         domain_id = 0
         self.domain_list = []
 
+        # Set flag for merging domains.
+        merge_domains = True
+
         # Iterate over the scaffold and staple strands of a structure. 
         for strand in self.strands:
             self._logger.debug("")
@@ -220,8 +223,7 @@ class DnaStructure(object):
 
                 # Check for a single->double or double->single strand transition.
                 if curr_across_sign != across_sign:
-                    self._add_domain(domain_id, strand, domain_bases, "sign change")
-                    domain_id += 1
+                    domain_id = self._add_domain(domain_id, strand, domain_bases, merge_domains, "sign change")
                     domain_bases = []
                     curr_across_sign = across_sign
 
@@ -232,8 +234,7 @@ class DnaStructure(object):
                     if base.h == last_base.h:
                         domain_bases.append(base)
                         add_curr_base = False
-                    self._add_domain(domain_id, strand, domain_bases, "base crossover")
-                    domain_id += 1
+                    domain_id = self._add_domain(domain_id, strand, domain_bases, merge_domains, "base crossover")
                     domain_bases = []
 
                 # Check the base paired to this base for: crossover or termination.
@@ -242,8 +243,7 @@ class DnaStructure(object):
                     if self._check_base_crossover(abase):
                         domain_bases.append(base)
                         add_curr_base = False
-                        self._add_domain(domain_id, strand, domain_bases, "abase crossover")
-                        domain_id += 1
+                        domain_id = self._add_domain(domain_id, strand, domain_bases, merge_domains, "abase crossover")
                         domain_bases = []
                     # If a strand terminates make sure the current base is in the same strand. 
                     elif (abase.down == -1) or (abase.up == -1):
@@ -256,8 +256,7 @@ class DnaStructure(object):
                         else:
                             domain_bases.append(base)
                             add_curr_base = False
-                        self._add_domain(domain_id, strand, domain_bases, "abase start/end")
-                        domain_id += 1
+                        domain_id = self._add_domain(domain_id, strand, domain_bases, merge_domains, "abase start/end")
                         domain_bases = []
                 #__if curr_across_sign != across_sign
 
@@ -268,8 +267,7 @@ class DnaStructure(object):
 
             # Add a domain for any remaining bases.
             if len(domain_bases) != 0:
-                self._add_domain(domain_id, strand, domain_bases, "remaining")
-                domain_id += 1
+                domain_id = self._add_domain(domain_id, strand, domain_bases, merge_domains, "remaining")
         #__for strand in self.strands__
 
         self._logger.info("Number of domains computed: %d " % len(self.domain_list))
@@ -293,7 +291,7 @@ class DnaStructure(object):
                 conn_strand = across_base.strand
             domain.connected_strand = conn_strand
             domain.connected_domain = conn_dom
-        #__for domain in self.domain_list
+        #__for domain in domain_list
 
     def _check_base_crossover(self, base):
         """ Check if there is a crossover to a different helix at the given base.
@@ -329,6 +327,11 @@ class DnaStructure(object):
         num_failures = 0
         for strand in self.strands:
             self._logger.debug("-------------------- strand %d -------------------- " % strand.id)
+            self._logger.debug("Number of bases %d " % len(strand.tour))
+            bases = ""
+            for base in strand.tour:
+                bases += " " + str(base)
+            self._logger.debug("Bases: %s " % bases) 
             domain_list = strand.domain_list
             self._logger.debug("Number of domains: %d" % len(domain_list))
 
@@ -339,6 +342,7 @@ class DnaStructure(object):
                 helix_list = [ helix ]
                 self._logger.debug("Domain %d: number of bases: %d" % (domain.id, len(domain.base_list)))
                 for base in domain.base_list:
+                    self._logger.debug("       base id %d  h %d  p %d" % (base.id, base.h, base.p))
                     if base.h != helix:
                         helix = base.h
                         helix_list.append(helix)
@@ -357,13 +361,15 @@ class DnaStructure(object):
 
             # Check that the combined domain bases are equal to the bases in the strand. 
             match_failed = False
-            for sbid,dbid in zip(strand.tour,domain_base_ids):
-                if sbid != dbid: 
-                    match_failed = True
-                    self._logger.error("The domain base %d does not match the strand base %d." % (dbid, sbid))
-                    num_failures += 1
-                    break
-            #__for sbid,dbid in zip(strand.tour,domain_base_ids)
+            if (not strand.is_circular) :
+                for sbid,dbid in zip(strand.tour,domain_base_ids):
+                    if sbid != dbid: 
+                        match_failed = True
+                        self._logger.error("The domain base %d does not match the strand base %d." % (dbid, sbid))
+                        num_failures += 1
+                        break
+                #__for sbid,dbid in zip(strand.tour,domain_base_ids)
+            #__if (not strand.is_circular)
 
             # For a failed match check if domain bases are out of order.
             if match_failed:
@@ -386,31 +392,69 @@ class DnaStructure(object):
         else:
             self._logger.error("Domain consistency check: %d domains failed." % num_failures)
 
-    def _add_domain(self, id, strand, base_list, msg=""):
+    def _add_domain(self, id, strand, base_list, merge_domains, msg=""):
         """ Create a DnaDomain object from a list of bases. 
 
             The new domain object is added to self.domain_list and to the list of domains for the helix and 
             strand it is contained in.
 
+            If a strand is circular then the first domain will be created from the bases at the start of the strand. 
+            The remaining bases at the end of the strand will be merged into the initial domain. 
+
             Arguments:
                 id (int): The domain ID; starts from 0.
                 strand (DnaStrand): The strand the domain is in.
                 base_list (list[DnaBase]): The list of bases in the domain.
+                merge_domains (bool): If True then for circular strands merge the bases from the start of the strand with
+                    those from the end. 
                 msg (string): An optional string used for debugging. 
 
+            Returns:
+                id (int): The next domain ID. If a domain is added then id is incremented by one and returned.
+
         """ 
-        start_pos = base_list[0].p
-        end_pos = base_list[-1].p
-        self._logger.debug("++++ add domain %d   %s" % (id,msg))
-        self._logger.debug("     vh:  %4d  -  %4d" % (base_list[0].h, base_list[-1].h))
-        self._logger.debug("     pos: %4d  -  %4d" % (base_list[0].p, base_list[-1].p))
-        base = base_list[0]
-        helix = self.structure_helices_map[base.h]
-        domain = nd.Domain(id, helix, strand, base_list)
-        strand.domain_list.append(domain)
-        for base in base_list:
-            base.domain = domain.id
-        self.domain_list.append(domain)
+        # Check if the bases should be merged into the strand's first domain.
+        merge_domain = False
+        if merge_domains and strand.is_circular and len(strand.domain_list):
+            first_dom = strand.domain_list[0]
+            first_sbase = first_dom.base_list[0]
+            first_ebase = first_dom.base_list[-1]
+            sbase = base_list[0]
+            ebase = base_list[-1]
+
+            if (first_sbase.h == ebase.h) and  (abs(first_sbase.p-ebase.p) == 1):
+                #self._logger.setLevel(logging.DEBUG)
+                self._logger.debug("---------- strand %d: merging domains ---------- " % strand.id)
+                self._logger.debug(">>> first domain id %d:  h %d  sb %d  eb %d" % (first_dom.id, first_sbase.h, first_sbase.p, first_ebase.p))
+                self._logger.debug(">>> base list:           sbase %d  ebase %d" % (sbase.p, ebase.p))
+                self._logger.setLevel(logging.INFO)
+                merge_domain = True
+                merged_base_list = []
+                for base in base_list:
+                    base.domain = first_dom.id
+                    merged_base_list.append(base)
+                for base in first_dom.base_list:
+                    merged_base_list.append(base)
+                first_dom.base_list = merged_base_list
+        #__if strand.is_circular and len(strand.domain_list):
+
+        # If we haven't merged the bases then create a new domain.
+        if not merge_domain:
+            start_pos = base_list[0].p
+            end_pos = base_list[-1].p
+            self._logger.debug("++++ add domain %d   %s" % (id,msg))
+            self._logger.debug("     vh:  %4d  -  %4d" % (base_list[0].h, base_list[-1].h))
+            self._logger.debug("     pos: %4d  -  %4d" % (base_list[0].p, base_list[-1].p))
+            base = base_list[0]
+            helix = self.structure_helices_map[base.h]
+            domain = nd.Domain(id, helix, strand, base_list)
+            strand.domain_list.append(domain)
+            for base in base_list:
+                base.domain = domain.id
+            self.domain_list.append(domain)
+            id = id + 1
+        #__if not merge_domain
+        return id
 
     def _compute_strand_helix_references(self):
         """ Set the virtual helices referenced by each strand. """
