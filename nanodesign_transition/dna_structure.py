@@ -401,6 +401,45 @@ class DnaStructure(object):
             If a strand is circular then the first domain will be created from the bases at the start of the strand. 
             The remaining bases at the end of the strand will be merged into the initial domain. 
 
+            The merging algorithm works as follows:
+
+                first_dom = the first domain created for the strand.
+                first_sbase = the first base in the first domains base list.
+                base_list = list of bases for a new domain 
+                ebase = the last base in base_list
+
+                      helix 1     .------------se-------------------------.
+                                  |                                       |
+                      helix 2     .---------------------------------------.
+
+
+                                          first_sbase
+                                               |
+                      1st domain [.------------s]                            
+
+                      new domain                [e-------------------------.]
+                                                 |
+                                                 ebase
+
+                if first_base and ebase are in the same helix and they are a sigle base apart then add the new domains
+                base list to the first domains:
+
+                      1st domain  [.------------se-------------------------.]
+
+
+            TODO (DaveP) We need to check for the edge case where a strand crosses over to another helix
+                         a single base away from the strand start. 
+
+                                    .----------.
+                                    |          |
+                                    .---..-----.               s = strand start
+                                        ||                     . = crossover 
+                                  .-----.s---------.
+                                  |                |
+                                  .----------------.
+             
+             
+
             Arguments:
                 id (int): The domain ID; starts from 0.
                 strand (DnaStrand): The strand the domain is in.
