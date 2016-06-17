@@ -1,0 +1,38 @@
+service-name: computeworker
+# NOTE this build just build docker images. Overload 'environment' to be the git-sha. This is done in the Jenkins project.
+environment: ""
+
+# used to avoid container collisions when testing in the same Docker Host
+# This project does (yet) have test targets
+test-docker-project: ""
+
+
+# Set to true if the 'verify-url-full' end point is to be checked after update stack. 
+verify-enabled: false
+
+build-compose-file: docker-compose.yml
+# No test targets yet
+jenkins-test-compose-file: ""
+
+version-file: ./package.json
+
+# Temp variables and directory for scratch outputs
+tmp-cfn-status: CloudStackStatus.txt
+tmp-dir: node_modules/jenkins-docker/compose-tmp
+tmp-env: compose-env.txt
+tmp-images: images.txt
+
+build-ver-file: VERSION
+build-manifest-file: build-manifest.txt
+
+# set false to only push a image tagged for the envrionment
+tag-latest: true
+lib-prefix: quay.io/bionano/
+lib-push-config: --config /var/jenkins_home/.docker
+
+# This project doesn't produce npm consumable outputs
+npm-package-push: false
+npm-package-name: ""
+npm-package-s3-folder: ""
+
+fake-jenkins: false # Don't change this; it's only here to be overridden by place holder Jenkins configuration
