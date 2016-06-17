@@ -414,7 +414,7 @@ class DnaStructure(object):
 
         """ 
         # Check if the bases should be merged into the strand's first domain.
-        merge_domain = False
+        domain_was_merged = False
         if merge_domains and strand.is_circular and len(strand.domain_list):
             first_dom = strand.domain_list[0]
             first_sbase = first_dom.base_list[0]
@@ -428,7 +428,7 @@ class DnaStructure(object):
                 self._logger.debug(">>> first domain id %d:  h %d  sb %d  eb %d" % (first_dom.id, first_sbase.h, first_sbase.p, first_ebase.p))
                 self._logger.debug(">>> base list:           sbase %d  ebase %d" % (sbase.p, ebase.p))
                 self._logger.setLevel(logging.INFO)
-                merge_domain = True
+                domain_was_merged = True 
                 merged_base_list = []
                 for base in base_list:
                     base.domain = first_dom.id
@@ -439,7 +439,7 @@ class DnaStructure(object):
         #__if strand.is_circular and len(strand.domain_list):
 
         # If we haven't merged the bases then create a new domain.
-        if not merge_domain:
+        if not domain_was_merged:
             start_pos = base_list[0].p
             end_pos = base_list[-1].p
             self._logger.debug("++++ add domain %d   %s" % (id,msg))
@@ -453,7 +453,7 @@ class DnaStructure(object):
                 base.domain = domain.id
             self.domain_list.append(domain)
             id = id + 1
-        #__if not merge_domain
+        #__if not domain_was_merged:
         return id
 
     def _compute_strand_helix_references(self):
