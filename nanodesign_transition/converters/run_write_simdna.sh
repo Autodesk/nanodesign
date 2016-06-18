@@ -1,10 +1,10 @@
-data=/Users/parkerda/nanodesign/test-data
+data=../../tests/samples
 
-fn=fourhelix
 fn=slottedcross
 fn=Rothemund-rect
+fn=fourhelix
 
-out=/Users/parkerda/software/SimDNA/vis
+outfile=./results/${fn}_nd.pairs
 
-converter.py --infile=${data}/${fn}.json --informat="cadnano"  --outfile=${out}/${fn}_nd.pairs  --outformat="simdna"
+converter.py --infile=${data}/${fn}.json --informat="cadnano"  --outfile=${outfile}  --outformat="simdna"
 
