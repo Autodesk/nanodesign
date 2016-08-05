@@ -121,7 +121,7 @@ class DnaStructure(object):
         """ Compute auxiallry data. """
         for strand in self.strands:
             strand.dna_structure = self
-        self._set_strand_helix_references()
+        self.set_strand_helix_references()
         self._set_helix_bases()
         self._compute_strand_helix_references()
         self._compute_domains()
@@ -159,7 +159,7 @@ class DnaStructure(object):
             helix.staple_base_list = staple_base_list
             helix.scaffold_base_list = scaffold_base_list
 
-    def _set_strand_helix_references(self):
+    def set_strand_helix_references(self):
         """ Set the helices referenced by each strand. """
         for strand in self.strands:
             for id in strand.tour:
@@ -549,6 +549,7 @@ class DnaStructure(object):
                 base_info['down'] = base.down
                 base_info['across'] = base.across
                 base_info['sequence'] = base.seq
+                base_info['strand'] = base.strand
                 base_list.append(base_info)
             #__for base in self.base_connectivity
 
@@ -586,10 +587,10 @@ class DnaStructure(object):
             outfile.write("# number of bases %d\n" % len(self.base_connectivity))
             outfile.write("# number of strands %d\n" % len(self.strands))
             outfile.write("# number of domains %d\n" % len(self.domain_list))
-            outfile.write("# bases: id   helix  pos   up   down  across  seq   scaf\n")
+            outfile.write("# bases: id   helix  pos   up   down  across  seq   strand   scaf\n")
             for base in self.base_connectivity:
-                outfile.write("%4d %5d %5d %5d %5d %5d  %5s  %5d\n" % \
-                    (base.id, base.h, base.p, base.up, base.down, base.across, base.seq, base.is_scaf))
+                outfile.write("%4d %5d %5d %5d %5d %5d  %5s  %5d  %5d\n" % \
+                    (base.id, base.h, base.p, base.up, base.down, base.across, base.seq, base.strand, base.is_scaf))
             outfile.write("# strands: id  scaf  numBases:[baseIDs]  numDomains:[domainIDs]\n")
             for strand in self.strands:
                 outfile.write("strand %4d %2d \n" % (strand.id, strand.is_scaffold))
@@ -618,6 +619,7 @@ class DnaStructure(object):
                 base_info['down'] = base.down
                 base_info['across'] = base.across
                 base_info['sequence'] = base.seq 
+                base_info['strand'] = base.strand 
                 base_list.append(base_info)
             #__for base in self.base_connectivity
 
@@ -629,10 +631,10 @@ class DnaStructure(object):
         file_name = file_name.replace("json", "txt")
         self._logger.info("Writing DNA base connectivity in plain text format to file %s." % file_name)
         with open(file_name, 'w') as outfile:
-            outfile.write("# id   helix  pos   up   down  across  seq   scaf\n")
+            outfile.write("# id   helix  pos   up   down  across  seq   strand   scaf\n")
             for base in self.base_connectivity:
-                outfile.write("%4d %5d %5d %5d %5d %5d  %5s  %5d\n" % \
-                    (base.id, base.h, base.p, base.up, base.down, base.across, base.seq, base.is_scaf))
+                outfile.write("%4d %5d %5d %5d %5d %5d  %5s  %5d   %5d\n" % \
+                    (base.id, base.h, base.p, base.up, base.down, base.across, base.seq, base.strand, base.is_scaf))
         #__with open(file_name, 'w') as outfile
 
 #__class DnaStructure(object):

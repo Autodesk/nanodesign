@@ -34,7 +34,7 @@ try:
     from nanodesign_transition.strand import DnaStrand
     from nanodesign_transition.dna_structure import DnaStructure,DnaStructureHelix
     from nanodesign_transition.lattice import Lattice,SquareLattice,HoneycombLattice
-    from nanodesign_transition.parameters import DnaPolarity
+    from nanodesign_transition.parameters import DnaPolarity,DnaParameters
 
     sys.path = sys.path[:-1]
 except ImportError as i:
@@ -73,6 +73,11 @@ class CadnanoConvertDesign(object):
         self._timer = _Timer()
         self.dna_structure = None 
         self.staple_colors = []
+        self.r_strand = DnaParameters.helix_distance 
+        self.r_helix = DnaParameters.helix_radius 
+        self.dist_bp = DnaParameters.base_pair_rise
+        self.ang_bp = DnaParameters.base_pair_twist_angle 
+        self.ang_minor = DnaParameters.minor_groove_angle
 
     def _set_logging_level(self,level):
         """Set logging level."""
@@ -94,17 +99,22 @@ class CadnanoConvertDesign(object):
     def _add_staple_color(self,staple_color, vhelix_num):
         self.staple_colors.append(self.StapleColor(staple_color,vhelix_num))
 
-    def create_structure(self,design):
+    def create_structure(self,design, modify=False, helix_distance=DnaParameters.helix_distance):
         """ Create a DNA structure from a caDNAno DNA origami design.
 
             Arguments:
                 design (CadnanoDesign): A caDNAno DNA origami design.
+                modify (bool): If true then modify the caDNAno DNA origami design for inserts and deletes.
+                helix_distance (float): The distance between adjacent helices.
 
             Returns:
                 DnaStructure: The DNA structure object containing topological and geometric information for the
                               caDNAno DNA origami design model.
         """
 
+        self.r_strand = helix_distance 
+        self._logger.info("Distance between adjacent helices %g " % helix_distance)
+        self._logger.info("Helix radius %g " % self.r_helix)
         self._timer.start()
         structure_topology, dnode, triad, id_nt_0, helices = self._create_structure_topology_and_geometry(design)
         num_bases = structure_topology.shape[0]
@@ -151,19 +161,18 @@ class CadnanoConvertDesign(object):
                     (i+1, base.id, base.up, base.down, base.across, base.h, base.p, base.is_scaf) )
         #__if print_topology
 
+        # Remove deleted bases
+        if (modify):
+            dna_topology, dnode, triad, id_nt = self._delete_bases(dna_topology, dnode, triad, id_nt)
+
+        # Add inserted bases
+        if (modify):
+            dna_topology, dnode, triad, id_nt = self._insert_bases(dna_topology, dnode, triad, id_nt)
+
         # Create a DnaStructure object to store the base topology and geometry information.
         name = "dna structure"
         self.dna_structure = DnaStructure(name, dna_topology, helices, dnode, triad, id_nt)
         self.dna_structure.set_lattice_type(design.lattice_type)
-
-        # Remove deleted bases
-        delete_and_insert = False
-        if (delete_and_insert):
-            dna_topology, dnode, triad, id_nt = self._delete_bases(dna_topology, dnode, triad, id_nt)
-
-        # Add inserted bases
-        if (delete_and_insert):
-            dna_topology, dnode, triad, id_nt = self._insert_bases(dna_topology, dnode, triad, id_nt)
 
         # Generate strands 
         dna_topology,strands = self._build_strands(dna_topology)
@@ -919,20 +928,20 @@ class CadnanoConvertDesign(object):
         return helix_topology, dnode, triad, id_nt_0, dnode_0, triad_0
 
     def _generate_coordinates(self, lattice_type, row, col, strand_num, num_lattice):
-        """Generate the coordinates for base pair positions along a helix and atom
-           positions along the dna helix.
+        """ Generate the coordinates for base pair positions along a helix and atom
+            positions along the dna helix.
         """
         #self._logger.debug("-------------------- generate_coordinates --------------------")
         #self._logger.debug("num_lattice %d" % num_lattice)
-        r_strand = 1.25      # half the distance between the axes of two neighboring DNA helices
-        r_helix = 1.0        # radius of DNA helices (nm)
-        dist_bp = 0.34       # rise between two neighboring base-pairs (nm)
-        ang_bp = 360/10.5    # twisting angle between two neighboring base-pairs (degree)
-        ang_minor = 120      # angle of the minor groove (degree)
+        r_strand = self.r_strand    # half the distance between the axes of two neighboring DNA helices
+        r_helix = self.r_helix      # radius of DNA helices (nm)
+        dist_bp = self.dist_bp      # rise between two neighboring base-pairs (nm)
+        ang_bp = self.ang_bp        # twisting angle between two neighboring base-pairs (degree)
+        ang_minor = self.ang_minor  # angle of the minor groove (degree)
 
         # positions of the scaffold nucleotide and staple nucleotide
         # in the local reference frame.
-        scaf_local = r_helix * np.array([cos(_deg2rad(ang_minor/2)),     sin(_deg2rad(ang_minor/2)),     0.0]).transpose()
+        scaf_local = r_helix * np.array([cos(_deg2rad(180-ang_minor/2)), sin(_deg2rad(180-ang_minor/2)), 0.0]).transpose()
         stap_local = r_helix * np.array([cos(_deg2rad(180+ang_minor/2)), sin(_deg2rad(180+ang_minor/2)), 0.0]).transpose()
 
         if (lattice_type == CadnanoLatticeType.honeycomb):
@@ -1070,7 +1079,7 @@ class CadnanoConvertDesign(object):
                 break
 
             init_baseID = curr_base.id
-            strand = DnaStrand(n_strand)
+            strand = DnaStrand(n_strand,self.dna_structure)
 
             # Find the first base in the current strand
             while ((curr_base.up >= 0) and (curr_base.up != init_baseID)):
@@ -1080,7 +1089,7 @@ class CadnanoConvertDesign(object):
                     return None,None
             #_while 
 
-            strand = DnaStrand(n_strand)
+            strand = DnaStrand(n_strand,self.dna_structure)
             strands.append(strand)
 
             if (curr_base.up < 0):                     # currBase is at the 5'-end of the strand
@@ -1145,8 +1154,8 @@ class CadnanoConvertDesign(object):
                 modified_structure (bool): If true then the structure has been modified for insertions and deletions. 
                 seq_name (string): The name of the sequence as defined in the dna_sequence_data dictionary. 
         """
-        self._logger.setLevel(logging.DEBUG)
-        #self._logger.setLevel(logging.INFO)
+        #self._logger.setLevel(logging.DEBUG)
+        self._logger.setLevel(logging.INFO)
 
         sequence = dna_sequence_data.get(seq_name,None)
         seq_index = 0
