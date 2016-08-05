@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 """ 
-This module is used to read PDB format files. Currently only ATOM records are read.
+This module is used to read PDB format files used internally to create atomic models of DNA nanodesigns. 
+
+The PDB files are used as templates to create atomic models for nanodesigns. Only ATOM records are read.
 """
 import logging
 import sys

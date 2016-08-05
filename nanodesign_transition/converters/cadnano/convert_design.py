@@ -73,11 +73,11 @@ class CadnanoConvertDesign(object):
         self._timer = _Timer()
         self.dna_structure = None 
         self.staple_colors = []
-        self.r_strand = DnaParameters.helix_distance 
-        self.r_helix = DnaParameters.helix_radius 
-        self.dist_bp = DnaParameters.base_pair_rise
-        self.ang_bp = DnaParameters.base_pair_twist_angle 
-        self.ang_minor = DnaParameters.minor_groove_angle
+        self.r_strand = DnaParameters.helix_distance       # half the distance between the axes of two neighboring DNA helices
+        self.r_helix = DnaParameters.helix_radius          # radius of DNA helices (nm)
+        self.dist_bp = DnaParameters.base_pair_rise        # rise between two neighboring base-pairs (nm)
+        self.ang_bp = DnaParameters.base_pair_twist_angle  # twisting angle between two neighboring base-pairs (degrees)
+        self.ang_minor = DnaParameters.minor_groove_angle  # angle of the minor groove (degrees)
 
     def _set_logging_level(self,level):
         """Set logging level."""

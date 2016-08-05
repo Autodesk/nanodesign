@@ -10,7 +10,7 @@ augmented with the rotation and translation data of each base along a strand.
 A Molecule object is created for each AtomicStructureStrand object. It contains a list of
 atoms for a strand.
 
-Atomic models are generated using template structures containing three paired residues for A-T, G-C, C-G anf T-A.
+Atomic models are generated using template structures containing three paired residues for A-T, G-C, C-G and T-A.
 """
 from collections import OrderedDict
 import logging
@@ -284,7 +284,7 @@ class AtomicStructure(object):
         return self.molecules 
 
     def _generate_atoms(self, strands):
-        """ Generat atomic structures from the dna strands. 
+        """ Generate atomic structures from the dna strands. 
 
             Arguments:
                 strands (List[AtomicStructureStrand]): The list of atomic stucture strands to create atoms for.
@@ -876,7 +876,7 @@ class AtomicStructure(object):
         return self.molecules 
 
     def _generate_atoms_ss(self, strands):
-        """ Generat atomic structures from the dna strands. 
+        """ Generate atomic structures from the dna strands. 
 
             Arguments:
                 strands (List[AtomicStructureStrand]): The list of atomic stucture strands to create atoms for.
@@ -909,13 +909,14 @@ class AtomicStructure(object):
         """ Create the atoms for the list of bases in a strand.
 
             Arguments:
-                strand (AtomicStructureStrand): The input strand to create and atomistic structure from. 
-                forward_struct: 
-                reverse_struct: 
-                first_atomID_in:
+                strand (AtomicStructureStrand): The input strand to create an atomistic structure from. 
+                forward_struct (Dict{String:List[Atom]}: A dictionary mapping a base name to a forward structure.
+                reverse_struct (Dict{String:List[Atom]}: A dictionary mapping a base name to a reverse structure.
+                first_atomID_in (int): The current atom ID.
 
             Returns: 
                 molecule (Molecule):  A Molecule object containing the strand atoms.
+                first_atomID_out (int): The current atom ID of the last atom created for the input the strand. 
 
             A Molecule object is created to store the atoms for the strand structure. 
         """

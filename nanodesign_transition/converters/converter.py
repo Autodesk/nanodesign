@@ -1,6 +1,13 @@
 #!/usr/bin/env python
 """ 
 This module is used to convert DNA design files into other file formats.
+
+An input caDNAno design file is conveted into a DnaStructure object containing information about the
+design (e.g. lattice type, virtual helix definitions) and information derived from that design 
+(e.g. strands, domains). caDNAno design files may contain deleted/inserted bases. By default the 
+DnaStructure is not created with deleted/inserted bases. The DnaStructure is created with 
+deleted/inserted bases by specifying the --modify command-line argument.
+
 """
 import os
 import sys
@@ -59,18 +66,18 @@ class Converter(object):
 def parse_args():
     """ Parse command-line arguments."""
     parser = argparse.ArgumentParser()
-    parser.add_argument("-hd",  "--helixdist",  help="distance between DNA helices.")
+    parser.add_argument("-hd",  "--helixdist",  help="distance between DNA helices")
     parser.add_argument("-if",  "--informat",   help="input file format: cadnano, viewer")
     parser.add_argument("-i",   "--infile",     help="input file")
     parser.add_argument("-is",  "--inseqfile",  help="input sequence file")
     parser.add_argument("-isn", "--inseqname",  help="input sequence name")
-    parser.add_argument("-m",   "--modify",     help="modify cadnano design for inserts and deletes")
+    parser.add_argument("-m",   "--modify",     help="create DNA structure using the deleted/inserted bases given in a cadnano design file")
     parser.add_argument("-o",   "--outfile",    help="output file")
     parser.add_argument("-of",  "--outformat",  help="output file format")
     return parser.parse_args()
 
 def read_cadnano_file(converter, file_name, seq_file_name, seq_name):
-    """ Read in a caDNAno file."""
+    """ Read in a caDNAno file. """
     cadnano_reader = CadnanoReader()
     converter.cadnano_design = cadnano_reader.read_json(file_name)
     converter.cadnano_convert_design = CadnanoConvertDesign()
@@ -177,7 +184,7 @@ def main():
         converter.informat = args.informat
 
     if args.modify:
-        logger.info("Modify caDNAno design for inserts and deletes.")
+        logger.info("Create a DNA structure using deleted/inserted bases from the caDNAno design file.")
         converter.modify = (args.modify.lower() == "true")
 
     if args.helixdist:
