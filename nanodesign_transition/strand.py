@@ -27,7 +27,7 @@ class DnaStrand(object):
         tour (List[int]): The list of base IDs making up the strand. 
     """
 
-    def __init__(self, id):
+    def __init__(self, id, dna_structure):
         self.id = id
         self.is_scaffold = False
         self.is_circular = False
@@ -35,7 +35,7 @@ class DnaStrand(object):
         self.color = [1.0,1.0,1.0]
         self.helix_list = dict()
         self.base_id_list = dict()
-        self.dna_structure = None
+        self.dna_structure = dna_structure
         self.domain_list = []
         self.insert_seq = []
 
