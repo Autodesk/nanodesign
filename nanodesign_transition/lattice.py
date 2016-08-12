@@ -27,7 +27,7 @@ class Lattice():
     """ This is the lattice base class.
     """
     __metaclass__ = ABCMeta
-    radius = DnaParameters.strand_radius
+    radius = DnaParameters.helix_distance
 
     @abstractmethod
     def get_neighbors(row,col):

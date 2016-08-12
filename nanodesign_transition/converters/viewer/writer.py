@@ -101,11 +101,15 @@ class ViewerWriter(object):
 
     def _get_helices_info(self, dna_structure):
         """ Get JSON serialized data for helix objects. """
+        self._logger.setLevel(logging.INFO)
+        #self._logger.setLevel(logging.DEBUG)
+        self._logger.debug("==================== get helix information ===================")
         helices_info = []
         # Need helices sorted by ID for indexing into helix arryay.
         helix_list = sorted(list(dna_structure.structure_helices_map.values()), key=lambda x: x.id)
 
         for helix in helix_list: 
+            self._logger.debug("---------- helix  id %d  num %d ----------" % (helix.id,helix.lattice_num))
             point1 = helix.end_coordinates[0]
             point2 = helix.end_coordinates[1]
             length = np.linalg.norm(point1-point2)
@@ -115,9 +119,11 @@ class ViewerWriter(object):
             possible_staple_crossovers = helix.possible_staple_crossovers
             possible_scaffold_crossovers = helix.possible_scaffold_crossovers
 
+            #sys.exit(0)
+
             info = { 'id'                 : helix.id,
                      'length'             : length,
-                     'strand_radius'      : DnaParameters.strand_radius,
+                     'strand_radius'      : DnaParameters.helix_distance,
                      'base_pair_rise'     : DnaParameters.base_pair_rise,
                      'start_position'     : list(point1),
                      'orientation'        : [frame[0,2], frame[1,2], frame[2,2]],
@@ -138,9 +144,39 @@ class ViewerWriter(object):
     def _get_strand_info(self, dna_structure):
         """ Get JSON serialized data for strands objetcs. 
         """
+        #self._logger.setLevel(logging.DEBUG)
+        self._logger.debug("==================== get strand information ===================")
         strand_info_list = []
         for strand in dna_structure.strands:
+            #if not strand.is_circular:
+            #    continue
+            self._logger.debug("---------- strand %d ----------" % strand.id) 
+            self._logger.debug("Is scaffold %s" % str(strand.is_scaffold))
+            self._logger.debug("Is circular %s" % str(strand.is_circular))
+            strand_start_base = self.dna_structure.base_connectivity[strand.tour[0]-1]
+            strand_end_base = self.dna_structure.base_connectivity[strand.tour[-1]-1]
+            self._logger.debug("Start helix %d  pos %d " % (strand_start_base.h, strand_start_base.p))
+            self._logger.debug("End helix %d  pos %d " % (strand_end_base.h, strand_end_base.p))
+            base = self.dna_structure.base_connectivity[strand.tour[1]-1]
+            self._logger.debug("Next helix %d  pos %d " % (base.h, base.p))
+
+            self._logger.debug("Domains:")
+            for domain in strand.domain_list:
+                point1,point2 = domain.get_end_points()
+                start_base = domain.base_list[0]
+                end_base = domain.base_list[-1]
+                self._logger.debug("id %d  vhelix %d  start %d  end %d" % (domain.id, start_base.h, start_base.p, 
+                    end_base.p))
+            #__for domain in strand.domain_list
+
             domain_ids = [domain.id for domain in strand.domain_list]
+
+            # We are now modifying circular strands to eliminate crossovers
+            # at the first strand base; we should not need to modify
+            # domain lists anymore. 
+            #if strand.is_circular:
+            #    domain_ids = self._modify_domain_ids(strand, domain_ids)
+
             base_coords = strand.get_base_coords()
             base_info = []
             for i in xrange(0,len(strand.tour)):
@@ -160,13 +196,70 @@ class ViewerWriter(object):
                    }
 
             strand_info_list.append(info)
+        self._logger.setLevel(logging.INFO)
+
         return strand_info_list
+
+    def _modify_domain_ids(self, strand, domain_ids):
+        strand_start_base = self.dna_structure.base_connectivity[strand.tour[0]-1]
+        circular_domains = {}
+        start_domains = {}
+        start_end_ids = set()
+        for domain in strand.domain_list:
+            start_base = domain.base_list[0]
+            if start_base.h == strand_start_base.h:
+                start_domains[start_base.p] = domain
+                circular_domains[start_base.p] = domain
+                start_end_ids.add(domain.id)
+            else:
+                break
+        #__for domain in strand.domain_list
+
+        end_domains = {}
+        for domain in reversed(strand.domain_list):
+            start_base = domain.base_list[0]
+            if start_base.h == strand_start_base.h:
+                end_domains[start_base.p] = domain
+                start_end_ids.add(domain.id)
+                circular_domains[start_base.p] = domain
+            else:
+                break
+        #__for domain in reversed(strand.domain_list)
+
+        if (not start_domains) or (not end_domains):
+            return domain_ids
+
+        self._logger.debug("**** Modify domain IDs list ****") 
+        self._logger.debug("Add start domains to end.")
+        domain = start_domains.values()[0]
+        if domain.base_list[0].p > domain.base_list[-1].p:
+            sorted_domains = sorted(circular_domains.keys(),reverse=True)
+        else:
+            sorted_domains = sorted(circular_domains.keys())
+            self._logger.debug("Sorted domains:") 
+            # Create domain ID list.
+            domain_ids = []
+            for domain in strand.domain_list:
+                if domain.id not in start_end_ids: 
+                    domain_ids.append(domain.id)
+            #__for domain in strand.domain_list
+
+            for p in sorted_domains:
+                domain = circular_domains[p]
+                start_base = domain.base_list[0]
+                end_base = domain.base_list[-1]
+                self._logger.debug("id %d  vhelix %d  start %d  end %d" % (domain.id, start_base.h, start_base.p, 
+                            end_base.p))
+                domain_ids.append(domain.id)
+            #__for p in sorted_domains
+            self._logger.debug("Domain IDs %s " % str(domain_ids))
+            return domain_ids 
 
     def _get_helix_conn_info(self, helix):
         """ Get the information to write for helix connectivity.
         """
         #self._logger.setLevel(logging.DEBUG)
-        self._logger.debug("==================== get conn information for helix num %d ===================" % helix.lattice_num) 
+        self._logger.debug("==================== get conn info for helix num %d ===================" % helix.lattice_num) 
         dna_structure = self.dna_structure
         lattice = dna_structure.lattice
         num_neigh = lattice.number_of_neighbors
@@ -196,12 +289,13 @@ class ViewerWriter(object):
                     num_scaffold += 1 
                 else:
                     num_staple += 1 
-            self._logger.debug(">>> Connected helix: num: %d  row: %d  col:%d " % (to_helix.lattice_num, to_helix.lattice_row,
+            self._logger.debug("Connected helix: num: %d  row: %d  col:%d " % (to_helix.lattice_num, to_helix.lattice_row,
                 to_helix.lattice_col)) 
             self._logger.debug("    Nindex: %d " % nindex) 
             self._logger.debug("    Direction: (%g %g %g) " % (dir[0], dir[1], dir[2])) 
 
             crossover_info = self._get_crossover_info(connection)
+            self._logger.debug("    crossover_info %s  " % str(crossover_info))
 
             conn_info = { 'helix_id'   : to_helix.id,
                           'helix_num'  : to_helix.lattice_num,
@@ -276,8 +370,10 @@ class ViewerWriter(object):
                     strand2_id = crossover2.strand.id
                     strand2_index = crossover2.strand.get_base_index(base2)
                     self._logger.debug("        n: %d  pos1: %d  pos2: %d " % (n, pos1, pos2))
+                    self._logger.debug("               base1 id %d   base2 id %d " % (base1.id, base2.id))
                     self._logger.debug("               strand1: %d  index: %d " % (strand1_id, strand1_index))
                     self._logger.debug("               strand2: %d  index: %d " % (strand2_id, strand2_index))
+                    self._logger.debug("               strand2: %s " % (str(crossover2.strand.tour)))
                     add_pair = True 
                     n += 2
 

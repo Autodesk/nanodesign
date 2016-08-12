@@ -1125,6 +1125,17 @@ class CadnanoConvertDesign(object):
                 is_visited[curr_base.id-1] = True
             #__while((not strand.is_circular 
 
+            # Modify the strand if it is circular and the first base 
+            # crosses over to another helix. This will prevent later
+            # issues, like domains that don't follow the strand tour.
+            if strand.is_circular and len(strand.tour) > 2:
+                first_base = dna_topology[strand.tour[0]-1]
+                second_base = dna_topology[strand.tour[1]-1]
+                if first_base.h != second_base.h:
+                    del(strand.tour[0])
+                    strand.tour.append(first_base.id)
+            #__if strand.is_circular and len(strand.tour) > 2
+
             n_strand += 1
         #__while (True):
         return dna_topology, strands
