@@ -46,7 +46,8 @@ class DnaStructure(object):
             strands_map (Dict[DnaStrand]): The dictionary that maps strand IDs to DnaStrand objects.
     """ 
 
-    def __init__(self, name, base_connectivity, helices, helix_axis_nodes=None, helix_axis_frames=None, id_nt=None):
+    def __init__(self, name, base_connectivity, helices, helix_distance=None, helix_axis_nodes=None, helix_axis_frames=None, 
+                 id_nt=None):
         """ Initialize a DnaStructure object. 
 
             The helix_axis_nodes, helix_axis_frames, id_nt arguments are optional and are not used for any algorithms 
@@ -56,6 +57,7 @@ class DnaStructure(object):
                 name (string): The name of the structure.
                 base_connectivity (List[DnaBase]): The list of DNA bases for the structure. 
                 helices (List[DnaStructureHelix]): The list of helices for the structure. 
+                helix_distance (Float): The distance between adjacent helices.
                 helix_axis_nodes (NumPy 3x3xN ndarray[float]): The coordinates of paired base nodes along a helix axis. 
                 helix_axis_frames (NumPy 3x3xN ndarray[float]): The reference frames of paired bases along a helix axis. 
                 id_nt (NumPy Nx2 ndarray[int]): The base IDs for scaffold bases and their paired staple base.
@@ -64,6 +66,7 @@ class DnaStructure(object):
         self.lattice_type = CadnanoLatticeType.none
         self.lattice = None
         self.parameters = DnaParameters()
+        self.helix_distance = helix_distance
         self.base_connectivity = base_connectivity
         self.helix_axis_nodes = helix_axis_nodes
         self.helix_axis_frames = helix_axis_frames
@@ -115,7 +118,10 @@ class DnaStructure(object):
 
         """
         self.lattice_type = lattice_type
-        self.lattice = Lattice.create_lattice(lattice_type)
+        if self.helix_distance != None:
+            self.lattice = Lattice.create_lattice(lattice_type, self.helix_distance)
+        else:
+            self.lattice = Lattice.create_lattice(lattice_type, self.parameters.helix_distance)
 
     def compute_aux_data(self):
         """ Compute auxiallry data. """
