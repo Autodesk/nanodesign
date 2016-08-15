@@ -23,11 +23,14 @@ except ImportError:
     print "Cannot locate nanodesign package, it hasn't been installed in main packages, and is not reachable relative to the nanodesign_transition directory."
     raise ImportError
 
-class Lattice():
+class Lattice(object):
     """ This is the lattice base class.
     """
     __metaclass__ = ABCMeta
-    radius = DnaParameters.helix_distance
+
+    # Set the radius using a physical value or one used for visualization.
+    def __init__(self, radius):
+        self.radius = radius
 
     @abstractmethod
     def get_neighbors(row,col):
@@ -45,11 +48,11 @@ class Lattice():
         raise NotImplementedError
 
     @staticmethod
-    def create_lattice(lattice_type):
+    def create_lattice(lattice_type, radius):
         if (lattice_type == CadnanoLatticeType.honeycomb):
-            return HoneycombLattice()
+            return HoneycombLattice(radius)
         elif (lattice_type == CadnanoLatticeType.square):
-            return SquareLattice()
+            return SquareLattice(radius)
         else:
             return None
 
@@ -73,6 +76,8 @@ class SquareLattice(Lattice):
         Attributes: 
             step (int): The number of bases between crossover positions. 
     """
+    def __init(self,radius):
+       Lattice.__init__(self, radius)
     number_of_neighbors = 4
     step = 32
     scaffold_low  = [ [4, 26, 15], [18, 28, 7], [10, 20, 31], [2, 12, 23] ]
@@ -133,6 +138,8 @@ class HoneycombLattice(Lattice):
         Attributes: 
             step (int): The number of bases between cross-over positions. 
     """
+    def __init(self, radius):
+       Lattice.__init__(self, radius)
     number_of_neighbors = 3
     step = 21
     scaffold_low  = [ [1, 11], [8, 18], [4, 15] ]

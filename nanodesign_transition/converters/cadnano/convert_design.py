@@ -73,7 +73,7 @@ class CadnanoConvertDesign(object):
         self._timer = _Timer()
         self.dna_structure = None 
         self.staple_colors = []
-        self.r_strand = DnaParameters.helix_distance / 2.0 # half the distance between the axes of two neighboring DNA helices
+        self.r_strand = None  # half the distance between the axes of two neighboring DNA helices. (set later)
         self.r_helix = DnaParameters.helix_radius          # radius of DNA helices (nm)
         self.dist_bp = DnaParameters.base_pair_rise        # rise between two neighboring base-pairs (nm)
         self.ang_bp = DnaParameters.base_pair_twist_angle  # twisting angle between two neighboring base-pairs (degrees)
@@ -171,7 +171,7 @@ class CadnanoConvertDesign(object):
 
         # Create a DnaStructure object to store the base topology and geometry information.
         name = "dna structure"
-        self.dna_structure = DnaStructure(name, dna_topology, helices, dnode, triad, id_nt)
+        self.dna_structure = DnaStructure(name, dna_topology, helices, helix_distance, dnode, triad, id_nt)
         self.dna_structure.set_lattice_type(design.lattice_type)
 
         # Generate strands 
