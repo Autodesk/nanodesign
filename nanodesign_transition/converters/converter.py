@@ -100,7 +100,7 @@ def read_cadnano_file(converter, file_name, seq_file_name, seq_name):
 
 def write_viewer_file(converter, file_name):
     """ Write a DNA Design viewer file."""
-    viewer_writer = ViewerWriter(converter.dna_structure)
+    viewer_writer = ViewerWriter(converter.dna_structure, converter.helix_distance)
     viewer_writer.write(file_name)
 
 def write_pdb_file(converter, file_name):
@@ -202,8 +202,9 @@ def main():
         logger.error("Unknown output file format given: %s" % args.outformat)
     else:
         logger.info("Output file format: %s" % args.outformat)
+        # Make the helix distance a bit larger to better visualization.
         if args.outformat == ConverterFileFormats.VIEWER:
-            converter.helix_distance = 1.25
+            converter.helix_distance = 2.50
     # read the input file
     converter_read_map[args.informat](converter, args.infile, args.inseqfile, args.inseqname)
 

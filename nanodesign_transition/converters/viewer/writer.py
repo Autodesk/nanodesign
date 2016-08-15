@@ -26,8 +26,9 @@ class ViewerWriter(object):
     """ The ViewerWriter class writes out a DNA Design viewer JSON file. 
     """
 
-    def __init__(self, dna_structure):
+    def __init__(self, dna_structure, helix_distance=DnaParameters.helix_distance):
         self.dna_structure = dna_structure
+        self.helix_distance = helix_distance
         self._logging_level = logging.INFO
         self._setup_logging()
 
@@ -101,7 +102,6 @@ class ViewerWriter(object):
 
     def _get_helices_info(self, dna_structure):
         """ Get JSON serialized data for helix objects. """
-        self._logger.setLevel(logging.INFO)
         #self._logger.setLevel(logging.DEBUG)
         self._logger.debug("==================== get helix information ===================")
         helices_info = []
@@ -119,11 +119,9 @@ class ViewerWriter(object):
             possible_staple_crossovers = helix.possible_staple_crossovers
             possible_scaffold_crossovers = helix.possible_scaffold_crossovers
 
-            #sys.exit(0)
-
             info = { 'id'                 : helix.id,
                      'length'             : length,
-                     'strand_radius'      : DnaParameters.helix_distance,
+                     'helix_distance'     : self.helix_distance,
                      'base_pair_rise'     : DnaParameters.base_pair_rise,
                      'start_position'     : list(point1),
                      'orientation'        : [frame[0,2], frame[1,2], frame[2,2]],
@@ -148,8 +146,6 @@ class ViewerWriter(object):
         self._logger.debug("==================== get strand information ===================")
         strand_info_list = []
         for strand in dna_structure.strands:
-            #if not strand.is_circular:
-            #    continue
             self._logger.debug("---------- strand %d ----------" % strand.id) 
             self._logger.debug("Is scaffold %s" % str(strand.is_scaffold))
             self._logger.debug("Is circular %s" % str(strand.is_circular))
@@ -174,6 +170,8 @@ class ViewerWriter(object):
             # We are now modifying circular strands to eliminate crossovers
             # at the first strand base; we should not need to modify
             # domain lists anymore. 
+            # TODO (Davep) Remove this when we are confidant that modifying
+            # circular strands solves all of the domain ordering issues. 
             #if strand.is_circular:
             #    domain_ids = self._modify_domain_ids(strand, domain_ids)
 
@@ -196,13 +194,18 @@ class ViewerWriter(object):
                    }
 
             strand_info_list.append(info)
-        self._logger.setLevel(logging.INFO)
-
         return strand_info_list
 
     def _modify_domain_ids(self, strand, domain_ids):
+        """ Modify the list of strand domains IDs so that the order of domain bases 
+            follows that of its parent strand.
+            # TODO (Davep) Remove this when we are confidant that modifying
+            # circular strands solves all of the domain ordering issues. 
+        """
         strand_start_base = self.dna_structure.base_connectivity[strand.tour[0]-1]
         circular_domains = {}
+        # Create a list of domains at the start of the strand that are in the
+        # strand's start virtual helix.
         start_domains = {}
         start_end_ids = set()
         for domain in strand.domain_list:
@@ -215,6 +218,8 @@ class ViewerWriter(object):
                 break
         #__for domain in strand.domain_list
 
+        # Create a list of domains at the end of the strand that are in the
+        # strand's start virtual helix.
         end_domains = {}
         for domain in reversed(strand.domain_list):
             start_base = domain.base_list[0]
@@ -229,6 +234,7 @@ class ViewerWriter(object):
         if (not start_domains) or (not end_domains):
             return domain_ids
 
+        # Sort the start and ends domains by virtual helix position.
         self._logger.debug("**** Modify domain IDs list ****") 
         self._logger.debug("Add start domains to end.")
         domain = start_domains.values()[0]
@@ -236,24 +242,24 @@ class ViewerWriter(object):
             sorted_domains = sorted(circular_domains.keys(),reverse=True)
         else:
             sorted_domains = sorted(circular_domains.keys())
-            self._logger.debug("Sorted domains:") 
-            # Create domain ID list.
-            domain_ids = []
-            for domain in strand.domain_list:
-                if domain.id not in start_end_ids: 
-                    domain_ids.append(domain.id)
-            #__for domain in strand.domain_list
-
-            for p in sorted_domains:
-                domain = circular_domains[p]
-                start_base = domain.base_list[0]
-                end_base = domain.base_list[-1]
-                self._logger.debug("id %d  vhelix %d  start %d  end %d" % (domain.id, start_base.h, start_base.p, 
-                            end_base.p))
+        self._logger.debug("Sorted domains:") 
+        # Create domain ID list.
+        domain_ids = []
+        for domain in strand.domain_list:
+            if domain.id not in start_end_ids: 
                 domain_ids.append(domain.id)
-            #__for p in sorted_domains
-            self._logger.debug("Domain IDs %s " % str(domain_ids))
-            return domain_ids 
+        #__for domain in strand.domain_list
+
+        for p in sorted_domains:
+            domain = circular_domains[p]
+            start_base = domain.base_list[0]
+            end_base = domain.base_list[-1]
+            self._logger.debug("id %d  vhelix %d  start %d  end %d" % (domain.id, start_base.h, start_base.p, 
+                            end_base.p))
+            domain_ids.append(domain.id)
+        #__for p in sorted_domains
+        self._logger.debug("Domain IDs %s " % str(domain_ids))
+        return domain_ids 
 
     def _get_helix_conn_info(self, helix):
         """ Get the information to write for helix connectivity.

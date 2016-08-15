@@ -73,7 +73,7 @@ class CadnanoConvertDesign(object):
         self._timer = _Timer()
         self.dna_structure = None 
         self.staple_colors = []
-        self.r_strand = DnaParameters.helix_distance       # half the distance between the axes of two neighboring DNA helices
+        self.r_strand = DnaParameters.helix_distance / 2.0 # half the distance between the axes of two neighboring DNA helices
         self.r_helix = DnaParameters.helix_radius          # radius of DNA helices (nm)
         self.dist_bp = DnaParameters.base_pair_rise        # rise between two neighboring base-pairs (nm)
         self.ang_bp = DnaParameters.base_pair_twist_angle  # twisting angle between two neighboring base-pairs (degrees)
@@ -112,7 +112,7 @@ class CadnanoConvertDesign(object):
                               caDNAno DNA origami design model.
         """
 
-        self.r_strand = helix_distance 
+        self.r_strand = helix_distance / 2.0
         self._logger.info("Distance between adjacent helices %g " % helix_distance)
         self._logger.info("Helix radius %g " % self.r_helix)
         self._timer.start()
@@ -1125,9 +1125,10 @@ class CadnanoConvertDesign(object):
                 is_visited[curr_base.id-1] = True
             #__while((not strand.is_circular 
 
-            # Modify the strand if it is circular and the first base 
-            # crosses over to another helix. This will prevent later
-            # issues, like domains that don't follow the strand tour.
+            # Modify the strand if it is circular and the first base crosses over to another helix. 
+            # The first base is moved to the end of the strand. This will prevent later issues, like 
+            # domains that don't follow the strand tour because the strand first domain would be 
+            # merged with the last domain during domain calculation.
             if strand.is_circular and len(strand.tour) > 2:
                 first_base = dna_topology[strand.tour[0]-1]
                 second_base = dna_topology[strand.tour[1]-1]

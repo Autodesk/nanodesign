@@ -7,13 +7,13 @@ class DnaParameters:
     """ This class stores information for DNA parameters.
 
         Attributes:
-            helix_distance: Half the distance between the axes of two neighboring DNA helices.
+            helix_distance: The distance between the axes of two neighboring DNA helices.
             helix_radius: The radius of DNA helices (nm).
             base_pair_rise: The rise between two neighboring base-pairs (nm).
             base_pair_twist_angle: The twisting angle between two neighboring base-pairs (degree).
             minor_groove_angle: The angle of the minor groove (degree).
     """
-    helix_distance = 1.25
+    helix_distance = 2.3
     helix_radius = 1.0
     base_pair_rise = 0.34
     base_pair_twist_angle = 360 / 10.5
