@@ -1,0 +1,117 @@
+{\rtf1\ansi\ansicpg1252\cocoartf1348\cocoasubrtf170
+{\fonttbl\f0\froman\fcharset0 Times-Roman;\f1\fnil\fcharset0 Menlo-Regular;}
+{\colortbl;\red255\green255\blue255;\red33\green34\blue36;\red28\green0\blue207;}
+\margl1440\margr1440\vieww28600\viewh16200\viewkind0
+\deftab720
+\pard\pardeftab720
+
+\f0\fs30 \cf2 \expnd0\expndtw0\kerning0
+The algorithm now takes an array of template strands and tries to find an optimal arrangement of staples matching the available template strand types. This handles situations that cannot be solved optimally with a single type of template strand better.\
+Because of the larger variability in the template strands, energy parameters do not have to be modified as much. It may be possible to set a constant set of parameters for all lattice and template types in this case.\
+\
+
+\b Functions:
+\b0 \
+\pard\tx529\pardeftab529\pardirnatural
+\cf2 _generate_paths(self): Generates continuous strand domain length information and crossover information.\
+_join_crossovers(self): Determines which crossovers belong to physical double crossover.\
+initialize_system(self): Breaks all circular strands into linear strands randomly, places templates randomly.\
+_calculate_energy(self,template_positions,template_offsets,break_positions,single_strand_side_exception,template_types,
+\b path_nr
+\b0 ): Calculates energy of current state of current path 
+\b path_nr
+\b0 .\
+_take_step(self): Try to take one monte-carlo step.\
+generate(self,
+\b nr_steps
+\b0 ,nr_steps_timescale,temperature_adjust_rate): Run up to 
+\b nr_steps
+\b0  monte-carlo steps.\
+\pard\pardeftab720
+\cf2 _break_json(self): Write breaks into cadnano_design.\
+\
+
+\b Workflow:
+\b0 \
+The stapler object is initialized with a cadnano_design and the corresponding dna_structure.\
+e.g. 
+\f1\fs22 \cf0 \kerning1\expnd0\expndtw0 \CocoaLigature0 stapler = Stapler(converter.dna_structure,converter.cadnano_design)
+\f0\fs30 \cf2 \expnd0\expndtw0\kerning0
+\CocoaLigature1 \
+\
+This calls _generate_paths and _join_crossovers. _generate_paths determines all continuous staple paths that can be broken. Initially present strand breaks will not be joined by the algorithm. _join_crossovers determines which crossovers correspond to a double crossover. Only double crossovers can be broken, such that the topology of the structure is not modified by the algorithm.\
+\
+The system is then prepared for the stapling algorithm by breaking all circular strands into linear strands at random positions, and by applying random template types at random location to all strands.\
+e.g. 
+\f1\fs22 \cf0 \kerning1\expnd0\expndtw0 \CocoaLigature0 stapler.initialize_system()
+\f0\fs30 \cf2 \expnd0\expndtw0\kerning0
+\CocoaLigature1 \
+\
+Template strands are supplied as an list of lists of domain lengths.\
+e.g. 
+\f1\fs22 \cf0 \kerning1\expnd0\expndtw0 \CocoaLigature0 stapler.template = [[\cf3 7\cf0 ,\cf3 7\cf0 ,\cf3 7\cf0 ,\cf3 14\cf0 ,\cf3 7\cf0 ],[\cf3 7\cf0 ,\cf3 7\cf0 ,\cf3 14\cf0 ,\cf3 7\cf0 ,\cf3 7\cf0 ],[\cf3 7\cf0 ,\cf3 14\cf0 ,\cf3 7\cf0 ,\cf3 7\cf0 ,\cf3 7\cf0 ]]
+\f0\fs30 \cf2 \expnd0\expndtw0\kerning0
+\CocoaLigature1  provides 3 different templates\
+\
+Domains of a path that are not associated to a template strand incur an energy penalty to force full coverage of the design. 
+\b template_overhang_penalty_factor
+\b0  sets the penalty value.\
+e.g. 
+\f1\fs22 \cf0 \kerning1\expnd0\expndtw0 \CocoaLigature0 stapler.uncovered_domain_penalty = \cf3 10.0
+\f0\fs30 \cf2 \expnd0\expndtw0\kerning0
+\CocoaLigature1 \
+\
+Overhanging template strand domains are penalized relative to the length of the domain. The penalty is modified with 
+\b template_overhang_penalty_factor
+\b0 .\
+e.g. 
+\f1\fs22 \cf0 \kerning1\expnd0\expndtw0 \CocoaLigature0 stapler.template_overhang_penalty_factor = \cf3 0.5\
+\
+
+\f0\fs30 \cf2 \expnd0\expndtw0\kerning0
+\CocoaLigature1 The preferred domain length of domains not covered by a template is set by 
+\b standard_domain_length
+\b0 . This value matters for deciding where exactly to break a domain after the algorithm has found a solution.\
+e.g. 
+\f1\fs22 \cf0 \kerning1\expnd0\expndtw0 \CocoaLigature0 stapler.standard_domain_length = \cf3 5
+\f0\fs30 \cf2 \expnd0\expndtw0\kerning0
+\CocoaLigature1 \
+\
+The system temperature is set by 
+\b temperature
+\b0 .\
+e.g. 
+\f1\fs22 \cf0 \kerning1\expnd0\expndtw0 \CocoaLigature0 stapler.temperature = \cf3 10.0
+\f0\fs30 \cf2 \expnd0\expndtw0\kerning0
+\CocoaLigature1 \
+\
+The relative probability of the different step types is set in 
+\b step_probabilities
+\b0 .\
+e.g. 
+\f1\fs22 \cf0 \kerning1\expnd0\expndtw0 \CocoaLigature0 stapler.step_probabilities = (\cf3 0.1\cf0 ,\cf3 0.1\cf0 ,\cf3 0.35\cf0 ,\cf3 0.35\cf0 ,\cf3 0.1\cf0 )
+\f0\fs30 \cf2 \expnd0\expndtw0\kerning0
+\CocoaLigature1 \
+\
+There are currently 5 step types in the algorithm:\
+1. Add a break (and corresponding template) to a path\
+2. Remove a break (and corresponding template) from a path\
+3. Move an existing break along its path\
+4. Move an existing template\
+5. Exchange a placed template with a different template type\
+\
+The algorithm is run for a maximum number of steps 
+\b nr_steps
+\b0 . When the energy of the system has not improved after a set number of steps 
+\b nr_steps_timescale
+\b0 , the system temperature is lowered by a set factor 
+\b temperature_adjust_rate
+\b0 . When the system energy is constant for a set number of steps 
+\b nr_steps_timescale
+\b0 , or the maximum number of steps is reached, the algorithm stops. The algorithm is run by generate(nr_steps, nr_steps_timescale, temperature_adjust_rate).\
+e.g. 
+\f1\fs22 \cf0 \kerning1\expnd0\expndtw0 \CocoaLigature0 stapler.generate(\cf3 10000000\cf0 ,\cf3 10000\cf0 ,\cf3 0.999975\cf0 )
+\f0\fs30 \cf2 \expnd0\expndtw0\kerning0
+\CocoaLigature1 \
+\
+The final system state is written into the cadnano_design object.}
