@@ -16,7 +16,7 @@ from collections import OrderedDict
 import logging
 import numpy as np
 from math import sqrt,cos,acos,sin,asin,pi
-from converters.pdb.pdb_reader import PdbReader
+from converters.pdbcif.pdb_reader import PdbReader
 from parameters import DnaBaseNames
 
 # temp code to handle objects as they are being transitioned into the main package

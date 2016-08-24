@@ -20,8 +20,8 @@ from cadnano.convert_design import CadnanoConvertDesign
 from viewer.writer import ViewerWriter 
 from cando.writer import CandoWriter 
 from simdna.writer import SimDnaWriter 
-from pdb.pdb_writer import PdbWriter 
-from pdb.cif_writer import CifWriter 
+from pdbcif.pdb_writer import PdbWriter 
+from pdbcif.cif_writer import CifWriter 
 
 try:
     import os.path
