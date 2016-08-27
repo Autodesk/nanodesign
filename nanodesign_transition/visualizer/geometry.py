@@ -839,6 +839,7 @@ class VisGeometryCylinder(VisGeometry):
         n = 3
         conn_count = 0
         glEnable(GL_LIGHTING);
+        #glShadeModel(GL_SMOOTH);
         glColor4fv(self.color)
         # Render the side polygons.
         for i in xrange(0,num_tri-2*num_sides):
@@ -877,8 +878,7 @@ class VisGeometryCylinder(VisGeometry):
                 conn_count += 1
             glEnd()
         #__for i in xrange(0,num)__
-
-        glShadeModel(GL_SMOOTH);
+        glDisable(GL_LIGHTING);
 
         # If the cylinder is selected then hightlight its boundng circles at its ends and 
         # several lines end-to-end on its surface.
@@ -908,7 +908,7 @@ class VisGeometryCylinder(VisGeometry):
                 n += 1
             glEnd()
             n = 0
-            num_segs = 2
+            num_segs = 4
             dn = num_sides / num_segs
             glBegin(GL_LINES)
             for i in xrange(0,num_segs):
@@ -1222,6 +1222,8 @@ class VisGeometryPolygon(VisGeometry):
         """ Render the polygons. """
         if not self.visible:
             return
+
+        glEnable(GL_LIGHTING);
         glDisable(GL_CULL_FACE);
         glLineWidth(self.line_width)
         glColor4fv(self.color)
@@ -1270,6 +1272,7 @@ class VisGeometryPolygon(VisGeometry):
         #__if highlight
         glEnd()
         glEnable(GL_CULL_FACE);
+        glDisable(GL_LIGHTING);
 
         # Draw intersection points.
         if self.selected and self.intersect_point:

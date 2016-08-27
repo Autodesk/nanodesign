@@ -26,9 +26,9 @@ class ViewerWriter(object):
     """ The ViewerWriter class writes out a DNA Design viewer JSON file. 
     """
 
-    def __init__(self, dna_structure, helix_distance=DnaParameters.helix_distance):
+    def __init__(self, dna_structure, dna_parameters): 
         self.dna_structure = dna_structure
-        self.helix_distance = helix_distance
+        self.dna_parameters = dna_parameters
         self._logging_level = logging.INFO
         self._setup_logging()
 
@@ -121,8 +121,8 @@ class ViewerWriter(object):
 
             info = { 'id'                 : helix.id,
                      'length'             : length,
-                     'helix_distance'     : self.helix_distance,
-                     'base_pair_rise'     : DnaParameters.base_pair_rise,
+                     'helix_distance'     : self.dna_parameters.helix_distance,
+                     'base_pair_rise'     : self.dna_parameters.base_pair_rise,
                      'start_position'     : list(point1),
                      'orientation'        : [frame[0,2], frame[1,2], frame[2,2]],
                      'end_position'       : list(point2),

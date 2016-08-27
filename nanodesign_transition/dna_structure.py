@@ -46,7 +46,7 @@ class DnaStructure(object):
             strands_map (Dict[DnaStrand]): The dictionary that maps strand IDs to DnaStrand objects.
     """ 
 
-    def __init__(self, name, base_connectivity, helices, helix_distance=None, helix_axis_nodes=None, helix_axis_frames=None, 
+    def __init__(self, name, base_connectivity, helices, dna_parameters, helix_axis_nodes=None, helix_axis_frames=None, 
                  id_nt=None):
         """ Initialize a DnaStructure object. 
 
@@ -57,7 +57,7 @@ class DnaStructure(object):
                 name (string): The name of the structure.
                 base_connectivity (List[DnaBase]): The list of DNA bases for the structure. 
                 helices (List[DnaStructureHelix]): The list of helices for the structure. 
-                helix_distance (Float): The distance between adjacent helices.
+                dna_parameters (DnaParameters): The DNA parameters to use when creating the 3D geometry for the design.
                 helix_axis_nodes (NumPy 3x3xN ndarray[float]): The coordinates of paired base nodes along a helix axis. 
                 helix_axis_frames (NumPy 3x3xN ndarray[float]): The reference frames of paired bases along a helix axis. 
                 id_nt (NumPy Nx2 ndarray[int]): The base IDs for scaffold bases and their paired staple base.
@@ -65,8 +65,7 @@ class DnaStructure(object):
         self.name = name
         self.lattice_type = CadnanoLatticeType.none
         self.lattice = None
-        self.parameters = DnaParameters()
-        self.helix_distance = helix_distance
+        self.dna_parameters = dna_parameters
         self.base_connectivity = base_connectivity
         self.helix_axis_nodes = helix_axis_nodes
         self.helix_axis_frames = helix_axis_frames
@@ -109,22 +108,23 @@ class DnaStructure(object):
     def set_lattice_type(self, lattice_type):
         """ Set the lattice type the geometry of this structure is derived from. 
 
-            A Lattice object is created from the given lattice type. It is used to calculate 
-            lattice-dependent data such as crossover locations and the neighboring lattice 
-            coordinates for a given coordinate.
-
             Arguments:
                 lattice_type(CadnanoLatticeType): The type of lattice (e.g. square, honeycomb). 
 
+            A Lattice object is created from the given lattice type. It is used to calculate 
+            lattice-dependent data such as crossover locations and the neighboring lattice 
+            coordinates for a given coordinate.
         """
         self.lattice_type = lattice_type
-        if self.helix_distance != None:
-            self.lattice = Lattice.create_lattice(lattice_type, self.helix_distance)
-        else:
-            self.lattice = Lattice.create_lattice(lattice_type, self.parameters.helix_distance)
+        self.lattice = Lattice.create_lattice(lattice_type, self.dna_parameters.helix_distance)
 
     def compute_aux_data(self):
-        """ Compute auxiallry data. """
+        """ Compute auxiliary data. 
+
+            Compute data derived from the base connectivty: domains, strand/helix and helix/helix connectivty 
+            relationships, and crossovers. This data is needed for visualization, calculating melting
+            temperature and other applications.
+        """
         for strand in self.strands:
             strand.dna_structure = self
         self.set_strand_helix_references()
@@ -522,7 +522,7 @@ class DnaStructure(object):
                 if helix1 == helix2: 
                     continue 
                 if (abs(row-helix2.lattice_row) + abs(col-helix2.lattice_col) < 2) and \
-                    self.lattice.get_neighbor_index(row, col, helix2.lattice_row, helix2.lattice_col) != -1:
+                    self.lattice.get_neighbor_index(row, col, helix2.lattice_row, helix2.lattice_col) != None:
                     connection = DnaHelixConnection(helix1,helix2)
                     helix_connectivity.append(connection)
                     self._logger.debug("connected to %d " % helix2.lattice_num)

@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-This module defines the classes used to define the lattice-base geometric framework of a DNA structure.
+This module contains classes used to define the lattice-base geometric framework of a DNA structure.
 
 """
 from abc import ABCMeta, abstractmethod
@@ -48,7 +48,14 @@ class Lattice(object):
         raise NotImplementedError
 
     @staticmethod
-    def create_lattice(lattice_type, radius):
+    def create_lattice(lattice_type, helix_distance):
+        """ Create a lattice object for a given type. 
+
+            Arguments:
+                lattice_type (Int): The lattice type (e.g. honeycomb) taken from CadnanoLatticeType.
+                helix_distance (Float): The distance between adjacent DNA helices.
+        """
+        radius = helix_distance / 2.0
         if (lattice_type == CadnanoLatticeType.honeycomb):
             return HoneycombLattice(radius)
         elif (lattice_type == CadnanoLatticeType.square):
@@ -69,12 +76,22 @@ class Lattice(object):
 
 class SquareLattice(Lattice):
     """ This class defines the data and methods for a square lattice.
+        
+        Attributes: 
+            index (List[Tuple()]): The list used to map lattice (row,col) coordinates to a neighbor index (0-3). 
+            number_of_neighbors (int): The number of lattice cell neighbors.
+            scaffold_low (List[List[Int]]): The list scaffold of crossover points.
+            scaffold_high (List[List[Int]]): The list scaffold of crossover points.
+            staple_low (List[List[Int]]): The list staple of crossover points.
+            staple_high (List[List[Int]]): The list staple of crossover points.
+            step (int): The number of bases between crossover positions. 
 
         Some of the data in this class is used to compute crossover positions between neighboring helices on a square lattice. 
         It is based on the data from the caDNAno squarepart.py file. 
-        
-        Attributes: 
-            step (int): The number of bases between crossover positions. 
+
+        The index_map list is used to map a lattice (row,col) coordinate to a neighbor (nrow,ncol) index. The index 
+        identifies the neighbor direction in a standard way.
+
     """
     def __init(self,radius):
        Lattice.__init__(self, radius)
@@ -121,7 +138,16 @@ class SquareLattice(Lattice):
 
     @classmethod
     def get_neighbor_index(cls, row, col, nrow, ncol):
-        """ Get the index for a neighboring lattice coordinate. """
+        """ Get the index for a neighboring lattice coordinate. 
+            Arguments:
+                row (int): The row lattice coordinate.
+                col (int): The column lattice coordinate.
+                nrow (int): The neighbor row lattice coordinate.
+                ncol (int): The neighbor column lattice coordinate.
+
+            Returns:
+               nindex (Int): The neighbor index or None if the lattice coordinates are not a neighbor. 
+        """
         nval = (nrow-row, ncol-col)
         if nval in cls.index_map:
             nindex = cls.index_map.index(nval)
@@ -132,11 +158,23 @@ class SquareLattice(Lattice):
 class HoneycombLattice(Lattice):
     """ This class defines the data and methods for a honeycomb lattice.
 
-        Some of the data in this class is used to compute crossover positions between neighboring helices on a honeycomb lattice. 
-        It is based on the data from the caDNAno honeycombpart.py file. 
-        
         Attributes: 
-            step (int): The number of bases between cross-over positions. 
+            index_map_odd (List[Tuple()]): The list used to map lattice (row,col) coordinates into a neighbor index (0-2)
+               for odd-numbered helices. 
+            index_map_even (List[Tuple()]): The list used to map lattice (row,col) coordinates into a neighbor index (0-2) 
+               for even-numbered helices. 
+            number_of_neighbors (int): The number of lattice cell neighbors.
+            scaffold_low (List[List[Int]]): The list scaffold of crossover points.
+            scaffold_high (List[List[Int]]): The list scaffold of crossover points.
+            staple_low (List[List[Int]]): The list staple of crossover points.
+            staple_high (List[List[Int]]): The list staple of crossover points.
+            step (int): The number of bases between cross-over positions (step size). 
+
+        Some of the data in this class is used to compute crossover positions between neighboring helices 
+        on a honeycomb lattice. It is based on the data from the caDNAno honeycombpart.py file. 
+
+        The index_map list is used to map a lattice (row,col) coordinate to a neighbor (nrow,ncol) index. The index 
+        identifies the neighbor direction in a standard way.
     """
     def __init(self, radius):
        Lattice.__init__(self, radius)
@@ -159,7 +197,6 @@ class HoneycombLattice(Lattice):
 
             Returns:
                 neighbors (list[(int,int)): The list of neighboring lattice coordinates. 
-
         """
         neighbors = []
 
@@ -205,15 +242,27 @@ class HoneycombLattice(Lattice):
 
     @classmethod
     def get_neighbor_index(cls, row, col, nrow, ncol):
-        """ Get the index for a neighboring lattice coordinate. """
+        """ Get the index for a neighboring lattice coordinate.
+
+            Arguments:
+                row (int): The row lattice coordinate.
+                col (int): The column lattice coordinate.
+                nrow (int): The neighbor row lattice coordinate.
+                ncol (int): The neighbor column lattice coordinate.
+
+            Returns:
+               nindex (Int): The neighbor index or None if the lattice coordinates are not a neighbor.   
+        """
         nval = (nrow-row, ncol-col)
+        # Get the odd or even map depending on the (row,col).
         if cls.even_parity_coordinate(row, col):
            index_map = cls.index_map_even
         else:
            index_map = cls.index_map_odd  
+        # Map the neighbor coordinate to an index.
         if nval in index_map:
             nindex = index_map.index(nval)
         else:
-            nindex = -1
+            nindex = None
         return nindex 
 

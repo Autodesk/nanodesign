@@ -40,6 +40,7 @@ sys.path.append( base_path )
 from cadnano.reader import CadnanoReader
 from cadnano.convert_design import CadnanoConvertDesign
 from dna_sequence_data import dna_sequence_data
+from nanodesign_transition.parameters import DnaParameters
 sys.path = sys.path[:-1]
 
 # Set path and import atomic structure.
@@ -86,7 +87,8 @@ def read_file(args, logger):
     cadnano_design = cadnano_reader.read_json(args.infile)
 
     # Convert the design.
-    convert_design = CadnanoConvertDesign()
+    dna_parameters = DnaParameters()
+    convert_design = CadnanoConvertDesign(dna_parameters)
     dna_structure = convert_design.create_structure(cadnano_design)
 
     # Read a sequence file.

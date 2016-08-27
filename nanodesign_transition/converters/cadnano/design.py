@@ -67,7 +67,7 @@ class CadnanoDesign(object):
         else:
             lattice = HoneycombLattice 
 
-        stand_types = (CadnanoStrandType.SCAFFOLD, CadnanoStrandType.STAPLE)
+        strand_types = (CadnanoStrandType.SCAFFOLD, CadnanoStrandType.STAPLE)
 
         luts_neighbor = list( zip( lattice.scaffold_low,
                                    lattice.scaffold_high,
@@ -98,7 +98,7 @@ class CadnanoDesign(object):
                 lut = (lut_scaf, lut_stap)
                 self._logger.debug(">>> lut_stap: %s" % str(lut_stap))
 
-                for pts, st in zip(lut, stand_types):
+                for pts, st in zip(lut, strand_types):
                     if st == CadnanoStrandType.SCAFFOLD:
                         stype = "scafflold"
                     else:
@@ -106,6 +106,7 @@ class CadnanoDesign(object):
 
                     for pt in pts:
                         self._logger.debug(">>>>>> pt: %s   st: %s" % (str(pt),stype))
+                        self._logger.debug(">>>>>> base_range: %s " % (str(base_range)))
                         for i, j in product(base_range, pt):
                             index = i + j
                             if index < num_bases:
@@ -114,9 +115,8 @@ class CadnanoDesign(object):
                                 else:
                                     vhelix.possible_staple_crossovers.append((neighbor,index))
                                 self._logger.debug("    add i: %4d  j: %4d  index: %4d" % (i,j,index))
-                                self._logger.debug("    add i: %4d  j: %4d  index: %4d" % (i,j,index))
                     #__for pt in pts
-                #__for pts, st in zip(lut, stand_types)
+                #__for pts, st in zip(lut, strand_types)
             #__for neighbor, lut in zip(neighbor_helices, luts_neighbor):
         #__for vhelix in self.virtual_helices
 

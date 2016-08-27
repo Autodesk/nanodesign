@@ -67,17 +67,23 @@ class CadnanoConvertDesign(object):
             dna_structure (DnaStructure): A DnaStructure object. 
     """
 
-    def __init__(self):
+    def __init__(self, dna_parameters):
+        """ Initialize the CadnanoConvertDesign object.
+
+            Arguments:
+                dna_parameters (DnaParameters): The DNA parameters to use when creating the 3D geometry for the design.
+        """
         self._logging_level = logging.INFO
         self._setup_logging()
         self._timer = _Timer()
         self.dna_structure = None 
         self.staple_colors = []
-        self.r_strand = None  # half the distance between the axes of two neighboring DNA helices. (set later)
-        self.r_helix = DnaParameters.helix_radius          # radius of DNA helices (nm)
-        self.dist_bp = DnaParameters.base_pair_rise        # rise between two neighboring base-pairs (nm)
-        self.ang_bp = DnaParameters.base_pair_twist_angle  # twisting angle between two neighboring base-pairs (degrees)
-        self.ang_minor = DnaParameters.minor_groove_angle  # angle of the minor groove (degrees)
+        self.dna_parameters = dna_parameters
+        self.r_strand = dna_parameters.helix_distance / 2.0 # half the distance between the axes of adjacent DNA helices.
+        self.r_helix = dna_parameters.helix_radius          # radius of DNA helices (nm)
+        self.dist_bp = dna_parameters.base_pair_rise        # rise between two neighboring base-pairs (nm)
+        self.ang_bp = dna_parameters.base_pair_twist_angle  # twisting angle between two neighboring base-pairs (degrees)
+        self.ang_minor = dna_parameters.minor_groove_angle  # angle of the minor groove (degrees)
 
     def _set_logging_level(self,level):
         """Set logging level."""
@@ -99,21 +105,19 @@ class CadnanoConvertDesign(object):
     def _add_staple_color(self,staple_color, vhelix_num):
         self.staple_colors.append(self.StapleColor(staple_color,vhelix_num))
 
-    def create_structure(self,design, modify=False, helix_distance=DnaParameters.helix_distance):
+    def create_structure(self,design, modify=False):
         """ Create a DNA structure from a caDNAno DNA origami design.
 
             Arguments:
                 design (CadnanoDesign): A caDNAno DNA origami design.
                 modify (bool): If true then modify the caDNAno DNA origami design for inserts and deletes.
-                helix_distance (float): The distance between adjacent helices.
 
             Returns:
                 DnaStructure: The DNA structure object containing topological and geometric information for the
                               caDNAno DNA origami design model.
         """
 
-        self.r_strand = helix_distance / 2.0
-        self._logger.info("Distance between adjacent helices %g " % helix_distance)
+        self._logger.info("Distance between adjacent helices %g " % self.dna_parameters.helix_distance)
         self._logger.info("Helix radius %g " % self.r_helix)
         self._timer.start()
         structure_topology, dnode, triad, id_nt_0, helices = self._create_structure_topology_and_geometry(design)
@@ -171,7 +175,7 @@ class CadnanoConvertDesign(object):
 
         # Create a DnaStructure object to store the base topology and geometry information.
         name = "dna structure"
-        self.dna_structure = DnaStructure(name, dna_topology, helices, helix_distance, dnode, triad, id_nt)
+        self.dna_structure = DnaStructure(name, dna_topology, helices, self.dna_parameters, dnode, triad, id_nt)
         self.dna_structure.set_lattice_type(design.lattice_type)
 
         # Generate strands 
