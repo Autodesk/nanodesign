@@ -3,7 +3,7 @@
 This module is used to store information for DNA physical parameters.
 """
 
-class DnaParameters:
+class DnaParameters(object):
     """ This class stores information for DNA parameters.
 
         Attributes:
@@ -13,11 +13,12 @@ class DnaParameters:
             base_pair_twist_angle: The twisting angle between two neighboring base-pairs (degree).
             minor_groove_angle: The angle of the minor groove (degree).
     """
-    helix_distance = 2.3
-    helix_radius = 1.0
-    base_pair_rise = 0.34
-    base_pair_twist_angle = 360 / 10.5
-    minor_groove_angle = 120.0
+    def __init__(self):
+        self.helix_distance = 2.3
+        self.helix_radius = 1.0
+        self.base_pair_rise = 0.34
+        self.base_pair_twist_angle = 360 / 10.5
+        self.minor_groove_angle = 120.0
 
 class DnaPolarity:
     """ This class defines constants used to describe the polarity of a DNA strand. 
