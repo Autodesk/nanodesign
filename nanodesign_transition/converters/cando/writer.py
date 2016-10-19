@@ -27,7 +27,7 @@ class CandoWriter(object):
         """
         dna_structure = self.dna_structure
         base_conn = dna_structure.base_connectivity 
-        base_nodes = dna_structure.helix_axis_nodes
+        base_nodes = dna_structure.helix_axis_coords
         triad = dna_structure.helix_axis_frames
         id_nt = dna_structure.id_nt
         self._logger.info("Writing CanDo .cndo file: %s " % file_name)

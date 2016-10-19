@@ -34,6 +34,7 @@ except ImportError:
     print "Cannot locate nanodesign package, it hasn't been installed in main packages, and is not reachable relative to the nanodesign_transition directory."
     raise ImportError
 
+
 class Atom(object):
     """ This class stores the data for an atom.
 
@@ -60,6 +61,14 @@ class Atom(object):
         return Atom(self.id, self.name, self.res_name, self.chainID, self.res_seq_num, self.coords[0], self.coords[1],
                     self.coords[2], self.element )
 
+class MoleculeType:
+    """ This class defines atomic structure types. """
+    UNKNOWN = 'unknown'
+    ION = 'ion'
+    NUCLEIC_ACID = 'nucleaic_acid'
+    PROTEIN = 'protein'
+    WATER = 'water'
+
 class Molecule(object):
     """ This class stores data for a molecular structure.
 
@@ -68,9 +77,10 @@ class Molecule(object):
             chains (Set[string]): The chains in this molecule.
             model_id (int): The ID of the model this molecule belongs to.
     """
-    def __init__(self, model_id):
+    def __init__(self, model_id, type=MoleculeType.UNKNOWN):
         self.id = model_id
         self.model_id = model_id
+        self.type = type 
         self.atoms = []
         self.chains = set([])
         self.residues = OrderedDict()
@@ -132,8 +142,9 @@ class AtomicStructureStrand(object):
         self.translations = [ np.empty(shape=(0)) ] * size
 
         # Create the chain ID.
+        dna_structure = strand.dna_structure
         base_conn = strand.dna_structure.base_connectivity
-        first_base = base_conn[strand.tour[0]-1]
+        first_base = strand.tour[0]
         if strand.is_scaffold:
             self.chainID = "sc"
         else:
@@ -197,7 +208,7 @@ class AtomicStructure(object):
     def generate_structure(self):
         """ Generate the atomic structure for the dna model. """
         base_conn = self.dna_structure.base_connectivity
-        base_nodes = self.dna_structure.helix_axis_nodes
+        base_nodes = self.dna_structure.helix_axis_coords
         triads = self.dna_structure.helix_axis_frames
         id_nt = self.dna_structure.id_nt
         self._logger.info("Generate atomic structure.") 
@@ -805,6 +816,7 @@ class AtomicStructure(object):
 
     def generate_structure_ss(self):
         """ Generate the atomic structure for the dna model. """
+        dna_structure = self.dna_structure
         base_conn = self.dna_structure.base_connectivity
 
         self._logger.info("Generate atomic structure for ssDNA.") 
@@ -826,11 +838,10 @@ class AtomicStructure(object):
             self._logger.debug("=================== strand:%d =================== "  % strand.id)
             base_coords = strand.dna_strand.get_base_coords()
 
-            for i,base_id in enumerate(strand.tour):
-                base = base_conn[base_id-1]
-                helix = helix_map[base.h]
-                frame = np.zeros((3,3),dtype=float)
-                frame = np.copy(helix.helix_axis_frames[:,:,base.p])
+            for i,base in enumerate(strand.tour):
+                #frame = np.zeros((3,3),dtype=float)
+                #frame = np.copy(base.ref_frame)
+                frame = base.ref_frame
                 self._logger.debug("base id %d  vh %d  pos %d " % (base.id, base.h, base.p))
                 frame[:,0] = -frame[:,0]
                 frame[:,2] = -frame[:,2]
@@ -850,7 +861,7 @@ class AtomicStructure(object):
         self._logger.debug("=================== create bulges ==================");
         for strand in self.strands:
             self._logger.debug("---------- strand %d ---------- "  % strand.id)
-            base = base_conn[strand.tour[0]-1]
+            base = strand.tour[0]
             rotations = strand.rotations
             translations = strand.translations
             is_main = strand.is_main
@@ -924,8 +935,9 @@ class AtomicStructure(object):
         self._logger.debug("Strand %d " % strand.id ) 
         self._logger.debug("Number of bases %d " % len(strand.tour) ) 
         self._logger.debug("Scaffold %d " % strand.is_scaffold ) 
+        dna_structure = strand.dna_strand.dna_structure
         base_conn = strand.dna_strand.dna_structure.base_connectivity
-        base = base_conn[strand.tour[0]-1]
+        base = strand.tour[0]
         self._logger.debug( "Start helix %d  position %d" % (base.h, base.p) ) 
         first_atomID_out = first_atomID_in
         max_atom_per_base = 40

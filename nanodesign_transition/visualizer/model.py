@@ -183,9 +183,9 @@ class VisModel(object):
 
     def _set_extent(self):
         """ Set the model extent from the DNA structure. """
-        base_nodes = self.dna_structure.helix_axis_nodes
-        for coord in base_nodes: 
-            self.extent.update(coord[0], coord[1], coord[2])
+        for helix in self.dna_structure.structure_helices_map.itervalues():
+            for coord in helix.helix_axis_coords:
+                self.extent.update(coord[0], coord[1], coord[2])
         xmin,xmax,ymin,ymax,zmin,zmax = self.extent.get_bounds()
         self._logger.info("Extent  xmin %f  ymin %f  zmin %f" % (xmin, ymin, zmin))
         self._logger.info("        xmax %f  ymax %f  zmax %f" % (xmax, ymax, zmax))
@@ -397,7 +397,10 @@ class VisModel(object):
         #__for helix in self.helices.values()
 
     def _create_structure_geometry(self):
-        """ Create the structure geometry. """
+        """ Create the structure geometry. 
+
+            The structure geometry shows dsDNA regions as solid cylinders.
+        """
         dna_structure = self.dna_structure
         radius = 1.15
         num_sides = 16
@@ -405,12 +408,13 @@ class VisModel(object):
         helix_list = list(self.helices.values())
         self._logger.info("Number of virtual helices %d" % (len(helix_list)))
         for helix in helix_list:
-            boundary_pos = helix.get_boundaries()
+            # Get the indexes into helix_axis_coords of dsDNA regions.
+            boundary_points = helix.get_boundaries()
             verts = []
-            axis_nodes = helix.vhelix.helix_axis_nodes
-            for i,pos in enumerate(boundary_pos): 
-                pt1 = axis_nodes[pos[0]]
-                pt2 = axis_nodes[pos[1]]
+            for i,points in enumerate(boundary_points): 
+                pt1 = points[0]
+                pt2 = points[1]
+                #self._logger.info("Pt1 %s  pt2 %s" % (str(pt1), str(pt2))) 
                 verts.append(pt1)
                 verts.append(pt2)
                 name = "ModelGeometry:%d_%d" % (helix.vhelix.lattice_num,i+1) 

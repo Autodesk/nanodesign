@@ -36,14 +36,15 @@ class Domain(object):
         # should we also set the strand's color? Or can the domain have a different color from the strand?
 
     def get_end_points(self):
-        base_pos = self.helix.helix_axis_nodes
-        #print"######## base_pos %d" % len(base_pos)
-        base1 = self.base_list[0].p 
-        base2 = self.base_list[-1].p
-        point1 = base_pos[base1]
-        point2 = base_pos[base2]
+        """ Get the end coordinates of the domain. """
+        base_pos = self.helix.helix_axis_coords
+        base1 = self.base_list[0]
+        base2 = self.base_list[-1]
+        point1 = base1.coordinates
+        point2 = base2.coordinates
+        #print("[get_end_points] base 1 p %d  h %d  coord %g %g %g" % (base1.p, base1.h, point1[0], point1[1], point1[2]))
+        #print("                 base 2 p %d  h %d  coord %g %g %g" % (base2.p, base2.h, point2[0], point2[1], point2[2]))
         return point1,point2
-
 
     def melting_temperature(self):
         # If we are not paired, return a nonphysical melting temperature.

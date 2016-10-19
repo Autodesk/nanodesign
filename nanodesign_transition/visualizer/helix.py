@@ -25,19 +25,20 @@ import os
 import sys
 import numpy as np
 from numpy import linalg
-from geometry import VisGeometryCylinder,VisGeometryPath,VisGeometryAxes,VisGeometryLines
+from geometry import VisGeometryCylinder,VisGeometryPath,VisGeometryAxes,VisGeometryLines,VisGeometrySymbols
 import graphics 
 from strand import VisStrand
 
 class VisHelixRepType:
     """ This class defines the helix visualization representation types. """
     UNKNOWN = 'unknown'
+    BASE_POSITIONS    = 'base_positions'
     COORDINATES       = 'coordinates'
     COORDINATE_FRAMES = 'frames'
     DESIGN_CROSSOVERS = 'design_crossovers'
     DOMAINS           = 'domains'
     GEOMETRY          = 'geometry'
-    NODES             = 'nodes'
+    INSERTS_DELETES   = 'inserts_deletes'
     STRANDS           = 'strands'
 
 class VisHelix(object):
@@ -77,7 +78,8 @@ class VisHelix(object):
             VisHelixRepType.DESIGN_CROSSOVERS : self.create_crossovers_rep,
             VisHelixRepType.DOMAINS           : self.create_domains_rep,
             VisHelixRepType.GEOMETRY          : self.create_geometry_rep,
-            VisHelixRepType.NODES             : self.create_nodes_rep,
+            VisHelixRepType.INSERTS_DELETES   : self.create_inserts_deletes_rep,
+            VisHelixRepType.BASE_POSITIONS    : self.create_base_positions_rep,
             VisHelixRepType.STRANDS           : self.create_strands_rep
         }
 
@@ -94,35 +96,38 @@ class VisHelix(object):
 
     def get_boundaries(self):
         """ Get the start-end base positions of regions of dsDNA. """
-        num_axis_nodes = len(self.vhelix.helix_axis_nodes)
+        num_axis_nodes = len(self.vhelix.helix_axis_coords)
 
-        # Add a 1 to positions that have a staple and scaffold bases.
-        paired_base_pos = [0]*num_axis_nodes
-        for i,base in enumerate(self.vhelix.staple_base_list):
-            if base:
-                paired_base_pos[i] += 1
-        #__for i,base in enumerate(self.vhelix.staple_base_list)
-        for i,base in enumerate(self.vhelix.scaffold_base_list):
-            if base:
-                paired_base_pos[i] += 1
-        #__for i,base in enumerate(self.vhelix.scaffold_base_list)
+        # Get paired bases. 
+        boundary_bases = []
+        start_base = None
+        end_base = None
+        for base in self.vhelix.staple_base_list:
+            if base.across == None: 
+                if start_base != None:
+                    boundary_bases.append((start_base,end_base))
+                    start_base = None
+                    end_base = None
+                #__if start_base != None
+            else:
+                if start_base == None:
+                    start_base = base
+                    self._logger.info("Start base %d" % start_base.p) 
+                else:
+                    end_base = base
+                #__if start_base == None
+        #__for base in self.vhelix.staple_base_list
+        if end_base != None:
+            boundary_bases.append((start_base,end_base))
 
-        # Find the start-end base positions of regions of dsDNA.
-        find_start = True
-        boundary_pos = []
-        for i in xrange(0,len(paired_base_pos)-1):
-            if find_start:
-                if paired_base_pos[i] == 2:
-                    find_start = False
-                    start_pos = i
-            elif paired_base_pos[i] != 2:
-                find_start = True
-                boundary_pos.append((start_pos,i-1))
-        #__for i in xrange(0,len(paired_base_pos)-1)
-
-        if paired_base_pos[num_axis_nodes-1] == 2:
-            boundary_pos.append((start_pos,start_pos,num_axis_nodes-1))
-        return boundary_pos
+        # Create pairs of points for the boudary bases.
+        boundary_points = []
+        for paired_bases in boundary_bases: 
+            start_base = paired_bases[0]
+            end_base = paired_bases[1]
+            boundary_points.append((start_base.coordinates,end_base.coordinates))
+        #__for paired_bases in boundary_bases
+        return boundary_points
 
     def print_info(self):
         """ Print helix information. """
@@ -161,7 +166,7 @@ class VisHelix(object):
         self._logger.debug("Create crossover rep for helix num %d " % self.vhelix.lattice_num)
         dna_structure = self.dna_structure
         helix = self.vhelix
-        helix_axis_nodes = helix.helix_axis_nodes
+        helix_axis_coords = helix.helix_axis_coords
         lattice = dna_structure.lattice
         num_neigh = lattice.number_of_neighbors
         self._logger.debug("Number of lattice directions: %d " % num_neigh)
@@ -185,12 +190,12 @@ class VisHelix(object):
             self._logger.debug("    Nindex %d " % nindex)
             self._logger.debug("    Direction (%g %g %g) " % (dir[0], dir[1], dir[2]))
             self._logger.debug("    Number of crossovers %d " % len(crossovers))
-            self._logger.debug("    Number of helix_axis_nodes %d " % len(helix_axis_nodes))
+            self._logger.debug("    Number of helix_axis_coords %d " % len(helix_axis_coords))
 
             for i in xrange(0,len(crossovers),1):
                 crossover = crossovers[i]
                 base = crossover.crossover_base
-                pt1 = helix_axis_nodes[base.p]
+                pt1 = base.coordinates
                 pt2 = pt1 + s*dir
                 verts.append(pt1)
                 verts.append(pt2)
@@ -254,9 +259,9 @@ class VisHelix(object):
         self._logger.info("Selected Helix %s geometry " % (self.name))
         self.print_info()
 
-    def create_nodes_rep(self):
-        """ Create the geometry for the helix nodes representation. """
-        points = self.vhelix.helix_axis_nodes
+    def create_base_positions_rep(self):
+        """ Create the geometry for the helix base positions representation. """
+        points = self.vhelix.helix_axis_coords
         show_vertices = True
         name = "HelixNodes:%s" % self.id
         geom = VisGeometryPath(name, points, show_vertices)
@@ -264,18 +269,18 @@ class VisHelix(object):
         geom.line_width = 1.0
         geom.select_vertex = True
         geom.entity_indexes = range(0,len(points))
-        geom.selected_callback = self.select_node
-        self.representations[VisHelixRepType.NODES] = [geom]
+        geom.selected_callback = self.select_base_positions
+        self.representations[VisHelixRepType.BASE_POSITIONS] = [geom]
         self.graphics.add_render_geometry(geom)
 
-    def select_node(self, geom, index):
-        """ Process helix node selection.
+    def select_base_positions(self, geom, index):
+        """ Process helix base positions selection.
 
             Arguments:
                 geom (VisGeometry): The geometry selected.
                 index (int): The index into the geometry selected.
         """
-        coords = self.vhelix.helix_axis_nodes[index]
+        coords = self.vhelix.helix_axis_coords[index]
         self._logger.info("Selected Helix %s node.  Location in helix %d  Coordinates (%g %g %g) " % (self.name, index+1, 
             coords[0], coords[1], coords[2]))
         self.print_info()
@@ -289,20 +294,20 @@ class VisHelix(object):
         staple_points = []
         for base in self.vhelix.staple_base_list:
             if base:
-                staple_points.append(base.coord)
+                staple_points.append(base.nt_coords)
         #__for id in base_ids
         scaffold_points = []
         for base in self.vhelix.scaffold_base_list:
             if base:
-                scaffold_points.append(base.coord)
+                scaffold_points.append(base.nt_coords)
         #__for id in base_ids
 
         # Create the scaffold geometry.
         show_vertices = True
         name = "HelixScaffoldCoords:%s" % self.id
         scaffold_geom = VisGeometryPath(name, scaffold_points, show_vertices)
-        scaffold_geom.line_width = 3.0 
-        scaffold_geom.color = [1.0,0.8,0.8,1.0] 
+        scaffold_geom.line_width = 1.0 
+        scaffold_geom.color = [0.6,0.0,0.0,1.0] 
         scaffold_geom.selected_callback = self.select_coords
         scaffold_geom.select_vertex = True
         scaffold_geom.entity_indexes = range(0,len(scaffold_points))
@@ -312,8 +317,8 @@ class VisHelix(object):
         # Create the staple geometry.
         name = "HelixStapleCoords:%s" % self.id
         staple_geom = VisGeometryPath(name, staple_points, show_vertices)
-        staple_geom.color = [0.0,0.8,0.8,1.0] 
-        staple_geom.line_width = 3.0 
+        staple_geom.color = [0.0,0.6,0.0,1.0] 
+        staple_geom.line_width = 1.0 
         staple_geom.selected_callback = self.select_coords
         staple_geom.select_vertex = True
         staple_geom.entity_indexes = range(0,len(staple_points))
@@ -337,7 +342,7 @@ class VisHelix(object):
 
     def create_frames_rep(self):
         """ Create the geometry for the helix coordinates frames representation. """
-        origins = self.vhelix.helix_axis_nodes
+        origins = self.vhelix.helix_axis_coords
         directions = self.vhelix.helix_axis_frames
         scale = 0.2
         name = "HelixFrame:%s" % self.id
@@ -353,7 +358,7 @@ class VisHelix(object):
                 geom (VisGeometry): The geometry selected.
                 index (int): The index into the geometry selected.
         """
-        coords = self.vhelix.helix_axis_nodes[index]
+        coords = self.vhelix.helix_axis_coords[index]
         self._logger.info("Selected Helix %s frame. Location in helix %d  Coordinates (%g %g %g) " % (self.name, index+1,
             coords[0], coords[1], coords[2]))
         self.print_info()
@@ -403,6 +408,85 @@ class VisHelix(object):
         self._logger.info("Domain ID %d  Number of bases %d  Start pos %d  End pos %d" % (domain_id, num_bases,
             start_base.p, end_base.p))
         self._logger.info("Domain is part of strand %s" % (strand_name))
+        self.print_info()
+
+    def create_inserts_deletes_rep(self):
+        """ Create the geometry for the helix inserts and deletes representation. 
+
+            The inserts and deletes representation is visualized by displaying the staple and scaffold inserts and
+            deletes as wireframe spheres.
+        """
+        # Create the inserts geometry.
+        inserts = [i for i,base in enumerate(self.vhelix.staple_base_list) if base.num_insertions != 0]
+        num_inserts = len(inserts)
+        if num_inserts != 0:
+            insert_origins = np.zeros((num_inserts,3), dtype=float)
+            insert_directions = np.zeros((3,3,num_inserts), dtype=float)
+            for i,j in enumerate(inserts): 
+                base = self.vhelix.staple_base_list[j]
+                insert_origins[i] = base.coordinates
+                insert_directions[:,:,i] = base.ref_frame
+            #__for id in base_ids
+            show_vertices = True
+            name = "HelixInserts:%s" % self.id
+            scale = 0.2
+            symbol = VisGeometrySymbols.BASE_INSERT
+            inserts_geom = VisGeometrySymbols(name, symbol, insert_origins, insert_directions, scale)
+            inserts_geom.line_width = 1.0 
+            inserts_geom.color = [0.0,0.6,0.0,1.0] 
+            inserts_geom.selected_callback = self.select_inserts
+            inserts_geom.select_vertex = True
+            inserts_geom.entity_indexes = range(0,len(inserts))
+            self.representations[VisHelixRepType.INSERTS_DELETES] = [inserts_geom]
+            self.graphics.add_render_geometry(inserts_geom)
+        #__if num_inserts != 0
+
+        # Create the deletes geometry.
+        deletes = [i for i,base in enumerate(self.vhelix.staple_base_list) if base.num_deletions != 0]
+        num_deletes = len(deletes)
+        if num_deletes != 0:
+            delete_origins = np.zeros((num_deletes,3), dtype=float)
+            delete_directions = np.zeros((3,3,num_deletes), dtype=float)
+            for i,j in enumerate(deletes): 
+                base = self.vhelix.staple_base_list[j]
+                delete_origins[i] = base.coordinates
+                delete_directions[:,:,i] = base.ref_frame
+            #__for id in base_ids
+            show_vertices = True
+            name = "HelixDeletes:%s" % self.id
+            scale = 0.2
+            symbol = VisGeometrySymbols.BASE_DELETE
+            deletes_geom = VisGeometrySymbols(name, symbol, delete_origins, delete_directions, scale)
+            deletes_geom.line_width = 1.0
+            deletes_geom.color = [0.6,0.0,0.0,1.0]
+            deletes_geom.selected_callback = self.select_deletes
+            deletes_geom.select_vertex = True
+            deletes_geom.entity_indexes = range(0,len(deletes))
+            self.representations[VisHelixRepType.INSERTS_DELETES] = [deletes_geom]
+            self.graphics.add_render_geometry(deletes_geom)
+        #__if num_inserts != 0
+
+        if (num_deletes == 0) and (num_inserts == 0):
+            self.representations[VisHelixRepType.INSERTS_DELETES] = []
+
+    def select_inserts(self, geom, index):
+        """ Process helix inserts selection.
+
+            Arguments:
+                geom (VisGeometry): The geometry selected.
+                index (int): The index into the geometry selected.
+        """
+        self._logger.info("Selected Helix %s insert." % (self.name)) 
+        self.print_info()
+
+    def select_deletes(self, geom, index):
+        """ Process helix inserts selection.
+
+            Arguments:
+                geom (VisGeometry): The geometry selected.
+                index (int): The index into the geometry selected.
+        """
+        self._logger.info("Selected Helix %s insert." % (self.name))
         self.print_info()
 
     def create_strands_rep(self):

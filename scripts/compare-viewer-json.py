@@ -17,7 +17,6 @@ import sys
 import logging
 import math
 
-
 class Domain(object):
     """ The Domain class defines the data and methods for a DNA structure domain.
     """
@@ -43,7 +42,7 @@ class Domain(object):
         # Extract JSON data.
         try:
             self.id = json_data[self.ID]
-            self.num_bases = json_data[self.NUM_BASES]
+            self.number_of_bases = json_data[self.NUM_BASES]
             self.base_list = json_data[self.BASES]
             self.strand_id = json_data[self.STRAND_ID]
             self.connected_strand = json_data[self.CONN_STRAND]
@@ -52,7 +51,7 @@ class Domain(object):
             self.end_base_index = json_data[self.END_BASE_INDEX]
             self.orientation = json_data[self.ORIENTATION]
             self.start_pos = json_data[self.START_POS]
-            self.end_pos  = json_data[self.END_POS]
+            self.end_pos = json_data[self.END_POS]
             self.color = json_data[self.COLOR]
             self.melting_temperature = json_data[self.MELTING_TEMP]
         except KeyError as e:
@@ -88,15 +87,20 @@ class Base(object):
     COORDS = 'coordinates'
     ID = 'id'
     SEQ = 'sequence'
+    HELIX = 'h'
+    POSITION = 'p'
 
-    def __init__(self, json_data):
+    def __init__(self, json_data, id=0):
         """ Create a Base object from JSON data. """
+        self.id = id
         self.bad_data = False
         self.num_errors = 0 
         try:
-            self.id = json_data[self.ID]
+            # self.id = json_data[self.ID]    don't compare IDs, they can be different.
             self.coord = json_data[self.COORDS]
-            self.seq = json_data[self.SEQ]
+            self.sequence = json_data[self.SEQ]
+            self.h = json_data[self.HELIX]
+            self.p = json_data[self.POSITION]
         except KeyError as e:
             logger.error("Base data is missing the JSON %s field: %s" % (str(e), str(json_data)))
             self.bad_data = True
@@ -107,7 +111,7 @@ class Base(object):
             return
         self.num_errors += compare_dicts(self.__dict__, base.__dict__)
         if not compare_float_lists(self.coord,base.coord):
-           logger.error("Base id %d '%s' values are not equal: %s != %s" % (self.id, self.COORDS, self.coord, base.coord))
+           logger.error("Base number %d '%s' values are not equal: %s != %s" % (self.id, self.COORDS, self.coord, base.coord))
            self.num_errors += 1
 
 class Strand(object):
@@ -129,10 +133,10 @@ class Strand(object):
             self.id = json_data[self.ID]
             self.is_scaffold = json_data[self.IS_SCAFFLOD]
             self.is_circular = json_data[self.IS_CIRCULAR]
-            self.num_bases = json_data[self.NUM_BASES]
+            self.number_of_bases = json_data[self.NUM_BASES]
             self.bases = []
-            for base in json_data[self.BASES]:
-                self.bases.append( Base(base) )
+            for i,base in enumerate(json_data[self.BASES]):
+                self.bases.append( Base(base,i) )
             self.helix_list = [] 
             for id in json_data[self.VIRTUAL_HELICES]:
                 self.helix_list.append(id)
@@ -144,7 +148,18 @@ class Strand(object):
             self.bad_data = True
 
     def compare(self, strand):
-        """ Compare this strand object with the given strand object. """
+        """ Compare this strand object with the given strand object. 
+
+            Arguments:
+                strand (DnaStrand): The strand object to compare.
+
+            Strands are compared using
+                1) The number of bases in the strands.
+                2) The list of domains IDs. This may change because the integer domain 
+                   IDs does not really matter.
+                3) The bases in the strand. 
+                4) The list of helix IDs. 
+        """
         if self.bad_data or strand.bad_data:
             return
         logger.info("Compare strand id %d " % self.id)
@@ -168,13 +183,15 @@ class Strand(object):
             self.num_errors += 1
             return
 
-        # Check base IDs.
+        # Check strand base data. 
         base_map1 = {}
         for base in self.bases:
-            base_map1[base.id] = base 
+            id = (base.h,base.p)
+            base_map1[id] = base 
         base_map2 = {}
         for base in strand.bases:
-            base_map2[base.id] = base 
+            id = (base.h,base.p)
+            base_map2[id] = base 
         id_list = []
         for id in base_map1:
             if id not in base_map2:
@@ -205,10 +222,10 @@ class HelixCrossover(object):
         self.num_errors = 0
         try:
              self.vhelix_base_index = json_data[self.BASE_INDEX]
-             self.strand1_ID = json_data[self.FIRST_STRAND_ID]
-             self.strand1_bindex = json_data[self.FIRST_STRAND_BASE_INDEX]
-             self.strand2_ID = json_data[self.SECOND_STRAND_ID]
-             self.strand2_bindex = json_data[self.SECOND_STRAND_BASE_INDEX]
+             self.first_strand_ID = json_data[self.FIRST_STRAND_ID]
+             self.first_strand_base_index = json_data[self.FIRST_STRAND_BASE_INDEX]
+             self.second_strand_ID = json_data[self.SECOND_STRAND_ID]
+             self.second_strand_base_index = json_data[self.SECOND_STRAND_BASE_INDEX]
         except KeyError as e:
             logger.error("Helix crossover data is missing the JSON %s field: %s" % (str(e), str(json_data)))
             self.bad_data = True
@@ -303,11 +320,11 @@ class Helix(object):
     DOMAINS = 'domains'
     END_POS = 'end_position'
     HELIX_CONNECTIVITY = 'helix_connectivity'
+    HELIX_DISTANCE = 'helix_distance'
     NUM_POSSIBLE_STAPLE_XOVERS = 'num_possible_staple_crossovers'
     NUM_POSSIBLE_SCAFFOLD_XOVERS = 'num_possible_scaffold_crossovers'
     ORIENTATION = 'orientation'
     START_POS = 'start_position'
-    STRAND_RADIUS = 'strand_radius'
 
     def __init__(self, json_data):
         """ Create a Helix object from JSON data."""
@@ -319,17 +336,17 @@ class Helix(object):
             self.num = cadnano_info[self.CADNANO_HELIX_NUM]
             self.row = cadnano_info[self.CADNANO_ROW]
             self.col = cadnano_info[self.CADNANO_COL]
-            self.strand_radius = json_data[self.STRAND_RADIUS]
+            self.helix_distance = json_data[self.HELIX_DISTANCE]
             self.base_pair_rise = json_data[self.BP_RISE]
             self.orientation = json_data[self.ORIENTATION]
             self.end_pos = json_data[self.END_POS]
             self.start_pos = json_data[self.START_POS]
             # Set domain list.
             self.domain_ids = []
-            domain_list = json_data[self.DOMAINS]
-            for domain_id in domain_list:
+            domains = json_data[self.DOMAINS]
+            for domain_id in domains:
                 self.domain_ids.append(domain_id)
-            #__for domain_id in domain_list
+            #__for domain_id in domains
             self.num_possible_staple_crossovers = json_data[self.NUM_POSSIBLE_STAPLE_XOVERS]
             self.num_possible_scaffold_crossovers = json_data[self.NUM_POSSIBLE_SCAFFOLD_XOVERS]
             # Set helix connectivity.
@@ -480,8 +497,10 @@ class DnaStructure(object):
         self.compare_domain(dna_structure)
         if self.num_errors != 0:
             logger.error("Files are not identical: %d errors detected." % self.num_errors)
+            return False
         else:
             logger.info("Files are identical.")
+            return True
 
     def compare_domain(self, dna_structure):
         """ Compare domain data. """
@@ -608,15 +627,17 @@ def compare_lists(name, list1, list2, check_order):
         return False
 
     # Check that the lists contain the same elements.
-    ldiff = set(list1).symmetric_difference(set(list2))
-    if ldiff:
-        logger.error("'%s' lists contain different values: %s" % (name, list(ldiff)))
-        return False
+    if (False):
+        ldiff = set(list1).symmetric_difference(set(list2))
+        if ldiff:
+            logger.error("'%s' lists contain different values: %s" % (name, list(ldiff)))
+            return False
 
-    # Check if the ordering of the lists are the same.
-    if check_order and cmp(list1,list2):
-        logger.error("'%s' list values are not in the same order: %s != %s" % (name, list1, list2)) 
-        return False
+        # Check if the ordering of the lists are the same.
+        if check_order and cmp(list1,list2):
+            logger.error("'%s' list values are not in the same order: %s != %s" % (name, list1, list2)) 
+            return False
+
     return True
 
 def setup_logging(level):
@@ -652,7 +673,8 @@ def main():
     dna_structure2.read_json(file_name2)
 
     # Compare the data.
-    dna_structure1.compare( dna_structure2 )
+    if not dna_structure1.compare(dna_structure2):
+        sys.exit(1)
 
 if __name__=="__main__":
     main()

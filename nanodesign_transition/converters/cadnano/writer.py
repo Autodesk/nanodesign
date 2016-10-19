@@ -109,27 +109,24 @@ class CadnanoWriter(object):
         for base in base_list:
             if base:
                 #print(">>> base  id %d   h %d  p %d  up %d  down %d " % (base.id, base.h, base.p, base.up, base.down))
-                if base.up == -1:
+                if base.up == None:
                     up_pos = -1
                     up_vh = -1
                 else:
-                    up_base = self.dna_structure.base_connectivity[base.up-1]
-                    up_pos = up_base.p
-                    up_vh = up_base.h
+                    up_pos = base.up.p
+                    up_vh = base.up.h
 
-                if base.down == -1:
+                if base.down == None:
                     down_pos = -1
                     down_vh = -1
                 else:
-                    down_base = self.dna_structure.base_connectivity[base.down-1]
-                    down_pos = down_base.p
-                    down_vh = down_base.h
-               
+                    down_pos = base.down.p
+                    down_vh = base.down.h
                 #print("          %s " % str([up_vh, up_pos, down_vh, down_pos])) 
                 base_info.append( [up_vh, up_pos, down_vh, down_pos] )
             else:
                 base_info.append( [-1,-1,-1,-1] )
-       
+        #__for base in base_list
         return base_info 
 
     def _get_loop_info(self, base_list):
@@ -137,7 +134,7 @@ class CadnanoWriter(object):
         loop_info = []
         for base in base_list:
             if base:
-                loop_info.append(base.loop)
+                loop_info.append(base.num_insertions)
             else:
                 loop_info.append(0)
         return loop_info
@@ -147,7 +144,7 @@ class CadnanoWriter(object):
         skip_info = []
         for base in base_list:
             if base:
-                skip_info.append(base.skip)
+                skip_info.append(base.num_deletions)
             else:
                 skip_info.append(0)
         return skip_info

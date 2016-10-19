@@ -337,12 +337,13 @@ class VisMenu(object):
         strand_select.add_submenu(VisStrandRepType.PATH,     "Strand path")
 
         # Create the submenus for the virtual helix representations. 
-        helix_select.add_submenu(VisHelixRepType.NODES,             "Virtual helix base positions") 
+        helix_select.add_submenu(VisHelixRepType.BASE_POSITIONS,    "Virtual helix base positions") 
         helix_select.add_submenu(VisHelixRepType.COORDINATE_FRAMES, "Virtual helix coordinate frames") 
         helix_select.add_submenu(VisHelixRepType.DESIGN_CROSSOVERS, "Virtual helix design crossovers")
-        helix_select.add_submenu(VisHelixRepType.GEOMETRY,          "Virtual helix geometry")
         helix_select.add_submenu(VisHelixRepType.COORDINATES,       "Virtual helix DNA helix P coordinates")
         helix_select.add_submenu(VisHelixRepType.DOMAINS,           "Virtual helix domains")
+        helix_select.add_submenu(VisHelixRepType.GEOMETRY,          "Virtual helix geometry")
+        helix_select.add_submenu(VisHelixRepType.INSERTS_DELETES,   "Virtual helix inserts and deletes")
         helix_select.add_submenu(VisHelixRepType.STRANDS,           "Virtual helix strands")
 
         # Add the quit menu item.
@@ -368,9 +369,10 @@ class VisMenu(object):
         print(" Virtual helix base positions - Show the location of base positions along a helix axis.")
         print(" Virtual helix coordinate frames - Show the virtual helix coordinate frames. An arrow on the helix axis shows its polarity.")
         print(" Virtual helix design crossovers - Show the virtual helix crossovers present in the design.")
-        print(" Virtual helix cylinders - Show the virtual helix as a transparent cylinder.")
+        print(" Virtual helix geometry - Show the virtual helix as a transparent cylinder.")
         print(" Virtual helix DNA helix P coordinates - Show the approximate coordinates of P atoms of a DNA helix.")
         print(" Virtual helix domains - Show the domains defined for the virtual helix.")
+        print(" Virtual helix inserts and deletes - Show the locations of base insertions and deletions for the virtual helix.")
         print(" Virtual helix strands - Show the strands that start in a virtual helix.")
         print("\n")
 

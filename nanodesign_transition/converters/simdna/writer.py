@@ -45,15 +45,13 @@ class SimDnaWriter(object):
             outfile.write("%d\n" % num_bases)
             for strand in dna_structure.strands:
                 base_coords = strand.get_base_coords()
-
                 for i in xrange(0,len(strand.tour)):
-                    id = strand.tour[i]
-                    base = self.dna_structure.base_connectivity[id-1]
-                    if base.across == -1:
+                    base = strand.tour[i]
+                    if base.across == None or base.across == -1:
                         paired_strand_id = -1
                         paired_base_id = -1
                     else:
-                        across_base = dna_structure.base_connectivity[base.across-1]
+                        across_base = base.across
                         paired_strand_id = across_base.strand
                         paired_strand = self.dna_structure.strands_map[paired_strand_id]
                         #print(">>> strand id %d  paired_strand  id %d" % (strand.id, paired_strand.id))

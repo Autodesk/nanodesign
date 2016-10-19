@@ -107,14 +107,14 @@ def read_cadnano_file(converter, file_name, seq_file_name, seq_name):
         if (file_extension == ".csv"): 
             modified_structure = False
             sequence = cadnano_reader.read_csv(seq_file_name)
-            converter.cadnano_convert_design.set_sequence(modified_structure, sequence)
+            converter.cadnano_convert_design.set_sequence(converter.dna_structure, modified_structure, sequence)
 
     # Assign a sequence using a name.
     if (seq_name): 
         if (seq_name not in dna_sequence_data):
             converter.logger.error("The sequence name %s is not recognized.", seq_name)
         modified_structure = False
-        converter.cadnano_convert_design.set_sequence_from_name(modified_structure, seq_name)
+        converter.cadnano_convert_design.set_sequence_from_name(converter.dna_structure, modified_structure, seq_name)
 
 def write_viewer_file(converter, file_name):
     """ Write a Nanodesign Viewer file.
