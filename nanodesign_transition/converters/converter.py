@@ -47,7 +47,7 @@ class ConverterFileFormats(object):
     STRUCTURE = "structure"
     TOPOLOGY  = "topology"
     VIEWER    = "viewer"
-    names = [ CADNANO, CANDO, CIF, PDB, STRUCTURE, TOPOLOGY, VIEWER ]
+    names = [ CADNANO, CANDO, CIF, PDB, SIMDNA, STRUCTURE, TOPOLOGY, VIEWER ]
 
 class Converter(object):
     """ This class stores objects for various models created when reading from a file.
@@ -255,7 +255,7 @@ def main():
     if args.outformat == None:
         logger.error("No output file format given.")
     elif (args.outformat not in  ConverterFileFormats.names):
-        logger.error("Unknown output file format given: %s" % args.outformat)
+        logger.error("Unknown output file format given: \'%s\'" % args.outformat)
     else:
         logger.info("Output file format: %s" % args.outformat)
         # Make the helix distance a bit larger to better visualization.
