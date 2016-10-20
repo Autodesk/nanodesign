@@ -67,13 +67,13 @@ class DnaStructure(object):
     def _setup_logging(self):
         """ Set up logging."""
         logger = logging.getLogger(__name__ + ":" + str(self.name))
-        #logger = logging.getLogger('dna_structure')
         logger.setLevel(logging.INFO)
         # Create console handler and set format.
-        console_handler = logging.StreamHandler()
-        formatter = logging.Formatter('[%(name)s] %(levelname)s - %(message)s')
-        console_handler.setFormatter(formatter)
-        logger.addHandler(console_handler)
+        if not len(logger.handlers):
+            console_handler = logging.StreamHandler()
+            formatter = logging.Formatter('[%(name)s] %(levelname)s - %(message)s')
+            console_handler.setFormatter(formatter)
+            logger.addHandler(console_handler)
         return logger
 
     def _add_structure_helices(self, structure_helices):

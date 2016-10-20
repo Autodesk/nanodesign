@@ -28,15 +28,13 @@ class CadnanoWriter(object):
     def _setup_logging(self):
         """ Set up logging."""
         self._logger = logging.getLogger(__name__)
-        #self._logger = logging.getLogger('viewer:writer')
         self._logger.setLevel(self._logging_level)
-
         # Create console handler and set format.
-        console_handler = logging.StreamHandler()
-        #formatter = logging.Formatter('%(asctime)s [%(name)s] %(levelname)s - %(message)s')
-        formatter = logging.Formatter('[%(name)s] %(levelname)s - %(message)s')
-        console_handler.setFormatter(formatter)
-        self._logger.addHandler(console_handler)
+        if not len(self._logger.handlers):
+            console_handler = logging.StreamHandler()
+            formatter = logging.Formatter('[%(name)s] %(levelname)s - %(message)s')
+            console_handler.setFormatter(formatter)
+            self._logger.addHandler(console_handler)
 
     def write(self,file_name):
         """ Write a caDNAno design JSON file.

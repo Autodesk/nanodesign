@@ -80,11 +80,11 @@ class CadnanoConvertDesign(object):
         self._logger = logging.getLogger(__name__)
         self._logger.setLevel(self._logging_level)
         # Create a console handler and set format.
-        console_handler = logging.StreamHandler()
-        #formatter = logging.Formatter('%(asctime)s [%(name)s] %(levelname)s - %(message)s')
-        formatter = logging.Formatter('[%(name)s] %(levelname)s - %(message)s')
-        console_handler.setFormatter(formatter)
-        self._logger.addHandler(console_handler)
+        if not len(self._logger.handlers):
+            console_handler = logging.StreamHandler()
+            formatter = logging.Formatter('[%(name)s] %(levelname)s - %(message)s')
+            console_handler.setFormatter(formatter)
+            self._logger.addHandler(console_handler)
 
     def _add_staple_color(self, staple_color, vhelix_num):
         """ Add a caDNAno staple color for the given virtual helix. 

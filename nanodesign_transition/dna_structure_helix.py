@@ -97,11 +97,12 @@ class DnaStructureHelix(object):
         """ Set up logging. """
         logger = logging.getLogger(__name__ + ":" + str(self.id))
         logger.setLevel(logging.INFO)
-        # create console handler and set format
-        console_handler = logging.StreamHandler()
-        formatter = logging.Formatter('[%(name)s] %(levelname)s - %(message)s')
-        console_handler.setFormatter(formatter)
-        logger.addHandler(console_handler)
+        # Create console handler and set format.
+        if not len(logger.handlers):
+            console_handler = logging.StreamHandler()
+            formatter = logging.Formatter('[%(name)s] %(levelname)s - %(message)s')
+            console_handler.setFormatter(formatter)
+            logger.addHandler(console_handler)
         return logger
 
     def set_end_coords(self):

@@ -192,10 +192,11 @@ class AtomicStructure(object):
         logger = logging.getLogger(__name__)
         logger.setLevel(logging.INFO)
         # Create console handler and set format.
-        console_handler = logging.StreamHandler()
-        formatter = logging.Formatter('[%(name)s] %(levelname)s - %(message)s')
-        console_handler.setFormatter(formatter)
-        logger.addHandler(console_handler)
+        if not len(logger.handlers):
+            console_handler = logging.StreamHandler()
+            formatter = logging.Formatter('[%(name)s] %(levelname)s - %(message)s')
+            console_handler.setFormatter(formatter)
+            logger.addHandler(console_handler)
         return logger
 
     def _init_strand_data(self):
