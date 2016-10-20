@@ -65,7 +65,7 @@ class MoleculeType:
     """ This class defines atomic structure types. """
     UNKNOWN = 'unknown'
     ION = 'ion'
-    NUCLEIC_ACID = 'nucleaic_acid'
+    NUCLEIC_ACID = 'nucleic_acid'
     PROTEIN = 'protein'
     WATER = 'water'
 
@@ -142,7 +142,6 @@ class AtomicStructureStrand(object):
         self.translations = [ np.empty(shape=(0)) ] * size
 
         # Create the chain ID.
-        dna_structure = strand.dna_structure
         base_conn = strand.dna_structure.base_connectivity
         first_base = strand.tour[0]
         if strand.is_scaffold:
@@ -816,7 +815,6 @@ class AtomicStructure(object):
 
     def generate_structure_ss(self):
         """ Generate the atomic structure for the dna model. """
-        dna_structure = self.dna_structure
         base_conn = self.dna_structure.base_connectivity
 
         self._logger.info("Generate atomic structure for ssDNA.") 
@@ -935,7 +933,6 @@ class AtomicStructure(object):
         self._logger.debug("Strand %d " % strand.id ) 
         self._logger.debug("Number of bases %d " % len(strand.tour) ) 
         self._logger.debug("Scaffold %d " % strand.is_scaffold ) 
-        dna_structure = strand.dna_strand.dna_structure
         base_conn = strand.dna_strand.dna_structure.base_connectivity
         base = strand.tour[0]
         self._logger.debug( "Start helix %d  position %d" % (base.h, base.p) ) 

@@ -33,6 +33,8 @@ class DnaStructureHelix(object):
     """ This class stores information for a DNA structure helix. 
 
         Attributes:
+            count (int): The helix count (0 based) of the order the helix was processed. This is needed when
+                writing a caDNAno file.
             end_coordinates (NumPy 2x3 ndarray[float]): The coordinates at the ends of the helix.
             end_frames (NumPy 3x3x2 ndarray[float]): The coordinate frames at the ends of the helix.
             helix_axis_frames (NumPy 3x3xN ndarray[float]): The coordinate frames of base nodes along the helix axis, 
@@ -61,10 +63,11 @@ class DnaStructureHelix(object):
 
     # TODO (DaveP) We need to remove the references to caDNAno lattice-based information.
 
-    def __init__(self, id, scaffold_polarity, helix_axis_coords, helix_axis_frames, scaffold_bases, staple_bases):
+    def __init__(self, count, id, scaffold_polarity, helix_axis_coords, helix_axis_frames, scaffold_bases, staple_bases):
         """ Initialize a DnaStructureHelix object.
 
             Arguments:
+                count (int): The helix count (0 based) of the order the helix was processed.
                 id (int): The helix ID.
                 scaffold_polarity (DnaPolarity): The helix polarity. 
                 helix_axis_coords (NumPy Nx3 ndarray[float]): The coordinates of base nodes along the helix axis. 
@@ -73,6 +76,7 @@ class DnaStructureHelix(object):
                 staple_bases (List[DnaBase]): The list of staple bases defined for the helix.
         """
         self.id = id
+        self.count = count 
         self.staple_bases = staple_bases
         self.scaffold_bases = scaffold_bases
         self.helix_axis_frames = helix_axis_frames
@@ -81,6 +85,7 @@ class DnaStructureHelix(object):
         self.lattice_row = -1
         self.lattice_col = -1
         self.lattice_num = -1
+        self.lattice_max_vhelix_size = 0
         self.helix_connectivity = []
         self.possible_staple_crossovers = []
         self.possible_scaffold_crossovers = []

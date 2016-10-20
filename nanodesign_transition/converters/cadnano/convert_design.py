@@ -590,8 +590,8 @@ class CadnanoConvertDesign(object):
 
     def _create_structure_topology_and_geometry(self, design):
         """ Create topological and geometrical information for a design. """
-        helix_id = 0
         lattice_type = design.lattice_type
+        max_vhelix_size = design.max_base_id+1
         row_list = []
         col_list = []
         structure_helices = [] 
@@ -600,7 +600,7 @@ class CadnanoConvertDesign(object):
         #self._logger.setLevel(logging.DEBUG)
         self._logger.debug("==================== create structure topology and geometry ====================")
 
-        for vhelix in vhelices:
+        for i,vhelix in enumerate(vhelices):
             self._logger.debug("---------- process virtual helix num %d ----------" % vhelix.num );
             row = vhelix.row 
             col = vhelix.col 
@@ -644,15 +644,15 @@ class CadnanoConvertDesign(object):
                 self._generate_coordinates(lattice_type, row, col, num, scaffold_bases, staple_bases)
 
             # Create a dna structure object that stores the helix information. 
-            structure_helix = DnaStructureHelix(num, scaffold_polarity, axis_coords, axis_frames, scaffold_bases, 
+            structure_helix = DnaStructureHelix(i, num, scaffold_polarity, axis_coords, axis_frames, scaffold_bases, 
                                                 staple_bases)
             structure_helix.lattice_num = num
             structure_helix.lattice_row = row
             structure_helix.lattice_col = col
+            structure_helix.lattice_max_vhelix_size = max_vhelix_size 
             structure_helix.staple_base_list = staple_bases
             structure_helix.scaffold_base_list = scaffold_bases
             structure_helices.append(structure_helix)
-            helix_id += 1
         #__for vhelix in vhelices
         return structure_helices
 
