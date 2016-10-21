@@ -45,13 +45,12 @@ class CadnanoDesign(object):
         """ Set up logging."""
         self._logger = logging.getLogger('cadnano:model')
         self._logger.setLevel(self._logging_level)
-
-        # create console handler and set format
-        console_handler = logging.StreamHandler()
-        #formatter = logging.Formatter('%(asctime)s [%(name)s] %(levelname)s - %(message)s')
-        formatter = logging.Formatter('[%(name)s] %(levelname)s - %(message)s')
-        console_handler.setFormatter(formatter)
-        self._logger.addHandler(console_handler)
+        # Create console handler and set format.
+        if not len(self._logger.handlers):
+            console_handler = logging.StreamHandler()
+            formatter = logging.Formatter('[%(name)s] %(levelname)s - %(message)s')
+            console_handler.setFormatter(formatter)
+            self._logger.addHandler(console_handler)
 
     def calculate_possible_crossovers(self):
         """ Calculate the possible crossover positions for both scaffold and staples. 

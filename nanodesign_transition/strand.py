@@ -51,25 +51,21 @@ class DnaStrand(object):
         """
         num_bases = len(self.tour)
         base_coords = np.zeros((num_bases,3), dtype=float)
-        for i in xrange(0,num_bases):
-            id = self.tour[i]
-            base = self.dna_structure.base_connectivity[id-1]
+        for i,base in enumerate(self.tour):
             helix_num = base.h
             helix_pos = base.p
             helix = self.helix_list[helix_num]
-            nodes = helix.helix_axis_nodes
-            base_coords[i] = nodes[base.p]
+            base_coords[i] = base.coordinates
         return base_coords
 
     def get_base_index(self, base):
         """ Get the index into the strand for the given base. 
             This is only used when writing a visualization file.
         """
+        num_bases = len(self.tour)
         if (not self.base_id_list):
-            num_bases = len(self.tour)
-            for i in xrange(0,num_bases):
-                id = self.tour[i]
-                self.base_id_list[id] = i
+            for i,sbase in enumerate(self.tour):
+                self.base_id_list[sbase.id] = i
         if base.id not in self.base_id_list:
             sys.stderr.write("[strand::get_base_index] **** WARNING: base %d not found in strand %d.\n" % (base.id, self.id))
             return None

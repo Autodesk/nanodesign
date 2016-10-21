@@ -37,6 +37,7 @@ except ImportError as e:
     print "Could not import PyOpenGL."
     raise e
 
+
 class VisGeometry(object):
     """ This is the VisGeometry base class.
 
@@ -61,6 +62,8 @@ class VisGeometry(object):
     """
     __metaclass__ = ABCMeta
     num_geometries = 0
+    vertices_size = 0
+    connectivity_size = 0
 
     def __init__(self, name):
         self.name = name
@@ -110,6 +113,13 @@ class VisGeometry(object):
                     break
             #__for entity,index in enumerate(self.entity_indexes)
         #__if self.intersect_point
+
+    def update_stats(self, size_conn, size_verts):
+        VisGeometry.vertices_size += size_verts 
+        VisGeometry.connectivity_size = size_conn 
+        #print("Number of geometries %d" % VisGeometry.num_geometries) 
+        #print("Size of connectivity %d" % VisGeometry.connectivity_size) 
+        #print("Size of vertices %d" % VisGeometry.vertices_size) 
 
 class VisGeometryBox(VisGeometry):
     """ This class is used to display the outline of a 3D box. """ 
@@ -169,6 +179,7 @@ class VisGeometryBox(VisGeometry):
 
         self.vertices = vertices 
         self.num_vertices = 24 
+        self.update_stats(0, len(self.vertices))
 
     def render(self):
         """ Render the box geometry. """
@@ -247,7 +258,9 @@ class VisGeometryLines(VisGeometry):
                     self.arrow_vertices[n,:] = vert 
                     n += 1
             #__for i in xrange(0,len(points)-1)
+            self.update_stats(0, len(self.arrow_vertices))
         #__if arrows
+        self.update_stats(0, len(self.vertices))
 
     def intersect_line(self, point1, point2):
         """ Intersect the geometry with a line. """
@@ -423,6 +436,9 @@ class VisGeometryPath(VisGeometry):
                 #__for j in xrange(0,3)
                 n += 8
             #__for i in xrange(0,len(self.bend_points)/2)
+
+        #self.update_stats(0, len(self.arrow_vertices))
+        #self.update_stats(0, len(self.vertices))
 
     def intersect_line(self, point1, point2):
         """ Intersect the geometry with a line. """ 
@@ -1035,7 +1051,7 @@ class VisGeometryAxes(VisGeometry):
         (e.g. helix polarity). 
     """
     def __init__(self, name, origins, directions, scale=1.0):
-        """ Initialize a VisGeometryLines object. 
+        """ Initialize a VisGeometryAxes object. 
 
             Arguments:
                 name (String): The geometry name.
@@ -1279,6 +1295,120 @@ class VisGeometryPolygon(VisGeometry):
             draw_cross(self.intersect_point)
 
 #__class VisGeometryPolygon
+
+class VisGeometrySymbols(VisGeometry):
+    """ This class is used to display 3D symbols.
+
+    """
+    BASE_INSERT = "base_insert"
+    BASE_DELETE = "base_delete"
+
+    def __init__(self, name, symbol, origins, directions, scale=1.0):
+        """ Initialize a VisGeometryLines object. 
+
+            Arguments:
+                name (String): The geometry name.
+                origins (List[List[Float]]): The list of N axis origins. 
+                directions ((NumPy 3x3xN ndarray[float]): The symbol three directions.  ith axis1 = directions[:,0,i], 
+                    ith axis2 = directions[:,1,i], ith axis3 = directions[:,2,i]
+                scale (Float): The symbol scale.
+        """
+        VisGeometry.__init__(self, name)
+        self.line_width = 1.0
+        self.color = [1.0, 0.0, 1.0, 1.0]
+        self.symbol = symbol
+        self._create_geometry(origins, directions, scale)
+
+    def _create_geometry(self, origins, directions, scale):
+        """ Create the axes geometry. """
+        if self.symbol == VisGeometrySymbols.BASE_INSERT:
+            self._create_insert_geometry(origins, directions, scale)
+        elif self.symbol == VisGeometrySymbols.BASE_DELETE:
+            self._create_delete_geometry(origins, directions, scale)
+
+    def _create_delete_geometry(self, origins, directions, scale):
+        """ Create the geometry for the delete symbol, a 3D cross. """
+        num_symbols = len(origins)
+        self.num_vp = 6
+        self.num_vertices = self.num_vp*num_symbols
+        self.vertices = np.zeros((self.num_vertices,3), dtype=float)
+        n = 0
+        for i in xrange(0,num_symbols):
+            for j in xrange(0,3):
+                self.vertices[n,j]   = origins[i,j] - scale*directions[j,0,i]
+                self.vertices[n+1,j] = origins[i,j] + scale*directions[j,0,i]
+                self.vertices[n+2,j] = origins[i,j] - scale*directions[j,1,i]
+                self.vertices[n+3,j] = origins[i,j] + scale*directions[j,1,i]
+                self.vertices[n+4,j] = origins[i,j] - scale*directions[j,2,i]
+                self.vertices[n+5,j] = origins[i,j] + scale*directions[j,2,i]
+            #__for j in xrange(0,3)
+            n += self.num_vp
+        #__for i in xrange(0,num_symbols)
+
+    def _create_insert_geometry(self, origins, directions, scale):
+        """ Create the insert geometry, a 3D triangle. """
+        num_symbols = len(origins)
+        self.num_vp = 6
+        self.num_vertices = self.num_vp*num_symbols
+        self.vertices = np.zeros((self.num_vertices,3), dtype=float)
+        n = 0
+        for i in xrange(0,num_symbols):
+            v1 = directions[:,2,i]
+            v2 = directions[:,0,i]
+            for j in xrange(0,3):
+                self.vertices[n,j] = origins[i,j]
+                self.vertices[n+1,j] = origins[i,j] + scale*v1[j] + scale*v2[j]
+                self.vertices[n+2,j] = origins[i,j] 
+                self.vertices[n+3,j] = origins[i,j] - scale*v1[j] + scale*v2[j]
+                self.vertices[n+4,j] = origins[i,j] - scale*v1[j] + scale*v2[j]
+                self.vertices[n+5,j] = origins[i,j] + scale*v1[j] + scale*v2[j]
+            #__for j in xrange(0,3)
+            n += self.num_vp
+        #__for i in xrange(0,num_symbols)
+
+    def intersect_line(self, point1, point2):
+        """ Intersect the geometry with a line. """ 
+        if not self.visible:
+            return False
+        self.intersect_index = None
+        self.intersect_point = None
+        self.selected_entity = None
+        for i in xrange(0,self.num_vertices-1):
+            line2_p1 = self.vertices[i]
+            line2_p2 = self.vertices[i+1]
+            ipt = comp_line_line_intersect(point1, point2, line2_p1, line2_p2)
+            if ipt:
+                self.selected_entity = i/self.num_vp
+                self.intersect_index = i
+                self.intersect_point = ipt
+                return True
+        #__for i in xrange(0,self.num_vertices)
+        return False 
+
+    def render(self):
+        """ Render the axes geometry. """
+        if not self.visible:
+            return
+        glLineWidth(self.line_width)
+        glColor4fv(self.color)
+        glDisable(GL_LIGHTING);
+        glBegin(GL_LINES)
+        for i in xrange(0,self.num_vertices):
+            glVertex3dv(self.vertices[i])
+        glEnd()
+        glEnable(GL_LIGHTING);
+
+        # Highlight the selected axis.
+        if self.selected and (self.selected_entity != None):
+            glColor4fv(self.highlight_color)
+            glLineWidth(6.0)
+            glBegin(GL_LINES)
+            i1 = self.selected_entity*self.num_vp
+            i2 = i1 + self.num_vp 
+            for i in xrange(i1,i2):
+                glVertex3dv(self.vertices[i])
+            glEnd()
+    #__def render(self)
 
 class VisGeometryCircle(VisGeometry):
     """ This class is used to display a circle in 3D. 

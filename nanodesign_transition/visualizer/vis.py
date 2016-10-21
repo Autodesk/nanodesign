@@ -87,9 +87,10 @@ def read_file(args, logger):
     cadnano_design = cadnano_reader.read_json(args.infile)
 
     # Convert the design.
+    modify = True
     dna_parameters = DnaParameters()
     convert_design = CadnanoConvertDesign(dna_parameters)
-    dna_structure = convert_design.create_structure(cadnano_design)
+    dna_structure = convert_design.create_structure(cadnano_design, modify)
 
     # Read a sequence file.
     if args.inseqfile:
@@ -106,7 +107,7 @@ def read_file(args, logger):
         if (args.inseqname not in dna_sequence_data):
             logger.error("The sequence name %s is not recognized.", args.inseqname)
         modified_structure = False
-        convert_design.set_sequence_from_name(modified_structure, args.inseqname)
+        convert_design.set_sequence_from_name(dna_structure, modified_structure, args.inseqname)
     return dna_structure 
 
 def main():

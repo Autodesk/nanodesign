@@ -9,7 +9,6 @@ import numpy as np
 from math import pi
 from cadnano.common import CadnanoLatticeName,CadnanoLatticeType
 
-
 try:
     import os.path
     import sys
@@ -20,7 +19,6 @@ try:
 except ImportError as i:
     print "Could not get nanodesign_transition module"
     raise i
-
 
 class ViewerWriter(object):
     """ The ViewerWriter class writes out a DNA Design viewer JSON file. 
@@ -39,7 +37,7 @@ class ViewerWriter(object):
     def write(self,file_name):
         """Write a viewer JSON file.
 
-        Args:
+        Arguments:
             file_name (string): The name of a viewer JSON file to write.
 
         """
@@ -69,19 +67,16 @@ class ViewerWriter(object):
         for domain in dna_structure.domain_list:
             point1,point2 = domain.get_end_points()
             base_info = [base.id for base in domain.base_list]
-
             if (domain.strand):
                 strand_id = domain.strand.id
-                strand_bases = domain.strand.tour
-                start_base_index = strand_bases.index(base_info[0])
-                end_base_index = strand_bases.index(base_info[-1])
+                strand_base_ids = [base.id for base in domain.strand.tour]
+                start_base_index = strand_base_ids.index(base_info[0])
+                end_base_index = strand_base_ids.index(base_info[-1])
             else:
                 strand_id = -1
                 start_base_index = -1
                 end_base_index = -1
-
             frame = domain.helix.end_frames[:,:,0]
-
             info = { 'id'                : domain.id ,
                      'color'             : domain.color,
                      'strand_id'         : domain.strand.id,
@@ -143,17 +138,17 @@ class ViewerWriter(object):
         """ Get JSON serialized data for strands objetcs. 
         """
         #self._logger.setLevel(logging.DEBUG)
-        self._logger.debug("==================== get strand information ===================")
+        self._logger.debug("==================== get strand information p ===================")
         strand_info_list = []
         for strand in dna_structure.strands:
             self._logger.debug("---------- strand %d ----------" % strand.id) 
             self._logger.debug("Is scaffold %s" % str(strand.is_scaffold))
             self._logger.debug("Is circular %s" % str(strand.is_circular))
-            strand_start_base = self.dna_structure.base_connectivity[strand.tour[0]-1]
-            strand_end_base = self.dna_structure.base_connectivity[strand.tour[-1]-1]
+            strand_start_base = strand.tour[0]
+            strand_end_base = strand.tour[-1]
             self._logger.debug("Start helix %d  pos %d " % (strand_start_base.h, strand_start_base.p))
             self._logger.debug("End helix %d  pos %d " % (strand_end_base.h, strand_end_base.p))
-            base = self.dna_structure.base_connectivity[strand.tour[1]-1]
+            base = strand.tour[1]
             self._logger.debug("Next helix %d  pos %d " % (base.h, base.p))
 
             self._logger.debug("Domains:")
@@ -178,10 +173,11 @@ class ViewerWriter(object):
             base_coords = strand.get_base_coords()
             base_info = []
             for i in xrange(0,len(strand.tour)):
-                id = strand.tour[i]
-                base = self.dna_structure.base_connectivity[id-1]
+                base = strand.tour[i]
                 coord = base_coords[i]
-                base_info.append({ 'id': base.id, 'coordinates' : list(coord), 'sequence' : base.seq })
+                base_info.append({ 'id': base.id, 'coordinates' : list(coord), 'sequence' : base.seq,
+                                   'h' : base.h,  'p' : base.p
+                                 })
  
             info = { 'id' : strand.id,
                      'is_scaffold'     : strand.is_scaffold,
@@ -359,6 +355,7 @@ class ViewerWriter(object):
         return crossover_info 
 
     def _get_crossover_strand_info(self, start_pos, pos, crossovers, crossover_info):
+        #self._logger.setLevel(logging.DEBUG)
         num_pos = len(pos)
         n = 0
         while n < num_pos:
@@ -379,7 +376,6 @@ class ViewerWriter(object):
                     self._logger.debug("               base1 id %d   base2 id %d " % (base1.id, base2.id))
                     self._logger.debug("               strand1: %d  index: %d " % (strand1_id, strand1_index))
                     self._logger.debug("               strand2: %d  index: %d " % (strand2_id, strand2_index))
-                    self._logger.debug("               strand2: %s " % (str(crossover2.strand.tour)))
                     add_pair = True 
                     n += 2
 
@@ -401,6 +397,7 @@ class ViewerWriter(object):
             crossover_info.append(info)
         #__while n < num_pos
 
+        self._logger.setLevel(logging.INFO)
         return crossover_info
 
     def _setup_logging(self):
@@ -408,13 +405,12 @@ class ViewerWriter(object):
         self._logger = logging.getLogger(__name__)
         #self._logger = logging.getLogger('viewer:writer')
         self._logger.setLevel(self._logging_level)
-
-        # create console handler and set format
-        console_handler = logging.StreamHandler()
-        #formatter = logging.Formatter('%(asctime)s [%(name)s] %(levelname)s - %(message)s')
-        formatter = logging.Formatter('[%(name)s] %(levelname)s - %(message)s')
-        console_handler.setFormatter(formatter)
-        self._logger.addHandler(console_handler)
+        # Create console handler and set format.
+        if not len(self._logger.handlers):
+            console_handler = logging.StreamHandler()
+            formatter = logging.Formatter('[%(name)s] %(levelname)s - %(message)s')
+            console_handler.setFormatter(formatter)
+            self._logger.addHandler(console_handler)
 
 def main():
     """ Write a DNA Design Viewer JSON file."""

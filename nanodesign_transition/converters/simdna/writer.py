@@ -88,17 +88,17 @@ class SimDnaWriter(object):
                 base_coords = strand.get_base_coords()
 
                 for i in xrange(0,len(strand.tour)):
-                    id = strand.tour[i]
-                    base = self.dna_structure.base_connectivity[id-1]
-                    if base.across == -1:
+                    base = strand.tour[i]
+                    if base.across == None:
                         paired_strand_id = -1
                         paired_base_id = -1
                     else:
-                        across_base = dna_structure.base_connectivity[base.across-1]
-                        paired_strand_id = strand_map[across_base.strand]
+                        across_base = base.across
+                        paired_strand_id = across_base.strand
                         paired_strand = self.dna_structure.strands_map[paired_strand_id]
                         paired_base_id = paired_strand.get_base_index(across_base)+1
-                    coord = nm_to_ang * base.coord
+                    #__if base.across == None
+                    coord = nm_to_ang * base.nt_coords
                     base_id = strand.get_base_index(base)+1
                     outfile.write("%4d %4d %8g %8g %8g %4d %4d\n" % 
                         (strand_id, i+1, coord[0], coord[1], coord[2], paired_strand_id, paired_base_id))
@@ -112,11 +112,11 @@ class SimDnaWriter(object):
         self._logger.setLevel(self._logging_level)
 
         # create console handler and set format
-        console_handler = logging.StreamHandler()
-        #formatter = logging.Formatter('%(asctime)s [%(name)s] %(levelname)s - %(message)s')
-        formatter = logging.Formatter('[%(name)s] %(levelname)s - %(message)s')
-        console_handler.setFormatter(formatter)
-        self._logger.addHandler(console_handler)
+        if not len(self._logger.handlers):
+            console_handler = logging.StreamHandler()
+            formatter = logging.Formatter('[%(name)s] %(levelname)s - %(message)s')
+            console_handler.setFormatter(formatter)
+            self._logger.addHandler(console_handler)
 
 def main():
     """ Write a DNA Design Viewer JSON file."""

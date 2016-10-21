@@ -48,7 +48,7 @@ def main():
         domain_list = vhelix[VisJsonFields.DOMAINS]
         print(">>> cadnano vhelix num %d" % num)
         print(">>> number of domains %d" % len(domain_list)) 
-        #print(">>> domains %s" % str(domain_list)) 
+        print(">>> domain IDs %s" % str(domain_list)) 
         print(">>> domains: ") 
         for domain_id in domain_list:
             for domain in domains_obj_list:
@@ -57,8 +57,7 @@ def main():
                     num_bases = domain["number_of_bases"]
                     connected_domain = domain['connected_domain']
                     strand_id = domain["strand_id"]
-            print("id: %4d  nbases: %3d  strand: %3d  connected to domain: %4d" % (domain_id, num_bases, strand_id, connected_domain))
-
+                    print("id: %4d  nbases: %3d  strand: %3d  connected to domain: %4d" % (domain_id, num_bases, strand_id, connected_domain))
         helix_connectivity = vhelix[VisJsonFields.HELIX_CONNECTIVITY]
         num_possible_staple_crossovers = vhelix['num_possible_staple_crossovers']
         num_possible_scaffold_crossovers = vhelix['num_possible_scaffold_crossovers']
@@ -120,7 +119,7 @@ def main():
         color = strand[VisJsonFields.COLOR]
         print("")
         print(">>> strand %s: scaffold: %s nbases: %d nvhelix: %d " % (id, is_scaffold, len(bases), len(vhelix_list)))
-        print("              number of domains: %d  domains: %s" % (len(domain_list), str(strand_domain_list)))
+        print("              number of domains: %d  domains: %s" % (len(strand_domain_list), str(strand_domain_list)))
         print("              color: %g %g %g" % (color[0],color[1],color[2])) 
         print("              bases: ") 
         print("              total number of domain bases: %d" % num_strand_domain_bases ) 

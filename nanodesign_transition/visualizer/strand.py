@@ -61,7 +61,7 @@ class VisStrand(object):
         self.representations = {}
         # Set the strand starting helix ann position within that helix.
         tour = dna_strand.tour
-        start_base = dna_structure.base_connectivity[tour[0]-1]
+        start_base = tour[0]
         self.start_helix = start_base.h
         self.start_pos = start_base.p
         # Set the strand name.
@@ -92,7 +92,7 @@ class VisStrand(object):
 
     @staticmethod
     def get_strand_name(dna_strand):
-        start_base = dna_strand.dna_structure.base_connectivity[dna_strand.tour[0]-1]
+        start_base = dna_strand.tour[0]
         if dna_strand.is_scaffold:
             name = "Scaffold"
         else:
@@ -119,8 +119,8 @@ class VisStrand(object):
 
     def print_info(self):
         """ Print strand information. """ 
-        start_base = self.dna_structure.base_connectivity[self.tour[0]-1]
-        end_base = self.dna_structure.base_connectivity[self.tour[-1]-1]
+        start_base = self.tour[0]
+        end_base = self.tour[-1]
         self._logger.info("Scaffold %s  Circular %s " % (str(self.dna_strand.is_scaffold), str(self.dna_strand.is_circular))) 
         self._logger.info("Start vhelix %d position %d  End vhelix %d position %d " % (start_base.h, start_base.p, 
             end_base.h, end_base.p))
@@ -196,12 +196,8 @@ class VisStrand(object):
         tour_size = len(self.tour)
         origins = np.empty(shape=(tour_size,3),dtype=float)
         directions = np.empty(shape=(3,3,tour_size),dtype=float)
-        for i,base_id in enumerate(self.tour):
-            base = base_conn[base_id-1]
-            helix = helix_map[base.h]
-            frame = helix.helix_axis_frames[:,:,base.p]
-            #self._logger.info("Number of triads %d" % helix.helix_axis_frames.shape[2])
-            self._logger.debug("base id %d  vh %d  pos %d " % (base.id, base.h, base.p))
+        for i,base in enumerate(self.tour):
+            frame = base.ref_frame 
             origins[i,:] = base_coords[i]
             directions[:,:,i] = frame 
         #__for i,base_id in enumerate(self.tour)
@@ -221,8 +217,7 @@ class VisStrand(object):
                 geom (VisGeometry): The geometry selected.
                 index (int): The index into the geometry selected.
         """
-        base_id = self.tour[index]
-        base = self.dna_structure.base_connectivity[base_id-1]
+        base = self.tour[index]
         self._logger.info("Selected Strand %s frame. Location in strand %d  Base id %d  Helix %d  Position %d " % (self.name, 
             index+1, base.id, base.h, base.p)) 
         self.print_info()
@@ -265,8 +260,7 @@ class VisStrand(object):
                 geom (VisGeometry): The geometry selected.
                 index (int): The index into the geometry selected.
         """
-        base_id = self.tour[index]
-        base = self.dna_structure.base_connectivity[base_id-1]
+        base = self.tour[index]
         self._logger.info("Selected Strand %s path. Location in path %d  Vhelix %d  Position %d  " % (self.name, index+1, 
             base.h, base.p)) 
         self.print_info()

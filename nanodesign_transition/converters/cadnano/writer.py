@@ -28,15 +28,13 @@ class CadnanoWriter(object):
     def _setup_logging(self):
         """ Set up logging."""
         self._logger = logging.getLogger(__name__)
-        #self._logger = logging.getLogger('viewer:writer')
         self._logger.setLevel(self._logging_level)
-
         # Create console handler and set format.
-        console_handler = logging.StreamHandler()
-        #formatter = logging.Formatter('%(asctime)s [%(name)s] %(levelname)s - %(message)s')
-        formatter = logging.Formatter('[%(name)s] %(levelname)s - %(message)s')
-        console_handler.setFormatter(formatter)
-        self._logger.addHandler(console_handler)
+        if not len(self._logger.handlers):
+            console_handler = logging.StreamHandler()
+            formatter = logging.Formatter('[%(name)s] %(levelname)s - %(message)s')
+            console_handler.setFormatter(formatter)
+            self._logger.addHandler(console_handler)
 
     def write(self,file_name):
         """ Write a caDNAno design JSON file.
@@ -58,36 +56,50 @@ class CadnanoWriter(object):
 
     def _get_vstrand_info(self, dna_structure):
         """ Get virtual helix information for the design. 
+
             In caDNAno all the virtual helices are the same size (i.e. the same number of base positions).
-            The lists of bases for staple and scaffold strands are also the same size. Positions within
-            this list that contain no bases are set to None. 
+            The lists of helix bases for staple and scaffold strands may contain fewer bases than the 
+            virtual helix size so we create an array of empty helix positions ([-1,-1,-1,-1]) for the caDNAno 
+            virtual helix size and fill from the base lists. 
         """
         self._logger.info("Number of helices %d " % len(dna_structure.structure_helices_map))
-        helix_size = 0
         vstrands_info = []
+
+        # Create a map of helix nums to the list of strands that start in that helix.
+        # Used for writing color information.
+        helix_strands_map = {}
+        for strand in dna_structure.strands:
+            if strand.is_scaffold: 
+                continue
+            base = strand.tour[0]
+            if base.h not in helix_strands_map: 
+                helix_strands_map[base.h] = []
+            helix_strands_map[base.h].append(strand)
+        #__for strand in dna_structure.strands
 
         # Create a map of the helices by ID so we can reproduce the order in which 
         # they were read in from the original caDNAno file.
         helix_map = {}
         for helix in dna_structure.structure_helices_map.itervalues():
-            helix_map[helix.id] = helix 
+            helix_map[helix.count] = helix 
 
         # Get the base connectivity, loops and skips for the staple and scaffold strands.
-        for id in sorted(helix_map):
-            helix = helix_map[id] 
+        for count in sorted(helix_map):
+            helix = helix_map[count] 
             scaffold_base_list = helix.scaffold_base_list
             staple_base_list = helix.staple_base_list
-            helix_size = len(scaffold_base_list)
-            id = helix.id 
+            helix_size = helix.lattice_max_vhelix_size 
             row = helix.lattice_row 
             col = helix.lattice_col
             num = helix.lattice_num
-            self._logger.info("Helix id %d  num %d  row %d  col %d  size %d" % (id, num, row, col, helix_size)) 
+            self._logger.info("Helix count %d  num %d  row %d  col %d" % (count, num, row, col)) 
 
-            scaf_info = self._get_base_info(scaffold_base_list)
-            stap_info = self._get_base_info(staple_base_list)
-            loop_info = self._get_loop_info(staple_base_list)
-            skip_info = self._get_skip_info(staple_base_list)
+            # Set the arrays for the virtual helix base information.
+            scaf_info = self._get_base_info(helix_size, scaffold_base_list)
+            stap_info = self._get_base_info(helix_size, staple_base_list)
+            loop_info = self._get_loop_info(helix_size, staple_base_list)
+            skip_info = self._get_skip_info(helix_size, staple_base_list)
+            staple_colors = self._get_staple_colors(helix_strands_map[num])
 
             vstrand = { "row": row,
                         "col": col,
@@ -96,58 +108,86 @@ class CadnanoWriter(object):
                         "stap": stap_info,
                         "loop": loop_info,
                         "skip": skip_info,
-                        "stap_colors": []
+                        "stap_colors": staple_colors
                       }
 
             vstrands_info.append( vstrand )
+        #__for count in sorted(helix_map)
 
         return vstrands_info
+    #__def _get_vstrand_info
 
-    def _get_base_info(self, base_list):
-        """ Get the base connecivity information from the list of bases. """
-        base_info = []
+    def _get_staple_colors(self, strands):
+        """ Get the array of staple colors for the strands originating in a given helix.
+   
+            Arguments:
+                strands (List[DnaStrand]): The list of strands originating in a given helix.
+
+            Returns the list of staple colors, staple_colors[].
+
+            In caDNAno staple colors are defined as an array of two-entry elements containing
+            the staple starting position in the virtual helix and an integer color.
+        """
+        staple_colors = []
+        for strand in strands:
+            pos = strand.tour[0].p # Strand starting position.
+            color = int(255*strand.color[0])<<16 | int(255*strand.color[1])<<8 | int(255*strand.color[2])
+            staple_colors.append([pos,color])
+        #__for strand in strands
+        return staple_colors
+    #__def _get_staple_colors
+
+    def _get_base_info(self, helix_size, base_list):
+        """ Get the array defining caDNAno base information from the list of bases. 
+
+            Arguments:
+                helix_size (int): The size of caDNAno virtual helix.
+                base_list (DnaBase): The list of bases for a helix. 
+
+            Create an array of empty helix positions ([-1,-1,-1,-1]) for the caDNAno virtual helix
+            and fill it in at the positions given by the bases in the base list (DnaBase.p).
+        """
+        base_info = [[-1,-1,-1,-1]]*helix_size
         for base in base_list:
-            if base:
-                #print(">>> base  id %d   h %d  p %d  up %d  down %d " % (base.id, base.h, base.p, base.up, base.down))
-                if base.up == -1:
-                    up_pos = -1
-                    up_vh = -1
-                else:
-                    up_base = self.dna_structure.base_connectivity[base.up-1]
-                    up_pos = up_base.p
-                    up_vh = up_base.h
-
-                if base.down == -1:
-                    down_pos = -1
-                    down_vh = -1
-                else:
-                    down_base = self.dna_structure.base_connectivity[base.down-1]
-                    down_pos = down_base.p
-                    down_vh = down_base.h
-               
-                #print("          %s " % str([up_vh, up_pos, down_vh, down_pos])) 
-                base_info.append( [up_vh, up_pos, down_vh, down_pos] )
+            if base.up == None:
+                up_pos = -1
+                up_vh = -1
             else:
-                base_info.append( [-1,-1,-1,-1] )
-       
+                up_pos = base.up.p
+                up_vh = base.up.h
+            if base.down == None:
+                down_pos = -1
+                down_vh = -1
+            else:
+                down_pos = base.down.p
+                down_vh = base.down.h
+            base_info[base.p] = [up_vh, up_pos, down_vh, down_pos]
+        #__for base in base_list
         return base_info 
 
-    def _get_loop_info(self, base_list):
-        """ Get the loop (insert) information for each base. """
-        loop_info = []
-        for base in base_list:
-            if base:
-                loop_info.append(base.loop)
-            else:
-                loop_info.append(0)
-        return loop_info
+    def _get_loop_info(self, helix_size, base_list):
+        """ Get the loop (insert) information for each base. 
 
-    def _get_skip_info(self, base_list):
-        """ Get the skip (deletion) information for each base. """
-        skip_info = []
+            Arguments:
+                helix_size (int): The size of caDNAno virtual helix.
+                base_list (DnaBase): The list of bases for a helix. 
+        """
+        loop_info = [0]*helix_size
         for base in base_list:
-            if base:
-                skip_info.append(base.skip)
-            else:
-                skip_info.append(0)
+            loop_info[base.p] = base.num_insertions
+        return loop_info
+    #__def _get_loop_info
+
+    def _get_skip_info(self, helix_size, base_list):
+        """ Get the skip (deletion) information for each base.
+
+            Arguments:
+                helix_size (int): The size of caDNAno virtual helix.
+                base_list (DnaBase): The list of bases for a helix. 
+        """
+        skip_info = [0]*helix_size
+        for base in base_list:
+            skip_info[base.p] = base.num_deletions
         return skip_info
+    #__def _get_skip_info
+

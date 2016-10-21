@@ -92,11 +92,12 @@ class PdbWriter(object):
         """ Set up logging."""
         self._logger = logging.getLogger(__name__)
         self._logger.setLevel(self._logging_level)
-        # create console handler and set format
-        console_handler = logging.StreamHandler()
-        formatter = logging.Formatter('[%(name)s] %(levelname)s - %(message)s')
-        console_handler.setFormatter(formatter)
-        self._logger.addHandler(console_handler)
+        # Create console handler and set format.
+        if not len(self._logger.handlers):
+            console_handler = logging.StreamHandler()
+            formatter = logging.Formatter('[%(name)s] %(levelname)s - %(message)s')
+            console_handler.setFormatter(formatter)
+            self._logger.addHandler(console_handler)
 
     def _write_molecule(self, pdb_file, molecule, model_num, res_seq, atom_id, chain_id, xmin, ymin, zmin):
         """ Write the atoms in a molecule to a file. 

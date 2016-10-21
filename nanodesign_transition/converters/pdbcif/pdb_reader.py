@@ -52,12 +52,13 @@ class PdbReader(object):
         self._logger.setLevel(self._logging_level)
         if PdbReader.logging_set:
            return
-        # create console handler and set format
-        console_handler = logging.StreamHandler()
-        formatter = logging.Formatter('[%(name)s] %(levelname)s - %(message)s')
-        console_handler.setFormatter(formatter)
-        self._logger.addHandler(console_handler)
-        PdbReader.logging_set = True
+        # Create console handler and set format.
+        if not len(self._logger.handlers):
+            console_handler = logging.StreamHandler()
+            formatter = logging.Formatter('[%(name)s] %(levelname)s - %(message)s')
+            console_handler.setFormatter(formatter)
+            self._logger.addHandler(console_handler)
+            PdbReader.logging_set = True
 
     def read(self,file_name):
         """Read a .pdb file.

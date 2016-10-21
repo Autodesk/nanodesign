@@ -2,17 +2,18 @@
 """ 
 This module is used to create a DNA structure from a caDNAno DNA origami design file. 
 
-The topology table provides connectivity information between all the bases in a model. The coordinates each base on the DNA
-helix is also computed and stored in the table. The positions of base pairs along the DNA helix axes with their orientations are 
-also computed and stored in separate data structures. 
+The virtual helices from the CadnanoDesign object are used to create a list of DnaStructureHelix objects. 
+DnaBase objects are created from the scaffold and staple bases defined for each virtual helix and stored 
+in the appropriate DnaStructureHelix object. A DnaStructure object object is created for the design. It 
+stores the list of DnaStructureHelix objects and a list of all the bases defined for the design. 
 
 This code is based on a direct translation of the set MATLAB scripts to convert a caDNAno design to a CanDo 
 .cndo file from Mark Bathe's Laboratory for Computational Biology & Biophysics at MIT.
 """
-import os
-import sys
+from collections import OrderedDict
 import csv
 import logging
+import os
 import re
 import string
 import sys
@@ -41,32 +42,20 @@ except ImportError as i:
     print "Could not get nanodesign_transition module"
     raise i
 
-
-# The number of columns in the intermediate structure topology table.
-TOPOLOGICAL_TABLE_NUM_COLUMNS = 18
-
 class StrandType:
     SCAFFOLD = 0
     STAPLE   = 1
 
-class Tindex:
-    """ The indexes into the structure topology table. """
-    ID = 0
-    CURRENT_BASE   = 1
-    FIVE_NEIGHBOR  = 4
-    THREE_NEIGHBOR = 7
-    WC_NEIGHBOR    = 10
-    COORD          = 14
-    DELETION       = 16
-    INSERTION      = 17
-
 class CadnanoConvertDesign(object):
-    """ The CadnanoConvertDesign class creates a DNA structure from a caDNAno DNA origami design. 
+    """ The CadnanoConvertDesign class is used to create a DNA structure from a caDNAno DNA origami design. 
 
         Attributes:
-            dna_structure (DnaStructure): A DnaStructure object. 
+            base_id (int): The current base ID used when creating a DnaBase object.
+            base_map (OrderedDict[Tuple]): The dict that stores DnaBase objects using the tuple (helix_num,helix_pos) as a key.
+            dna_parameters (DnaParameters): The DNA parameters to use when creating the 3D geometry for the design.
+            dna_structure (DnaStructure): The DnaStructure object. 
+            staple_colors (List[StapleColor]: The list of caDNAno staple strand colors.
     """
-
     def __init__(self, dna_parameters):
         """ Initialize the CadnanoConvertDesign object.
 
@@ -79,33 +68,65 @@ class CadnanoConvertDesign(object):
         self.dna_structure = None 
         self.staple_colors = []
         self.dna_parameters = dna_parameters
-        self.r_strand = dna_parameters.helix_distance / 2.0 # half the distance between the axes of adjacent DNA helices.
-        self.r_helix = dna_parameters.helix_radius          # radius of DNA helices (nm)
-        self.dist_bp = dna_parameters.base_pair_rise        # rise between two neighboring base-pairs (nm)
-        self.ang_bp = dna_parameters.base_pair_twist_angle  # twisting angle between two neighboring base-pairs (degrees)
-        self.ang_minor = dna_parameters.minor_groove_angle  # angle of the minor groove (degrees)
+        self.base_id = 0
+        self.base_map = OrderedDict()
 
     def _set_logging_level(self,level):
         """Set logging level."""
         self._logger.setLevel(level)
 
     def _setup_logging(self):
-        """ Set up logging."""
+        """ Set up logging. """
         self._logger = logging.getLogger(__name__)
-        #self._logger = logging.getLogger('cadnano:convert_design')
         self._logger.setLevel(self._logging_level)
-
         # Create a console handler and set format.
-        console_handler = logging.StreamHandler()
-        #formatter = logging.Formatter('%(asctime)s [%(name)s] %(levelname)s - %(message)s')
-        formatter = logging.Formatter('[%(name)s] %(levelname)s - %(message)s')
-        console_handler.setFormatter(formatter)
-        self._logger.addHandler(console_handler)
+        if not len(self._logger.handlers):
+            console_handler = logging.StreamHandler()
+            formatter = logging.Formatter('[%(name)s] %(levelname)s - %(message)s')
+            console_handler.setFormatter(formatter)
+            self._logger.addHandler(console_handler)
 
-    def _add_staple_color(self,staple_color, vhelix_num):
+    def _add_staple_color(self, staple_color, vhelix_num):
+        """ Add a caDNAno staple color for the given virtual helix. 
+
+            Arguments:
+                staple_color (List[int]): The caDNAno color definition consisting of a list of two integer
+                    values, position and color value.
+                vhelix_num (int): The caDNAno virtual helix number. 
+        """
         self.staple_colors.append(self.StapleColor(staple_color,vhelix_num))
 
-    def create_structure(self,design, modify=False):
+    def _get_base_index(self, num, pos, strand_type):
+        """ Create a tuple (helix_num,helix_pos,strand_type) used as a key to store bases in the base_map dict.
+
+            Arguments:
+                num (int): The base virtual helix number. 
+                pos (int): The base virtual helix position. 
+                strand_type (StrandType): The type of strand scaffold or staple the base is part of.
+
+            Returns The tuple (helix_num,helix_pos,strand_type) used to uniquely identify a base.
+         """
+        base_index = (int(num), int(pos), int(strand_type))
+        return base_index 
+
+    def _get_base(self, base_index):
+        """ Get a base from the base_map dict. If the base is not in the dict then create and add it.
+
+            Arguments:
+                base_index (Tuple): The tuple (helix_num,helix_pos,strand_type) used to uniquely identify a base.
+
+            Returns a DnaBase object.
+        """
+        if base_index not in self.base_map:
+            base = DnaBase(self.base_id)
+            self.base_map[base_index] = base
+            self.base_id += 1
+        else:
+            base = self.base_map[base_index]
+        return base
+    #__def _get_base
+
+    def create_structure(self, design, modify=False):
         """ Create a DNA structure from a caDNAno DNA origami design.
 
             Arguments:
@@ -115,568 +136,472 @@ class CadnanoConvertDesign(object):
             Returns:
                 DnaStructure: The DNA structure object containing topological and geometric information for the
                               caDNAno DNA origami design model.
+
+            The virtual helices from the CadnanoDesign object are design are used to create a list of 
+            DnaStructureHelix objects. DnaBase objects are created from the scaffold and staple bases 
+            defined for each virtual helix and stored in the appropriate DnaStructureHelix object. The
+            global list of DnaBase objects are stored in the self.base_map dict.
         """
-
         self._logger.info("Distance between adjacent helices %g " % self.dna_parameters.helix_distance)
-        self._logger.info("Helix radius %g " % self.r_helix)
+        self._logger.info("Helix radius %g " % self.dna_parameters.helix_radius) 
         self._timer.start()
-        structure_topology, dnode, triad, id_nt_0, helices = self._create_structure_topology_and_geometry(design)
-        num_bases = structure_topology.shape[0]
-        self._logger.info("Number of bases in structure_topology: %d " % num_bases)
-        self._logger.info("Time to create structure topology table: %s " % self._timer.finish())
-        self._logger.info("Number of bases in helix axis: %d " % dnode.shape[0])
 
-        # Create maps from a base helix number and position in that helix to a global 
-        # index into the structure_topology array. This is used to convert a helix-based
-        # base indexing to a global ID.
-        curr_bases = structure_topology[:,1:4]
-        scaffold_base_map = {}
-        staple_base_map = {}
-        for i in xrange(0,num_bases):
-            num = int(curr_bases[i,0])
-            pos = int(curr_bases[i,1])
-            type = int(curr_bases[i,2])
-            if type == StrandType.SCAFFOLD:
-                scaffold_base_map[(num,pos)] = i
-            else:
-                staple_base_map[(num,pos)] = i
-        #__for i in xrange(0,num_bases)
-        base_maps = [ scaffold_base_map, staple_base_map ]
+        # Create a list of DnaStructureHelix objects for the design. 
+        helices = self._create_structure_topology_and_geometry(design)
+        self._logger.info("Number of bases in design %d " % len(self.base_map))
+        self._logger.info("Time to create structure topology table %s " % self._timer.finish())
 
-        # Create the nucleotide map table.
-        self._timer.start()
-        id_nt = self._create_nt_map_table(base_maps, dnode, id_nt_0)
-        self._logger.info("Time to create map table: %s " % self._timer.finish())
+        # Set the bases up and down attributes pointing to terminal bases to point to None. 
+        # These scaffold and staple terminal bases are automatically added when adding caDNAno 
+        # virtual helix bases.
+        print_dna_model_base_map = False
+        num_bases = 0
+        n = 0
+        term_bases = []
+        if (-1,-1,1) in self.base_map:
+            term_bases.append(self.base_map[(-1,-1,1)].id)
+        if (-1,-1,0) in self.base_map:
+            term_bases.append(self.base_map[(-1,-1,0)].id)
+        for bindex, base in self.base_map.items():
+            if base.id not in term_bases:
+                num_bases += 1
+            if base.up and base.up.id in term_bases:
+               base.up = None
+            if base.down and base.down.id in term_bases:
+               base.down = None
+            up = base.up.id if base.up else -1
+            down = base.down.id if base.down else -1
+            across = base.across.id if base.across else -1
+            if print_dna_model_base_map:
+                self._logger("%4d: bindex %12s  base id %4d  up %4s  down %4s  across %4s  h %4d  p %4d  scaf %d" %
+                    ( n, bindex, base.id, up, down, across, base.h, base.p, base.is_scaf))
+            n += 1
+        #__for bindex, base in dna_model.base_map.items():
 
-        # Renumber base IDs.
-        for i in xrange(0,num_bases):
-            structure_topology[i,0] = i+1
+        # Create an array of all of the DnaBase objects created for the design.
+        base_connectivity = [None]*num_bases
+        num_bases = 0
+        for bindex, base in self.base_map.items():
+            if base.id not in term_bases:
+                base.id = num_bases
+                base_connectivity[base.id] = base
+                num_bases += 1
+        #_for bindex, base in self.base_map.items()
+        print_base_connectivity = False
+        if print_base_connectivity:
+            self._logger.info("---------- base_connectivity  ---------- ")
+            self._logger.info("size of base_connectivity: %d " % len(base_connectivity))
+            for i in xrange(0,num_bases):
+                base = base_connectivity[i]
+                up = base.up.id if base.up else -1
+                down = base.down.id if base.down else -1
+                across = base.across.id if base.across else -1
+                self._logger.info("%4d: base id %4d  up %4s  down %4s  across %4s  h %4d  p %4d  scaf %d" %
+                    ( i, base.id, up, down, across, base.h, base.p, base.is_scaf))
+        #__if print_base_connectivity_p
 
-        # Create the DNA topology table.
-        self._timer.start()
-        dna_topology = self._create_dna_topology(structure_topology, base_maps)
-        self._logger.info("Time to create topology table: %s " % self._timer.finish())
-        print_topology = False
-        if print_topology:
-            print("---------- dna_topology before inserts/deletes ----------")
-            for i in xrange(0,len(dna_topology)):
-                base = dna_topology[i];
-                print("%d:  id=%d  up=%d  down=%d  across=%d  h=%d  p=%d  isScaf=%d" % 
-                    (i+1, base.id, base.up, base.down, base.across, base.h, base.p, base.is_scaf) )
-        #__if print_topology
-
-        # Remove deleted bases
+        # Remove deleted bases.
         if (modify):
-            dna_topology, dnode, triad, id_nt = self._delete_bases(dna_topology, dnode, triad, id_nt)
+            self._delete_bases(helices, base_connectivity)
+            print_base_connectivity = False
+            if print_base_connectivity:
+                self._logger.info("Size of topology after deletes %d" % len(base_connectivity))
+                self._logger.info("---------- base_connectivity after deletes ---------- ")
+                self._logger.info("size of base_connectivity: %d " % len(base_connectivity))
+                for i,base in enumerate(base_connectivity): 
+                    up = base.up.id if base.up else -1
+                    down = base.down.id if base.down else -1
+                    across = base.across.id if base.across else -1
+                    self._logger.info("%4d: base id %4d  up %4s  down %4s  across %4s  h %4d  p %4d  scaf %d" %
+                        ( i, base.id, up, down, across, base.h, base.p, base.is_scaf))
+            #__if print_base_connectivity_p
+        #__if (modify)
 
-        # Add inserted bases
+        # Add inserted bases.
         if (modify):
-            dna_topology, dnode, triad, id_nt = self._insert_bases(dna_topology, dnode, triad, id_nt)
+            self._insert_bases(helices, base_connectivity)
+            print_base_connectivity = False
+            if print_base_connectivity:
+                self._logger.info("Size of topology after inserts %d" % len(base_connectivity))
+                self._logger.info("---------- base_connectivity after inserts ---------- ")
+                for i,base in enumerate(base_connectivity):
+                    up = base.up.id if base.up else -1
+                    down = base.down.id if base.down else -1
+                    across = base.across.id if base.across else -1
+                    self._logger.info("%4d: base id %4d  up %4s  down %4s  across %4s  h %4d  p %4d  scaf %d" %
+                        ( i, base.id, up, down, across, base.h, base.p, base.is_scaf))
+            #__if print_base_connectivity_p
+        #__if (modify)
 
-        # Create a DnaStructure object to store the base topology and geometry information.
+        # Create a DnaStructure object to store the base connectivty and helices.
         name = "dna structure"
-        self.dna_structure = DnaStructure(name, dna_topology, helices, self.dna_parameters, dnode, triad, id_nt)
+        self.dna_structure = DnaStructure(name, base_connectivity, helices, self.dna_parameters)
         self.dna_structure.set_lattice_type(design.lattice_type)
 
-        # Generate strands 
-        dna_topology,strands = self._build_strands(dna_topology)
+        # Generate strands.
+        base_connectivity,strands = self._build_strands(base_connectivity)
         self._set_strands_colors(strands)
         self.dna_structure.strands = strands
-        self._logger.info("Number of strands: %d " % len(strands)) 
+        self._logger.info("Number of strands %d " % len(strands)) 
+        print_strands = False
+        if print_strands:
+            for strand in strands:
+                self._logger.info("Strand %4d  bases %4d  scaf %6s  start helix %4d  pos %4d" % (strand.id, 
+                    len(strand.tour), strand.is_scaffold, strand.tour[0].h,  strand.tour[0].p))
+        #__if print_strands
 
-        # Calculate staple ends 
-        staple_ends = self._calculate_staple_ends(dna_topology)
+        # Calculate staple ends.
+        staple_ends = self._calculate_staple_ends(base_connectivity)
         self.dna_structure.staple_ends = staple_ends
 
         # Set possible cross-overs. 
         self._set_possible_crossovers(design)
  
         return self.dna_structure
+    #__def create_structure
 
-    def _create_dna_topology(self, structure_topology, base_maps):
-        """ Create the DNA topology table. """
-        num_bases = structure_topology.shape[0]
-        dna_topology = []
-
-        for i in xrange(0,num_bases):
-            id = structure_topology[i][0]
-            base = DnaBase(id)
-
-            #----- get 5' neighbor -----#
-            five_neigh = structure_topology[i,4:7]
-            curr_bases = structure_topology[:,1:4]
-            loc = self._find_base_location(five_neigh, base_maps)
-
-            if loc == -1:
-                base.up = -1
-            else:
-                base.up = loc + 1
-
-            #----- get 3' neighbor -----#
-            three_neigh = structure_topology[i,7:10]
-            loc = self._find_base_location(three_neigh, base_maps)
-
-            if loc == -1:
-                base.down = -1
-            else:
-                base.down = loc + 1
-
-            #----- Watson-Crick neighbor -----#
-            wc_neigh = structure_topology[i,10:13]
-            loc = self._find_base_location(wc_neigh, base_maps)
-
-            if loc == -1:
-                base.across = -1
-            else:
-                base.across = loc + 1
-
-            # helix, position, scaffold/staple
-            base.h = int(structure_topology[i,1])
-            base.p = int(structure_topology[i,2])
-
-            if (structure_topology[i,3] == 0):
-                base.is_scaf = True
-            elif (structure_topology[i,3] == 1):
-                base.is_scaf = False
-            else:
-                logger.error('Exception.')
-
-            # coordinate
-            base.coord = structure_topology[i,13:16]
-
-            # deletion
-            base.skip = int(structure_topology[i,16])
-
-            # insertion
-            base.loop = int(structure_topology[i,17])
-
-            dna_topology.append(base)
-        #__for i in xrange(0,num_bases)__
-        return dna_topology 
-
-    def _delete_bases(self, dna_topology, dnode, triad, id_nt):
-        """ Remove bases from dna_topology[]. deleted bases are given in the Base.skip field.
-            Note that curr_skip is a zero-based index; the other base IDs in dna_topology are 1-based.
-        """
-
+    def _delete_bases(self, helices, base_connectivity):
+        """ Remove bases from helices and base_connectivity.  """
+        #self._logger.setLevel(logging.DEBUG)
         self._logger.debug("==================== delete bases ====================")
-        num_bases = len(dna_topology)
 
-        num_skip = 0
-        for i in xrange(0,num_bases):
-            if ( dna_topology[i].skip < 0):
-               num_skip += 1
+        # Delete bases from each helix.
+        num_deleted_bases = 0
+        for helix in helices:
+            deleted_bases = helix.process_base_deletes()
+            num_deleted_bases += len(deleted_bases)
+            # Remove bases from base_connectivity.
+            for base in deleted_bases:
+                self._logger.debug("Delete base %d" % base.id)
+                base_connectivity.remove(base)
+            #__for base in deleted_bases
+        #__for helix in helices
 
-        self._logger.debug("Number of bases to delete: %d" % num_skip )
-        if (num_skip == 0):
-            return dna_topology, dnode, triad, id_nt 
+        # Renumber base IDs.
+        if num_deleted_bases != 0:
+            self._logger.info("Number of deleted bases %d" % num_deleted_bases) 
+            self._renumber_baseIDs(base_connectivity)
 
-        # create a list of indexes for skipped bases
-        skip = np.zeros(num_bases, dtype=int)
-        for i in xrange(0,num_bases):
-            skip[i] = dna_topology[i].skip
-        #self._logger.debug("skip: %s " % str(skip))
+    def _insert_bases(self, helices, base_connectivity):
+        """ Insert bases into helices and base_connectivity[]. 
 
-        # list of bases deleted
-        deleted_bases = []
-        deleted_bases_bp = []
+            Arguments:
+                helices(List[DnaStructureHelix]): The list of helices for the structure.
+                base_connectivity (List[DnaBase]): The list of DNA bases for the structure.
 
-        #----- iterated over skipped bases -----#
-        nonzero_search = np.nonzero(skip)[0]
-        while (nonzero_search.size != 0): 
-            curr_skip = nonzero_search[0]
-            #print(">>> curr_skip=%d" % curr_skip) 
-
-            # find the four neighboring bases
-            neighbor_up = dna_topology[curr_skip].up
-            neighbor_down = dna_topology[curr_skip].down
-            curr_skip_across = dna_topology[curr_skip].across
-
-            if (curr_skip_across >= 0):
-                neighbor_across_up = dna_topology[curr_skip_across-1].up
-                neighbor_across_down = dna_topology[curr_skip_across-1].down
-            else:
-                neighbor_across_up = -1
-                neighbor_across_down = -1
-
-            # update base connectivity
-            if (neighbor_up >= 0):
-                dna_topology[neighbor_up-1].down = neighbor_down
-
-            if (neighbor_down >= 0):
-                dna_topology[neighbor_down-1].up = neighbor_up
-
-            if (neighbor_across_up >= 0):
-                dna_topology[neighbor_across_up-1].down = neighbor_across_down
-
-            if (neighbor_across_down >= 0):
-                dna_topology[neighbor_across_down-1].up = neighbor_across_up
-
-            # update the list deleted bases
-            if (curr_skip_across >= 0):
-                deleted_bases.append(curr_skip)
-                deleted_bases.append(curr_skip_across-1)
-                ti = np.where(id_nt == curr_skip)[0]
-                for i in xrange(0,ti.shape[0]):
-                    deleted_bases_bp.append(ti[i])
-                skip[curr_skip] = 0
-                skip[curr_skip_across-1] = 0
-            else:
-                deleted_bases.append(curr_skip)
-                skip[curr_skip] = 0
-       
-            # find the next base to be deleted
-            nonzero_search = np.nonzero(skip)[0]
-        #_while (nonzero_search.size != 0)_
-
-        self._logger.debug("Deleted_bases: %s" % str(deleted_bases) )
-        #self._logger.debug("Deleted_bases_bp: %s" % str(deleted_bases_bp) )
-
-        # remove bases from topology
-        for i in xrange(0,len(deleted_bases)):
-            base = deleted_bases[i] - i
-            #print(">>> delete %d %d %d %d" % ( dna_topology[base].id, dna_topology[base].up, dna_topology[base].down, 
-            #      dna_topology[base].across))
-            del dna_topology[base] 
-
-        # remove bases from other arrays
-        dnode = np.delete(dnode, deleted_bases_bp, 0)
-        triad = np.delete(triad, deleted_bases_bp, 2)
-        id_nt = np.delete(id_nt, deleted_bases_bp, 0)
-
-        # update the base IDs
-        dna_topology, id_nt = self._renumber_baseIDs(dna_topology, id_nt)
-        self._logger.debug("Number of bases in topology table: %d " % num_bases)
-        return dna_topology, dnode, triad, id_nt 
-
-    def _insert_bases(self, dna_topology, dnode, triad, id_nt):
-        """ Insert bases into dna_topology[]. Inserted bases are given in the Base.loop field. """
-        dist_bp = 3.4       # Rise between two neighboring base-pairs (Angstrom)
-        ang_bp = 360/10.5   # Twisting angle between two neighboring base-pairs (degree)
-
+           The DnaBase.num_inserts attribute determines the number of bases inserted at that base. 
+           Bases are inserted in the 3' direction. 
+        """
+        self._logger.setLevel(logging.INFO)
+        #self._logger.setLevel(logging.DEBUG)
         self._logger.debug("==================== insert bases ====================")
-        num_bases = len(dna_topology)
-        dy = np.array([0, 0.1, 0], dtype=float)
-
-        # these need to have same shape has slice of triad[]
+        num_bases = len(base_connectivity)
+        base_id = num_bases
         y_up_vec   = np.array([0,  1.0, 0], dtype=float)
         y_down_vec = np.array([0, -1.0, 0], dtype=float)
 
-        # Check for inserts; if none then just return.
+        # Create a list of inserts from helices base lists.
         num_insert = 0
-        for i in xrange(0,num_bases):
-            if (dna_topology[i].loop == 1):
-                num_insert += 1
-        self._logger.debug("Number of bases to insert: %d" % num_insert)
-        if (num_insert == 0):
-            return dna_topology, dnode, triad, id_nt 
+        num_insert_bases = 0
+        base_inserts = OrderedDict()
+        helix_map = {}  # Stores DnaStructureHelix objects used later to update base lists.
+        for helix in helices:
+            helix_map[helix.id] = helix
+            for base in helix.staple_base_list:
+                if base.num_insertions != 0:
+                    num_insert_bases += base.num_insertions 
+                    base_inserts[base.id] = base
+            #__for base in helix.staple_base_list
+            for base in helix.scaffold_base_list:
+                if base.num_insertions != 0:
+                    base_inserts[base.id] = base
+                    self._logger.debug("Insert base id %d  h %d  pos %d" % (base.id, base.h, base.p))
+            #__for base in helix.scaffold_base_list
+        #__for helix in helices
+        self._logger.debug("Number of base inserts %d" % len(base_inserts))
+        if len(base_inserts) == 0:
+            return 
 
-        # create a loops array for searching
-        loops = np.zeros((num_bases,), dtype=int);
-        for i in xrange(0,num_bases):
-            loops[i] = dna_topology[i].loop
+        # Iterated over bases with inserts. 
+        processed_bases = set()
+        new_bases = {} # Stores lists of new insert bases by helix ID.
+        for curr_base in base_inserts.values():
+            if curr_base.id in processed_bases:
+                continue
+            processed_bases.add(curr_base.id)
+            coords = curr_base.coordinates
+            self._logger.debug("-------------------------------------------")
+            self._logger.debug("Current base      ID %3d  h %3d  p %3d  (%6.2f %6.2f %6.2f)" % 
+                (curr_base.id, curr_base.h, curr_base.p, coords[0], coords[1], coords[2]))
+            if curr_base.up:
+                up_base = curr_base.up
+                coords = up_base.coordinates
+                self._logger.debug("Current base up   ID %3d  h %3d  p %3d  (%6.2f %6.2f %6.2f) " % 
+                    (up_base.id, up_base.h, up_base.p, coords[0], coords[1], coords[2]))
+            if curr_base.down:
+                down_base = curr_base.down
+                coords = down_base.coordinates
+                self._logger.debug("Current base down ID %3d  h %3d  p %3d  (%6.2f %6.2f %6.2f) " % 
+                    (down_base.id, down_base.h, down_base.p, coords[0], coords[1], coords[2]))
+            helix_axis = curr_base.ref_frame[:,2]
+            curr_across = curr_base.across
 
-        #----- iterated over inserted bases -----#
-        num_added_inserts = 0 
-        nonzero_search = np.nonzero(loops)[0]
-        while (nonzero_search.size != 0):
-            curr_loop = nonzero_search[0]
-            #print("")
-            #print("[insert_bases] ------------------------------------- " )
-            #print("[insert_bases] curr_loop=%d" % curr_loop)
+            if curr_across != None:
+                self._logger.debug("Current across base ID %d" % curr_across.id)
+                neighbor_across_up = curr_across.up
+                processed_bases.add(curr_across.id)
+                # Make sure that the 3'-neighbor of the current base is to the right.
+                tmp_a = curr_base.ref_frame[:,2]
+                if (np.linalg.norm(tmp_a - y_up_vec) < 1e-10):  # Reference axis e3 poins to the right.
+                    self._logger.debug("Reference axis points to right")
+                    # If curr_base is not a preferred base then swap with its across base.
+                    if not curr_base.is_scaf: 
+                        tmp_base = curr_base
+                        curr_base  = curr_across
+                        curr_across = tmp_base
+                    #__if not curr_base.is_scaf
+                elif (np.linalg.norm(tmp_a - y_down_vec) < 1e-10): # Reference axis e3 points to the left.
+                    self._logger.debug("Reference axis points to left ")
+                    # If curr_base is a preferred base then swap with its across base.
+                    if curr_base.is_scaf: 
+                        tmp_base = curr_base
+                        curr_base  = curr_across
+                        curr_across = tmp_base
+                    #__if curr_base.is_scaf
+                else: 
+                    self._logger.error("Can't find reference axis when inserting bases.")
+                    sys.exit(0)
+                #__if (np.linalg.norm(tmp_a - y_up_vec) < 1e-10) 
+            #__if curr_across != None
 
-            # find the four neighboring bases
-            curr_loop_across = dna_topology[curr_loop].across
-            #print("[insert_bases] curr_loop_across=%d" % curr_loop_across)
-            #print("[insert_bases] id_nt.shape=%s" % str(id_nt.shape))
+            # Insert base into dsDNA. 
+            if curr_across != None:
+                base_id = self._insert_bases_dsDNA(curr_base, base_id, helix_axis, new_bases, base_connectivity)
 
-            if (curr_loop_across >= 0):
-                row_list,col_list = np.where(id_nt == curr_loop)
-                ti = row_list[0]
-                tj = col_list[0]
-                #print("[insert_bases] ti=%s" % str(ti)) 
-                #print("[insert_bases] tj=%s" % str(tj)) 
-                neighbor_across_up = dna_topology[curr_loop_across-1].up
-                # Make sure that the 3'-neighbor of the base 'currLoop' is to the right
-                tmp_a = triad[:,2,ti]
-                #print("[insert_bases] tmp_a=%s" % str(tmp_a)) 
-                #print("[insert_bases] tmp_a.shape=%s" % str(tmp_a.shape)) 
-                #print("[insert_bases] triad.shape=%s" % str(triad.shape)) 
-
-                if (np.linalg.norm(tmp_a - y_up_vec) < 1e-10):  # reference axis e3 pointing to the right
-                    #print("[insert_bases] ref axis points to right") 
-                    if (tj == 1): # base 'currLoop' is a non-preferred base
-                        tmp_nt = curr_loop
-                        curr_loop = curr_loop_across-1
-                        curr_loop_across = tmp_nt+1
-
-                elif (np.linalg.norm(tmp_a - y_down_vec) < 1e-10): # reference axis e3 pointing to the left
-                    #print("[insert_bases] ref axis points to left ") 
-                    if (tj == 0): # base 'currLoop' is a preferred base
-                        tmp_nt = curr_loop
-                        curr_loop = curr_loop_across-1
-                        curr_loop_across = tmp_nt+1
-                else:
-                    logger.error('Exception.')
-            #__if (curr_loop_across >= 0)__
-
-            # Find the four neighboring bases and insert them.
-            neighbor_down = dna_topology[curr_loop].down
-            if (curr_loop_across >= 0):
-                neighbor_across_up = dna_topology[curr_loop_across-1].up
+            # Insert base into ssDNA. 
             else:
-                neighbor_across_up = -1
+                base_id = self._insert_bases_ssDNA(curr_base, base_id, helix_axis, new_bases, base_connectivity)
+            #__if curr_across != None
+        #__for base in inserted_bases
 
-            # insert the bases
-            if (curr_loop_across >= 0):
-                num_inserts = 2*loops[curr_loop]
+        # Add the inserted bases into their parent helices.
+        for helix_id in new_bases.keys():
+            base_list = new_bases[helix_id]
+            self._logger.debug("Helix ID %d  add num bases %d " % (helix_id, len(base_list)))
+            helix_map[helix_id].insert_bases(base_list)
+        #__for helix_id in new_bases.keys()
+
+        self._logger.info("Number of inserted bases %d" % num_insert_bases)
+    #__def _insert_bases
+
+    def _insert_bases_ssDNA(self, curr_base, base_id, helix_axis, new_bases, base_connectivity):
+        """ Insert a number of bases into ssDNA. 
+
+            Arguments:
+                curr_base (DnaBase): The base where insertaions are made.
+                base_id (int): The current base ID. This is incremented to set new insert base IDs.
+                helix_axis (NumPy 3 ndarray[float]): The helix axis.
+                new_bases (Dict): The map of helix IDs to lists of new insert bases.
+                base_connectivity (List[DnaBase]): The list of DNA bases for the structure.
+
+            Returns base_id. 
+
+            New bases are inserted in the 3' direction for curr_base. The new DnaBase objects are stored
+            in new_bases{} by helix ID and appended to base_connectivity[].
+        """
+        dist_bp = self.dna_parameters.base_pair_rise         # Rise between two neighboring base-pairs (nm).
+        ang_bp = self.dna_parameters.base_pair_twist_angle   # Twisting angle between two neighboring base-pairs (degree)
+        dy = np.array([0, 0.1, 0], dtype=float)
+        y_up_vec   = np.array([0,  1.0, 0], dtype=float)
+        y_down_vec = np.array([0, -1.0, 0], dtype=float)
+
+        # Find the neighboring bases.
+        curr_across = curr_base.across
+        neighbor_down = curr_base.down
+        if curr_across != None:
+            neighbor_across_up = curr_across.up
+        else:
+            neighbor_across_up = None
+
+        # Interpolate positions and orientations.
+        num_inserts = curr_base.num_insertions
+        curr_coords = curr_base.coordinates
+        curr_frame = curr_base.ref_frame.copy()
+        curr_frame = curr_frame.reshape(3,3)
+        next_coords = curr_coords + [0, -dist_bp*helix_axis[1], 0]
+        rot_mat = _vrrotvec2mat(y_up_vec, _deg2rad(ang_bp))
+        next_frame = np.dot(rot_mat,curr_frame)
+        [insert_coords, insert_frames] = _bp_interp(curr_coords, curr_frame, next_coords, next_frame, num_inserts)
+        last_base = None
+        self._logger.debug("Current coords %g %g %g" % (curr_coords[0], curr_coords[1], curr_coords[2]))
+        self._logger.debug("Next coords %g %g %g" % (next_coords[0], next_coords[1], next_coords[2]))
+        self._logger.debug("Insert ssDNA")
+        self._logger.debug("num_inserts %d " % num_inserts)
+
+        # Create bases to insert.
+        for i in xrange(0,num_inserts):
+            base = DnaBase(base_id)
+            if curr_base.h not in new_bases:
+                new_bases[curr_base.h] = []
+            new_bases[curr_base.h].append(base)
+            base_id += 1
+            base_connectivity.append(base)
+
+            # Set base connectivity.
+            if (i == 0):
+                curr_base.down = base 
+                base.up = curr_base
             else:
-                num_inserts = loops[curr_loop]
+                base.up = last_base 
+                last_base.down = base
 
-            #print("[insert_bases] num_inserts=%s" % str(num_inserts))
-            #print("[insert_bases] neighbor_down=%d" % neighbor_down)
-            #print("[insert_bases] curr_loop_across=%d" % curr_loop_across)
-            #print("[insert_bases] neighbor_across_up=%d" % neighbor_across_up)
-
-            #----- case I: insert dsDNA -----#
-
-            if (curr_loop_across >= 0):
-                # Create basepair information
-                row_list,col_list = np.where(id_nt == curr_loop)
-                ti = row_list[0]
-                tj = col_list[0]
-                #print("[insert_bases] ti=%s" % str(ti))
-                #print("[insert_bases] tj=%s" % str(tj))
-
-                # Positions and orientations
-                dnode_1 = dnode[ti,:]
-                #print("[insert_bases] dnode_1=%s" % str(dnode_1))
-                #print("[insert_bases] dnode_1.shape=%s" % str(dnode_1.shape))
-
-                triad_1 = triad[:,:,ti]
-                triad_1 = triad_1.reshape(3,3)
-                #print("[insert_bases] triad_1.shape=%s " % str(triad_1.shape))
-                #print("[insert_bases] triad_1=%s" % str(triad_1))
-
-                dnode_2 = dnode_1 + [0, dist_bp, 0]
-                #print("[insert_bases] dnode_2=%s" % str(dnode_2))
-                #print("[insert_bases] dnode_2.shape=%s " % str(dnode_2.shape))
-
-                rot_mat = _vrrotvec2mat(y_up_vec, _deg2rad(ang_bp)) 
-                #print("[insert_bases] rot_mat=%s " % str(rot_mat))
-                #print("[insert_bases] rot_mat.shape=%s " % str(rot_mat.shape))
-                triad_2 = np.dot(rot_mat,triad_1)
-
-                #print("[insert_bases] triad_2=%s" % str(triad_2))
-                #print("[insert_bases] triad_2.shape=%s " % str(triad_2.shape))
-
-                [dnode_insert, triad_insert] = _bp_interp(dnode_1, triad_1, dnode_2, triad_2, num_inserts/2)
-
-                #print("[insert_bases] dnode_insert=%s" % str(dnode_insert))
-                #print("[insert_bases] triad_insert=%s" % str(triad_insert))
-
-                # map table
-                #id_nt_insert = reshape(nBase+(1:nInsert), 2, nInsert/2)';
-                #id_nt_insert = np.arange(num_bases+1,num_bases+num_inserts+1)
-                #id_nt_insert = np.zeros((num_inserts, 2), dtype=int)
-                id_nt_insert = np.zeros((num_inserts/2, 2), dtype=int)
-                for i in xrange(0,num_inserts/2):
-                    #id_nt_insert[i][0] = num_bases + i+1 
-                    #id_nt_insert[i][1] = num_bases + i+2 
-                    id_nt_insert[i][0] = num_bases + i 
-                    id_nt_insert[i][1] = num_bases + i+1 
-                #print("[insert_bases] id_nt_insert=%s" % str(id_nt_insert))
-
-                if (np.linalg.norm(triad_1[:,2] - y_up_vec) < 1e-10):
-                    pass
-                elif (np.linalg.norm(triad_1[:,2] - y_down_vec) < 1e-10):  # base 'currLoop' is non-preferred
-                    #print("[insert_bases] base is non-preferred") 
-                    #print("[insert_bases] id_nt_insert before flipls: %s " % str(id_nt_insert)) 
-                    id_nt_insert = np.fliplr(id_nt_insert);
-                    #print("[insert_bases] id_nt_insert after flipls: %s " % str(id_nt_insert)) 
-                else:
-                    logger.error('Exception.');
-
-                # insert new basepairs
-                dnode = np.concatenate((dnode, dnode_insert), axis=0);
-                triad = np.concatenate((triad, triad_insert), axis=2);
-                id_nt = np.concatenate((id_nt, id_nt_insert), axis=0);
-
-                for i in xrange(0,num_inserts,2):
-                    base1 = DnaBase(num_bases+i+1)
-                    base2 = DnaBase(num_bases+i+2)
-                    #print("[insert_bases] add two bases: id1=%d  id1=%d " % ( base1.id, base2.id) )
-                    dna_topology.append(base1)
-                    dna_topology.append(base2)
-                    num_added_inserts += 2 
-
-                    if (i == 0):
-                        dna_topology[curr_loop].down = num_bases+1
-                        dna_topology[curr_loop_across-1].up = num_bases+2
-                        base1.up = curr_loop+1
-                        base2.down = curr_loop_across
-                    else:
-                        base1.up = num_bases+i-2+1
-                        base2.down = num_bases+i-1+1;
-
-                    # [davep] is this right? -2 or -1?
-                    if (i == num_inserts-2):
-                        if (neighbor_down >= 0):
-                            dna_topology[neighbor_down-1].up = num_bases + num_inserts-1
-
-                        if (neighbor_across_up >= 0):
-                            dna_topology[neighbor_across_up-1].down = num_bases + num_inserts
-
-                        base1.down = neighbor_down
-                        base2.up = neighbor_across_up
-                    else:
-                        base1.down = num_bases+i+2
-                        base2.up = num_bases+i+3
-
-                    base1.across = base2.id
-                    base2.across = base1.id
-
-                    base1.h = dna_topology[curr_loop].h
-                    base2.h = dna_topology[curr_loop_across-1].h
-                    base1.p = dna_topology[curr_loop].p
-                    base2.p = dna_topology[curr_loop_across-1].p
-                    base1.is_scaf = dna_topology[curr_loop].is_scaf
-                    base2.is_scaf = dna_topology[curr_loop_across-1].is_scaf
-
-                    # chang this Tue Feb  9 11:39:34 PST 2016
-                    #base1.h = base2.h
-                    #base2.h = base1.h
-                    #base1.p = base2.p
-                    #base2.p = base1.p
-                    #base1.is_scaf = base2.is_scaf
-                    #base2.is_scaf = base1.is_scaf
-
-                    base1.coord = dna_topology[curr_loop].coord + dy*(i+1+1)/2
-                    base2.coord = dna_topology[curr_loop_across-1].coord + dy*(i+1)/2
-                    base1.skip = 0
-                    base2.skip = 0
-                    base1.loop = 0
-                    base2.loop = 0
-                #__for i in xrange(0,num_inserts)__
-
-            # insert ssDNA
-
+            if (i == num_inserts-1):
+                if neighbor_down != None:
+                    neighbor_down.up = base
+                base.down = neighbor_down
             else:
-                for i in xrange(0,num_inserts):
-                    base = DnaBase(num_bases+i+1)
-                    dna_topology.append(base)
-                    num_added_inserts += 1 
-                    #print(">>> add one base: id=%d " % base.id )
+                base.down = last_base
+                #last_base.up = base
 
-                    if (i == 0):
-                        dna_topology[curr_loop].down = num_bases+1
-                        base.up = curr_loop+1
-                    else:
-                        base.up = num_bases+i-1+1
+            self._logger.debug("Insert %d coords %g %g %g" % (i, insert_coords[i,0], insert_coords[i,1], insert_coords[i,2]))
+            base.h = curr_base.h
+            base.p = curr_base.p
+            base.is_scaf = curr_base.is_scaf
+            base.nt_coords = curr_base.nt_coords + dy*(i+1+1)/2
+            base.coordinates = insert_coords[i]
+            base.ref_frame = insert_frames[:,:,i]
+            last_base = base
+        #__for i in xrange(0,num_inserts)
 
-                    if (i == num_inserts-1):
-                        dna_topology[neighbor_down-1].up = num_bases + num_inserts
-                        base.down = neighbor_down
-                    else:
-                        base.down = num_bases+i+1+1
+        return base_id 
+    #__def _insert_bases_ssDNA
 
-                    base.across = -1
-                    base.skip = 0
-                    base.loop = 0
-                    base.h = dna_topology[curr_loop].h
-                    base.p = dna_topology[curr_loop].p
-                    base.is_scaf = dna_topology[curr_loop].is_scaf
-                    base.coord = dna_topology[curr_loop].coord + dy*(i+1)
-            #__if (curr_loop_across >= 0)__
+    def _insert_bases_dsDNA(self, curr_base, base_id, helix_axis, new_bases, base_connectivity):
+        """ Insert a number of bases into dsDNA. 
 
-            # update num_bases for creating new base IDs
-            num_bases = len(dna_topology)
+            Arguments:
+                curr_base (DnaBase): The base where insertaions are made. 
+                base_id (int): The current base ID. This is incremented to set new insert base IDs. 
+                helix_axis (NumPy 3 ndarray[float]): The helix axis. 
+                new_bases (Dict): The map of helix IDs to lists of new insert bases. 
+                base_connectivity (List[DnaBase]): The list of DNA bases for the structure.
 
-            # remove loop entries 
-            if (curr_loop_across >= 0):
-                loops[curr_loop] = 0
-                loops[curr_loop_across-1] = 0
+            Returns base_id. 
+
+            New bases are inserted in the 3' direction for curr_base. The new DnaBase objects are stored
+            in new_bases{} by helix ID and appended to base_connectivity[].
+        """
+        dist_bp = self.dna_parameters.base_pair_rise         # Rise between two neighboring base-pairs (nm).
+        ang_bp = self.dna_parameters.base_pair_twist_angle   # Twisting angle between two neighboring base-pairs (degree)
+        dy = np.array([0, 0.1, 0], dtype=float)
+        y_up_vec   = np.array([0,  1.0, 0], dtype=float)
+        y_down_vec = np.array([0, -1.0, 0], dtype=float)
+
+        # Find the neighboring bases.
+        neighbor_down = curr_base.down
+        curr_across = curr_base.across
+        if curr_across != None:
+            neighbor_across_up = curr_across.up
+        else:
+            neighbor_across_up = None
+
+        # Interpolate positions and orientations.
+        num_inserts = 2*curr_base.num_insertions
+        curr_coords = curr_base.coordinates
+        curr_frame = curr_base.ref_frame.copy()
+        curr_frame = curr_frame.reshape(3,3)
+        #next_coords = curr_coords + [0, dist_bp, 0]
+        next_coords = curr_coords + [0, -dist_bp*helix_axis[1], 0]
+        rot_mat = _vrrotvec2mat(y_up_vec, _deg2rad(ang_bp))
+        next_frame = np.dot(rot_mat,curr_frame)
+        [insert_coords, insert_frames] = _bp_interp(curr_coords, curr_frame, next_coords, next_frame, num_inserts/2)
+        self._logger.debug("Insert dsDNA")
+        self._logger.debug("num_inserts %d " % num_inserts)
+        self._logger.debug("next_coords %s" % str(next_coords))
+        self._logger.debug("curr_coords %s" % str(curr_coords))
+        self._logger.debug("insert coords %s" % str(insert_coords )) 
+
+        # Create bases to insert.
+        last_base1 = None 
+        last_base2 = None 
+        for i in xrange(0,num_inserts,2):
+            base1 = DnaBase(base_id)
+            if curr_base.h not in new_bases:
+                new_bases[curr_base.h] = []
+            new_bases[curr_base.h].append(base1)
+            base_id += 1
+            base2 = DnaBase(base_id)
+            new_bases[curr_base.h].append(base2)
+            base_id += 1
+            self._logger.debug("Add two bases  Base1 id %d   Base 2 id %d " % (base1.id, base2.id))
+            base_connectivity.append(base1)
+            base_connectivity.append(base2)
+
+            # Set base connectivity.
+            if i == 0:
+                curr_base.down = base1
+                curr_across.up = base2 
+                base1.up = curr_base
+                base2.down = curr_across
             else:
-                loops[curr_loop] = 0
+                base1.up = last_base1 
+                base2.down = last_base2
+                last_base1.down = base1
+                last_base2.up = base2
 
-            # find the next base to be inserted 
-            nonzero_search = np.nonzero(loops)[0]
-        #_while (nonzero_search.size != 0)_
+            if i == num_inserts-2:
+                if neighbor_down != None:
+                    neighbor_down.up = base1 
+                if neighbor_across_up != None:
+                    neighbor_across_up.down = base2 
+                base1.down = neighbor_down
+                base2.up = neighbor_across_up
+            else:
+                base1.down = last_base1
+                base2.up = last_base2 
 
-        #self._logger.debug("Number of bases inserted: %d " % num_added_inserts)
-        print_on = True
-        print_on = False
-        if (print_on):
-            num_bases = len(dna_topology)
-            print("--------- new topology with inserts ---------")
-            for i in xrange(0,num_bases):
-                #print("%d: %d %d %d %d %f %f %f" % (i+1, dna_topology[i].id, dna_topology[i].up, 
-                #      dna_topology[i].down, dna_topology[i].across, dna_topology[i].coord[0], 
-                #      dna_topology[i].coord[1],  dna_topology[i].coord[2] )) 
-                print("%d: %d %d %d %d" % (i+1, dna_topology[i].id, dna_topology[i].up, 
-                      dna_topology[i].down, dna_topology[i].across ))
+            base1.across = base2
+            base1.h = curr_base.h
+            base1.p = curr_base.p
+            base1.is_scaf = curr_base.is_scaf
+            base1.nt_coords = curr_base.nt_coords + dy*(i+1+1)/2
+            base1.coordinates = insert_coords[i/2]
+            base1.ref_frame = insert_frames[i/2]
 
-        self._logger.debug("Number of bases in topology table: %d " % num_bases)
-        return dna_topology, dnode, triad, id_nt 
+            base2.across = base1
+            base2.h = curr_across.h
+            base2.p = curr_across.p
+            base2.is_scaf = curr_across.is_scaf
+            base2.nt_coords = curr_across.nt_coords + dy*(i+1)/2
+            base2.coordinates = insert_coords[i/2]
+            base2.ref_frame = insert_frames[i/2]
 
-    def _renumber_baseIDs(self, dna_topology, id_nt):
-        """ Renumber base IDs so that they are between 1 and len(dna_topology). This is needed when bases are added or deleted.
-        """    
-        num_bases = len(dna_topology)
-        conn = np.zeros((num_bases,4), dtype=int)
-        for i in xrange(0,num_bases):
-            conn[i,:] = [dna_topology[i].id, dna_topology[i].up, dna_topology[i].down, dna_topology[i].across]
+            last_base1 = base1
+            last_base2 = base2
+        #__for i in xrange(0,num_inserts,2)
 
-        # Sort the connectivty 
-        sorted_indices = np.argsort(conn, axis=0)
-        conn = conn[sorted_indices[:,0]]
+        return base_id 
+    #__def _insert_bases_dsDNA
 
-        # Modify base IDs 
-        # Note: be careful here. id_nt contains zero-indexed base IDs.
-        id_nt_new = id_nt
-        new_conn = -2*np.ones((num_bases,4), dtype=int)
-        new_conn[conn == -1] = -1    # set entries in new_conn[] to -1 for -1 entries in conn[] 
-        for i in xrange(0,num_bases):
-            new_conn[conn == conn[i,0]] = i+1
-            #id_nt_new[id_nt == conn[i,0]] = i+1
-            id_nt_new[id_nt == conn[i,0]-1] = i
+    def _renumber_baseIDs(self, base_connectivity):
+        """ Renumber base IDs to be between 0 and num_bases. """
+        for i,base in enumerate(base_connectivity): 
+            base.id = i
 
-        # Create a new topology 
-        new_dna_topology = []
-        for i in xrange(0,num_bases):
-            id = new_conn[i,0]
-            base = DnaBase(id)
-            base.up = new_conn[i,1]
-            base.down = new_conn[i,2]
-            base.across = new_conn[i,3]
-            j = sorted_indices[i][0]
-            base.h = dna_topology[j].h
-            base.p = dna_topology[j].p
-            base.is_scaf = dna_topology[j].is_scaf
-            base.coord = dna_topology[j].coord
-            base.skip = dna_topology[j].skip
-            base.loop = dna_topology[j].loop
-            new_dna_topology.append(base)
-        #__for i in xrange(0,num_bases)
-        return new_dna_topology, id_nt_new
-
-    def _create_structure_topology_and_geometry(self,design):
+    def _create_structure_topology_and_geometry(self, design):
         """ Create topological and geometrical information for a design. """
-        structure_toplogy = np.empty(shape=(0,TOPOLOGICAL_TABLE_NUM_COLUMNS))
-        dnode = np.empty(shape=(0,3),dtype=float)
-        triad = np.empty(shape=(3,3,0),dtype=float)
-        id_nt_0 = np.empty(shape=(0,6),dtype=float)
-        num_vhelices = 0
         lattice_type = design.lattice_type
+        max_vhelix_size = design.max_base_id+1
         row_list = []
         col_list = []
         structure_helices = [] 
         vhelices = design.helices
-        self._logger.setLevel(logging.DEBUG)
+        self._logger.setLevel(logging.INFO)
+        #self._logger.setLevel(logging.DEBUG)
         self._logger.debug("==================== create structure topology and geometry ====================")
 
-        for vhelix in vhelices:
-            self._logger.debug("---------- process virtual helix %d ----------" % num_vhelices);
+        for i,vhelix in enumerate(vhelices):
+            self._logger.debug("---------- process virtual helix num %d ----------" % vhelix.num );
             row = vhelix.row 
             col = vhelix.col 
             num = vhelix.num 
@@ -698,62 +623,56 @@ class CadnanoConvertDesign(object):
             for color in stap_colors:
                 self._add_staple_color(color, num)
 
-            # Create data for a single helix
-            helix_topology, dnode_0, triad_0, id, dnode_full, triad_full = self._create_single_helix(vhelix, lattice_type)
+            # Get the bases for the helix.
+            scaffold_bases, staple_bases = self._create_single_helix(vhelix, lattice_type)
+            self._logger.debug("Number of scaffold bases %d " % len(scaffold_bases)) 
+            if (False):
+                s = ""
+                for base in scaffold_bases:
+                    s += str(base.p) + " "
+                self._logger.debug("Scaffold bases positions %s " % s) 
 
-            # Find start/end positions of the scaffold strands.
-            start_scaffold = -1
-            end_scaffold = -1
-            for i in xrange(0,len(helix_topology)):
-                if int(helix_topology[i,3]) == 0: 
-                    if start_scaffold == -1:
-                        start_scaffold = int(helix_topology[i,2])
-                    end_scaffold = int(helix_topology[i,2])
-            #__for i in xrange(0,len(helix_topology))
+	    self._logger.debug("Number of staple bases %d " % len(staple_bases)) 
+            if (False):
+                s = ""
+                for base in staple_bases:
+                    s += str(base.p) + " "
+                self._logger.debug("Staple bases positions %s " % s) 
+   
+            # Generate the helix axis coordinates and frames, and DNA helix nucleotide coordinates.
+            axis_coords, axis_frames, scaffold_coords, staple_coords = \
+                self._generate_coordinates(lattice_type, row, col, num, scaffold_bases, staple_bases)
 
-            # Find the start and end positions of the staple strands.
-            start_staple = -1
-            for i in xrange(0,len(helix_topology)):
-                if (int(helix_topology[i,3]) == 1):
-                    if start_staple == -1:
-                        start_staple = int(helix_topology[i,2])
-                    end_staple = int(helix_topology[i,2])
-            #__for i in xrange(0,len(helix_topology))
-
-            if start_scaffold != -1:
-                start_strand = start_scaffold
-                end_strand = end_scaffold
-            elif start_staple != -1:
-                start_strand = start_staple
-                end_strand = end_staple
-            else:
-                start_strand = -1
-                end_strand = -1 
-
-            # Create a DNA structure object that stores the helix information. 
-            # Set the caDNAno information outside of the constructor because
-            # this will be abstracted out in the future.
-            # TODO (DaveP) Remove references to lattice-based geometry.
-            structure_helix = DnaStructureHelix(num_vhelices, scaffold_polarity, dnode_full, triad_full, start_strand, end_strand)
+            # Create a dna structure object that stores the helix information. 
+            structure_helix = DnaStructureHelix(i, num, scaffold_polarity, axis_coords, axis_frames, scaffold_bases, 
+                                                staple_bases)
             structure_helix.lattice_num = num
             structure_helix.lattice_row = row
             structure_helix.lattice_col = col
-
-            # Append results to the global table.
-            structure_toplogy = np.concatenate((structure_toplogy, helix_topology), axis=0)
-            dnode = np.concatenate((dnode, dnode_0), axis=0)
-            triad = np.concatenate((triad, triad_0), axis=2)
-            id_nt_0 = np.concatenate((id_nt_0, id), axis=0)
-
+            structure_helix.lattice_max_vhelix_size = max_vhelix_size 
+            structure_helix.staple_base_list = staple_bases
+            structure_helix.scaffold_base_list = scaffold_bases
             structure_helices.append(structure_helix)
-            num_vhelices += 1
         #__for vhelix in vhelices
-        return structure_toplogy, dnode, triad, id_nt_0, structure_helices
+        return structure_helices
 
-    def _create_nt_map_table(self, base_maps, dnode, id_nt_0):
+    def _create_nt_map_table(self, base_connectivity, dnode, id_nt_0):
         """ Create the map table (id_nt). """
+        self._logger.info("================================= _create_nt_map_table =======================")
         n_bp = dnode.shape[0]
         id_nt = np.zeros((n_bp, 2), dtype=int)
+        self._logger.info("n_bp %d" % n_bp)
+
+        num_pairs = 0
+        for i,base in enumerate(base_connectivity):
+           if not (base.across and base.is_scaf): 
+               continue 
+           id_nt[num_pairs,0] = base.id 
+           id_nt[num_pairs,1] = base.across.id 
+           num_pairs += 1
+        self._logger.info("num_pairs %d" % num_pairs)
+        return id_nt 
+
         for i in xrange(0,n_bp):
             # Scaffold nucleotide
             base_data = id_nt_0[i,0:3]
@@ -795,13 +714,8 @@ class CadnanoConvertDesign(object):
                 lattice_type (CadnanoLatticeType): Cadnano lattice type. 
 
             Returns: 
-                helix_topology (Nx18 numpy float array): An array storing IDs, coordinates, and connectivity for each base 
-                    defined in the the virtual helix.  
-                dnode (Nx3 numpy float array): An array of helix axis coordinates for base-paired bases in the virtual helix.
-                triad (Nx3x3 numpy float array): An array of helix coordinate frames for base-paired bases in the virtual helix.
-                id_nt_0 (Nx6 numpy float array): An array of base pair connectivity. 
-                dnode_0 (NBx3 numpy float array): An array of helix axis coordinates for all bases in the virtual helix.
-                triad_0 (NBx3x3 numpy float array): An array of helix coordinate frames for all bases in the virtual helix.
+                scaffold_bases (List[DnaBase]): The list of scaffold bases defined for the helix. 
+                staple_bases (List[DnaBase]): The list of staple bases defined for the helix. 
         """
         #self._logger.debug("------------------- _create_single_helix ------------------- " )
         scaffolds = vhelix.scaffold_strands 
@@ -812,198 +726,180 @@ class CadnanoConvertDesign(object):
         col = vhelix.col 
         num = vhelix.num 
         num_bases = len(scaffolds)
-        #self._logger.debug("number of bases=%d" % num_bases )
-        #self._logger.debug("vstrand.row=%d" % row)
-        #self._logger.debug("vstrand.col=%d" % col)
 
-        # Generate the coordinates for the scaffold and staple bases.
-        dnode = np.empty((0, 3), dtype=float)
-        triad = np.empty((3, 3,0), dtype=float)
-        scaffold_coords, staple_coords, dnode_0, triad_0 = self._generate_coordinates(lattice_type, row, col, num, num_bases)
-        # convert nm to Angstrom (scaffold_coords and staple_coords are in nm).
-        #dnode_0 = dnode_0 * 10;
-
-        # Add scaffold and strand information to the topology table. 
-        uid = -1
-        helix_topology = np.zeros((2*num_bases, TOPOLOGICAL_TABLE_NUM_COLUMNS), dtype=float)
-        id_nt_0 = np.empty((0,6), dtype=float)
-
+        # Iterate over the vhelix scaffold and staple bases.
+        scaffold_bases = []
+        staple_bases = []
         for i in xrange(0,num_bases):
             current_scaffold = scaffolds[i] 
             current_staple = staples[i] 
+            helix_pos = i
 
-            # If the base exists in the scaffold strand
+            # If the base exists in the scaffold strand.
             if (current_scaffold.initial_strand >= 0) or (current_scaffold.final_strand >= 0):
-                #self._logger.debug("%d: add scaffold id %d" % (i,uid+1))
-                uid = uid + 1
-                helix_topology[uid,0] = uid+1
-                # Set helix ID, lattice ID, and strand type: 0 for scaffold, 1 for staple
-                helix_topology[uid,1] = num
-                helix_topology[uid,2] = (i-1) + 1  # use 1-based IDs
-                helix_topology[uid,3] = StrandType.SCAFFOLD
-                uid_curr_scaf = helix_topology[uid,1:4]
-
-                #  5'-neighbor
-                helix_topology[uid,4] = current_scaffold.initial_strand
-                helix_topology[uid,5] = current_scaffold.initial_base
-                helix_topology[uid,6] = StrandType.SCAFFOLD
-
-                # 3'-neighbor
-                helix_topology[uid,7] = current_scaffold.final_strand
-                helix_topology[uid,8] = current_scaffold.final_base  
-                helix_topology[uid,9] = StrandType.SCAFFOLD
-
-                # Watson-Crick neighbor
-                #if ( (current_staple[0] >= 0) or (current_staple[2] >= 0)):
-                if ( (current_staple.initial_strand >= 0) or (current_staple.final_strand >= 0)):
-                    helix_topology[uid,10] = num
-                    helix_topology[uid,11] = (i-1) + 1  # use 1-based IDs
-                    helix_topology[uid,12] = 1
-                else:
-                    helix_topology[uid,10] = -1
-                    helix_topology[uid,11] = -1
-                    helix_topology[uid,12] = 1
-
-                # Coordinate
-                helix_topology[uid,13] = scaffold_coords[i,0]
-                helix_topology[uid,14] = scaffold_coords[i,1]
-                helix_topology[uid,15] = scaffold_coords[i,2]
-
-                # deletion
-                helix_topology[uid,16] = deletions[i]
-
-                # insertion
-                helix_topology[uid,17] = insertions[i]
-            #__if ((current_scaffold[0] >= 0) or (current_scaffold[2] >= 0))__
+                base = self._add_base(StrandType.SCAFFOLD, current_scaffold, StrandType.STAPLE, current_staple, helix_pos, num)
+                base.num_deletions = deletions[i]
+                base.num_insertions = insertions[i]
+                scaffold_bases.append(base)
 
             # if the base exists in the staple strand
             if ((current_staple.initial_strand >= 0) or (current_staple.final_strand >= 0)):
-                uid = uid + 1
-                helix_topology[uid,0] = uid+1
-                # set helix ID, lattice ID, and strand type: 0 for scaffold, 1 for staple
-                helix_topology[uid,1] = num
-                helix_topology[uid,2] = (i-1) + 1  # use 1-based IDs 
-                helix_topology[uid,3] = StrandType.STAPLE
-                uid_curr_stap = helix_topology[uid,1:4]
+                base = self._add_base(StrandType.STAPLE, current_staple, StrandType.SCAFFOLD, current_scaffold, helix_pos, num)
+                staple_bases.append(base)
+                base.num_deletions = deletions[i]
+                base.num_insertions = insertions[i]
 
-                #  5'-neighbor
-                helix_topology[uid,4] = current_staple.initial_strand
-                helix_topology[uid,5] = current_staple.initial_base  
-                helix_topology[uid,6] = StrandType.STAPLE
-
-                # 3'-neighbor
-                helix_topology[uid,7] = current_staple.final_strand
-                helix_topology[uid,8] = current_staple.final_base  
-                helix_topology[uid,9] = 1 
-
-                # Watson-Crick neighbor
-                if ( (current_scaffold.initial_strand >= 0) or (current_scaffold.final_strand >= 0)):
-                    helix_topology[uid,10] = num
-                    helix_topology[uid,11] = (i-1) + 1
-                    helix_topology[uid,12] = 0
-                else:
-                    helix_topology[uid,10] = -1
-                    helix_topology[uid,11] = -1
-                    helix_topology[uid,12] = 0
-
-                # coordinate
-                helix_topology[uid,13] = staple_coords[i,0]
-                helix_topology[uid,14] = staple_coords[i,1]
-                helix_topology[uid,15] = staple_coords[i,2]
-
-                # deletion
-                helix_topology[uid,16] = deletions[i]
-
-                # insertion
-                helix_topology[uid,17] = insertions[i]
-            #__if ((current_staple[0] >= 0) or (current_staple[2] >= 0))__
-
-            # Set infomation for a base-paired base.
-            if ( ((current_scaffold.initial_strand >= 0) or (current_scaffold.final_strand >= 0)) and 
-                 ((current_staple.initial_strand >= 0) or (current_staple.final_strand >=0 ))):
-                dnode = np.concatenate((dnode, dnode_0[[i],:]), axis=0)
-                triad = np.concatenate((triad, triad_0[:,:,[i]]), axis=2)
-                ida = np.concatenate((uid_curr_scaf, uid_curr_stap))
-                id_nt_0 = np.concatenate((id_nt_0, [ida]), axis=0)
         #__for i in xrange(0,num_lattice)__
 
-        # Remove rows at the end that don't contain any information.
-        helix_topology = np.delete(helix_topology, np.s_[uid+1:2*num_bases:1],0)
-        return helix_topology, dnode, triad, id_nt_0, dnode_0, triad_0
+        return scaffold_bases, staple_bases 
 
-    def _generate_coordinates(self, lattice_type, row, col, strand_num, num_lattice):
-        """ Generate the coordinates for base pair positions along a helix and atom
-            positions along the dna helix.
+    def _add_base(self, base_type, base, paired_base_type, paired_base, helix_pos, helix_num):
+        """ Create a base from a cadnano base for a given location in a virtual helix. 
+ 
+            Arguments:
+                base_type (StrandType): The type of helix strand, SCAFFOLD or STAPLE, the cadnano base is part of. 
+                base (CadnanoBase): The cadnano base. 
+                paired_base_type (StrandType): The type of helix paired strand, SCAFFOLD or STAPLE, the cadnano 
+                    paired base is part of. 
+                paired_base (CadnanoBase): The cadnano paired base. 
+                helix_pos (int): The position of the base in the virtual helix.
+                helix_num (int): The number of the virtual helix.
         """
-        #self._logger.debug("-------------------- generate_coordinates --------------------")
-        #self._logger.debug("num_lattice %d" % num_lattice)
-        r_strand = self.r_strand    # half the distance between the axes of two neighboring DNA helices
-        r_helix = self.r_helix      # radius of DNA helices (nm)
-        dist_bp = self.dist_bp      # rise between two neighboring base-pairs (nm)
-        ang_bp = self.ang_bp        # twisting angle between two neighboring base-pairs (degree)
-        ang_minor = self.ang_minor  # angle of the minor groove (degree)
+        # Create the helix base. 
+        base_index = self._get_base_index(helix_num, helix_pos, base_type) 
+        new_base = self._get_base(base_index)
+        new_base.is_scaf = (base_type == StrandType.SCAFFOLD)
+        new_base.h = helix_num
+        new_base.p = helix_pos
 
-        # positions of the scaffold nucleotide and staple nucleotide
+        #  Add the 5'-neighbor.
+        base_index = self._get_base_index(base.initial_strand, base.initial_base, base_type) 
+        five_base = self._get_base(base_index)
+        new_base.up = five_base
+
+        # Add the 3'-neighbor
+        base_index = self._get_base_index(base.final_strand, base.final_base, base_type) 
+        three_base = self._get_base(base_index)
+        new_base.down = three_base
+
+        # Watson-Crick neighbor.
+        if ( (paired_base.initial_strand >= 0) or (paired_base.final_strand >= 0)):
+            base_index = self._get_base_index(helix_num, helix_pos, not base_type)
+            wc_base = self._get_base(base_index)
+            new_base.across = wc_base
+        else:
+            new_base.across = None
+
+        return new_base
+
+    def _generate_coordinates(self, lattice_type, row, col, helix_num, scaffold_bases, staple_bases):
+        """ Generate the axis coordinates, axis reference frames, and nucleotide coordinate for the
+            virtual helix. 
+
+            Arguments:
+                lattice_type (CadnanoLatticeType): The lattice type for this design.
+                row (int): The caDNAno row number. 
+                col (int): The caDNAno column number. 
+                helix_num (int): The caDNAno virtual helix number. 
+                scaffold_bases (List[DnaBase]): The list of scaffold bases for this helix. 
+                staple_bases (List[DnaBase]): The list of staple bases for this helix. 
+
+            The helix coordinates and reference frames are generated for all of the virtural helix
+            positions that contain a base. The coordinates and refereance frames are also set for 
+            scaffold and staple bases. 
+        """
+        #self._logger.setLevel(logging.DEBUG)
+        self._logger.setLevel(logging.INFO)
+        self._logger.debug("-------------------- generate_coordinates --------------------")
+        r_strand = self.dna_parameters.helix_distance / 2.0 # half the distance between the axes of adjacent DNA helices.
+        r_helix = self.dna_parameters.helix_radius          # radius of DNA helices (nm)
+        dist_bp = self.dna_parameters.base_pair_rise        # rise between two neighboring base-pairs (nm)
+        ang_bp = self.dna_parameters.base_pair_twist_angle  # twisting angle between two neighboring base-pairs (degrees)
+        ang_minor = self.dna_parameters.minor_groove_angle  # angle of the minor groove (degrees)
+
+        # Positions of the scaffold nucleotide and staple nucleotide
         # in the local reference frame.
         scaf_local = r_helix * np.array([cos(_deg2rad(180-ang_minor/2)), sin(_deg2rad(180-ang_minor/2)), 0.0]).transpose()
         stap_local = r_helix * np.array([cos(_deg2rad(180+ang_minor/2)), sin(_deg2rad(180+ang_minor/2)), 0.0]).transpose()
 
+        # Set the helix start coordinates, based on helix (row,col), and frame orientation, 
+        # based on helix number (polarity).
         if (lattice_type == CadnanoLatticeType.honeycomb):
             xpos =  sqrt(3.0) * col * r_strand
             zpos = -3.0 * row * r_strand;
-
             if ( ((row % 2 == 0) and (col % 2 == 0)) or ((row % 2 != 0) and (col % 2 != 0))):
                 zpos = zpos + r_strand
-
-            if ( strand_num % 2 == 0 ):
+            if ( helix_num % 2 == 0 ):
                 init_ang = -30 + ang_bp / 2
             else:
                 init_ang = 150 + ang_bp / 2
-
         elif (lattice_type == CadnanoLatticeType.square): 
             xpos =  2.0 * col * r_strand
             zpos = -2.0 * row * r_strand
-    
-            if ( strand_num % 2 == 0):
+            if helix_num % 2 == 0:
                 init_ang = 180 + ang_bp / 2
             else:
                 init_ang = 0 + ang_bp / 2
+        #__if (lattice_type == CadnanoLatticeType.honeycomb)
 
-        # Compute coordinate and twisting angle for each base pair. 
         init_coord_ang_strand = np.array([xpos, 0.0, zpos, init_ang]);
-        scaffold_coords = np.zeros((num_lattice,3), dtype=float)
-        staple_coords = np.zeros((num_lattice,3), dtype=float)
-        dnode = np.zeros((num_lattice,3), dtype=float);
-        triad = np.zeros((3,3,num_lattice), dtype=float);
 
-        if (strand_num % 2 == 0):
+        if (helix_num % 2 == 0):
             e3 = np.array([0, 1, 0],dtype=float)
         else:
             e3 = np.array([0, -1, 0],dtype=float)
 
-        for i in xrange(0,num_lattice):
-            ref_coord = init_coord_ang_strand + np.array([0, dist_bp*i, 0, ang_bp*i]);
+        # Create a list of sorted base positions.
+        base_positions = set()
+        for base in scaffold_bases: 
+            base_positions.add(base.p)
+        for base in staple_bases: 
+            base_positions.add(base.p)
+        #self._logger.debug("Base positions %s" % str(sorted_base_positions))
 
-            # Basepair position
-            dnode[i,:] = ref_coord[0:3];
-
-            # Basepair orientation
+        # Compute helix axis coordinates and frames.
+        num_base_positions = len(base_positions)
+        axis_coords = np.zeros((num_base_positions,3), dtype=float)
+        axis_frames = np.zeros((3,3,num_base_positions), dtype=float);
+        pos_map = {}
+        self._logger.debug("Axis frames: ")
+        for i,p in enumerate(sorted(base_positions)): 
+            pos_map[p] = i
+            ref_coord = init_coord_ang_strand + np.array([0, dist_bp*p, 0, ang_bp*p]);
+            # Base coordinate. 
+            axis_coords[i,:] = ref_coord[0:3];
+            # Base orientation.
             e2 = np.array([cos(-_deg2rad(ref_coord[3])), 0, sin(-_deg2rad(ref_coord[3]))])
             e1 = np.cross(e2, e3);
-            triad[:,:,i] = np.array([e1, e2, e3]).transpose();
-            #print(">>> triad=%s" % str(triad[:,:,i]))
+            axis_frames[:,:,i] = np.array([e1, e2, e3]).transpose();
+            self._logger.debug("pos %d  frame 1 %g %g %g " % (p, axis_frames[0,0,i], axis_frames[1,0,i], axis_frames[2,0,i]))
+            self._logger.debug("        frame 2 %g %g %g " % (   axis_frames[0,1,i], axis_frames[1,1,i], axis_frames[2,1,i]))
+            self._logger.debug("        frame 3 %g %g %g " % (   axis_frames[0,2,i], axis_frames[1,2,i], axis_frames[2,2,i]))
+        #__for base in staple_bases
 
-            # Scaffold & staple nucleotide positions
-            scaffold_coords[i,:] = dnode[i,:] + np.dot(triad[:,:,i],scaf_local)
-            staple_coords[i,:]   = dnode[i,:] + np.dot(triad[:,:,i],stap_local)
+        # Compute scaffold nucleotide positions and set base coordinates and frame.
+        num_scaffold_bases = len(scaffold_bases)
+        scaffold_coords = np.zeros((num_scaffold_bases,3), dtype=float)
+        for i,base in enumerate(scaffold_bases): 
+            j = pos_map[base.p]
+            base.coordinates = axis_coords[j]
+            base.ref_frame = axis_frames[:,:,j]
+            scaffold_coords[i,:] = axis_coords[j,:] + np.dot(axis_frames[:,:,j], scaf_local)
+            base.nt_coords = scaffold_coords[i]
+        #__for base in scaffold_bases 
 
-            #print(">>> ref_coord= %f %f %f %f" % (ref_coord[0], ref_coord[1], ref_coord[2], ref_coord[3]) )
-            #logger.debug("scaffold_coords[%d,:]= %f %f %f" % (i+1, scaffold_coords[i,0],scaffold_coords[i,1],scaffold_coords[i,2]) )
-            #print(">>> staple_coords[%d,:]= %f %f %f" % (i+1, staple_coords[i,0],staple_coords[i,1],staple_coords[i,2]) )
-            #print(" ")
-        #__for i in xrange(0,num_lattice)__
+        # Compute staple nucleotide positions and set base coordinates and frame.
+        num_staple_bases = len(staple_bases)
+        staple_coords = np.zeros((num_staple_bases,3), dtype=float)
+        for i,base in enumerate(staple_bases): 
+            j = pos_map[base.p]
+            base.coordinates = axis_coords[j]
+            base.ref_frame = axis_frames[:,:,j]
+            staple_coords[i,:] = axis_coords[j,:] + np.dot(axis_frames[:,:,j], stap_local)
+            base.nt_coords = staple_coords[i]
+        #__for base in stape_bases
 
-        return scaffold_coords, staple_coords, dnode, triad
+        return axis_coords, axis_frames, scaffold_coords, staple_coords 
 
     def _calculate_lattice_directions(self):
         """ Calculate the unit vectors pointing to neighboring cells.
@@ -1016,21 +912,21 @@ class CadnanoConvertDesign(object):
             dx =  2.0 
             dz = -2.0 
 
-    def _calculate_staple_ends(self, dna_topology):
-        dna_topology,strands = self._build_strands(dna_topology)
+    def _calculate_staple_ends(self, base_connectivity):
+        base_connectivity,strands = self._build_strands(base_connectivity)
         num_strands = len(strands)
         staple_ends = np.empty(shape=(0,5),dtype=float)
 
         for i in xrange(0,num_strands):
             strand = strands[i]
-            is_scaf_strand = dna_topology[strand.tour[0]-1].is_scaf
+            is_scaf_strand = strand.tour[0].is_scaf
             for j in xrange(0,len(strand.tour)):
-                is_scaf_base = dna_topology[strand.tour[j]-1].is_scaf
+                is_scaf_base = strand.tour[j].is_scaf
             if (not is_scaf_strand):
-                h0 = dna_topology[strand.tour[0]-1].h
-                p0 = dna_topology[strand.tour[0]-1].p
-                h1 = dna_topology[strand.tour[-1]-1].h
-                p1 = dna_topology[strand.tour[-1]-1].p
+                h0 = strand.tour[0].h
+                p0 = strand.tour[0].p
+                h1 = strand.tour[-1].h
+                p1 = strand.tour[-1].p
                 staple_ends = np.concatenate((staple_ends, [[i+1, h0, p0, h1, p1]]), axis=0)
         #__for i in xrange(0,num_strands)__
         return staple_ends
@@ -1063,99 +959,116 @@ class CadnanoConvertDesign(object):
                 self._logger.debug("            scaffold cross-over: %d,%d " % (cross_vh.num,index))
                 cross_sh = structure_helices_coord_map[(cross_vh.row,cross_vh.col)]
                 shelix.possible_scaffold_crossovers.append((cross_sh,index))
+        #__for vhelix in design.helices
 
-    def _build_strands(self,dna_topology):
-        """ Build strands. 
-        """
-        num_bases = len(dna_topology)
-        #print "[build_strand] num bases=%d" % num_bases 
+    def _build_strands(self, base_connectivity):
+        #self._logger.setLevel(logging.DEBUG)
+        self._logger.setLevel(logging.INFO)
+        self._logger.debug("==================== build strands ====================")
+        num_bases = len(base_connectivity)
+        self._logger.debug("Number of bases %d" % num_bases) 
         strands = []
         n_strand = 0
         is_visited = [False]*num_bases
-        
+
         while (True):
             try:
                 base_index = is_visited.index(False)
-                curr_base = dna_topology[base_index]
-                #print "[build_strand] base_index=%d" % base_index 
-                #print "[build_strand] curr_base.id=%d" % curr_base.id 
+                curr_base = base_connectivity[base_index]
+                self._logger.debug("------------- find first base --------------")
+                self._logger.debug("Base_index %d" % base_index)
+                self._logger.debug("Curr_base id %d  h %d  p %d  up %s" % (curr_base.id, curr_base.h, curr_base.p, curr_base.up))
             except:
                 break
 
-            init_baseID = curr_base.id
-            strand = DnaStrand(n_strand,self.dna_structure)
+            init_base = curr_base
+            #init_baseID = curr_base.id
 
-            # Find the first base in the current strand
-            while ((curr_base.up >= 0) and (curr_base.up != init_baseID)):
-                curr_base = dna_topology[curr_base.up-1]
-                if (is_visited[curr_base.id-1]):
-                    sys.stderr.write('[build_strand] **** ERROR: Reached a visited base.');
+            # Find the first base in the current strand.
+            self._logger.debug("------------- walk bases --------------")
+            while curr_base.up and (curr_base.up.id != init_base.id):
+                curr_base = curr_base.up
+                self._logger.debug(" curr_base id %d  h %d  p %d" % (curr_base.id, curr_base.h,  curr_base.p))
+                if (is_visited[curr_base.id]):
+                    print('[build_strand] **** ERROR: Reached a visited base.');
                     return None,None
             #_while 
-
+    
+            self._logger.debug("---------- add strand %d ----------" % n_strand)
+            self._logger.debug("first strand base: curr_base.id %d" % curr_base.id)
             strand = DnaStrand(n_strand,self.dna_structure)
             strands.append(strand)
-
-            if (curr_base.up < 0):                     # currBase is at the 5'-end of the strand
+    
+            if not curr_base.up:                     # currBase is at the 5'-end of the strand
                 strand.is_circular = False
-            elif (curr_base.up == init_baseID):        # currBase goes back to the starting point
+            elif curr_base.up.id == init_base.id:    # currBase goes back to the starting point
                 strand.is_circular = True
-                curr_base = dna_topology[init_baseID-1]
+                curr_base = init_base
+                self._logger.debug("strand is circular. " )
+                self._logger.debug("curr_base.id %d" % curr_base.id)
             else:
-                sys.stderr.write('[build_strand] **** ERROR: Exception.')
+                print('[build_strand] **** ERROR: Exception.')
                 return None,None
-
+    
             # Walk through the current strand.
             n_residue = 1
-            strand.tour.append(curr_base.id)
+            strand.tour.append(curr_base)
             curr_base.strand = n_strand
-            is_visited[curr_base.id-1] = True
-
-            # Each loop adds a new base.
-            while ( (not strand.is_circular and (curr_base.down >= 0)) or 
-                    (strand.is_circular and (curr_base.down != init_baseID)) ):
-                curr_base = dna_topology[curr_base.down-1]
-
-                if (is_visited[curr_base.id-1]):
+            curr_base.residue = n_residue
+            is_visited[curr_base.id] = True
+    
+            while ( (not strand.is_circular and curr_base.down) or 
+                    (strand.is_circular and (curr_base.down.id != init_base.id)) ):
+                curr_base = curr_base.down
+                #if debug: print "[build_strand] curr_base id %d  h %d  p %d" % (curr_base.id, curr_base.h, curr_base.p )
+    
+                if (is_visited[curr_base.id]):
                     sys.stderr.write('[build_strand] **** ERROR: Reached a visited base.\n')
                     return None,None
-
+    
                 if (n_residue == 1):
                     strand.is_scaffold = curr_base.is_scaf
-
+    
                 n_residue = n_residue + 1
-                strand.tour.append(curr_base.id)
+                strand.tour.append(curr_base)
                 curr_base.strand = n_strand
-                is_visited[curr_base.id-1] = True
+                curr_base.residue = n_residue
+                is_visited[curr_base.id] = True
             #__while((not strand.is_circular 
 
-            # Modify the strand if it is circular and the first base crosses over to another helix. 
-            # The first base is moved to the end of the strand. This will prevent later issues, like 
-            # domains that don't follow the strand tour because the strand first domain would be 
+            # Modify the strand if it is circular and the first base crosses over to another helix.
+            # The first base is moved to the end of the strand. This will prevent later issues, like
+            # domains that don't follow the strand tour because the strand first domain would be
             # merged with the last domain during domain calculation.
             if strand.is_circular and len(strand.tour) > 2:
-                first_base = dna_topology[strand.tour[0]-1]
-                second_base = dna_topology[strand.tour[1]-1]
+                first_base = strand.tour[0]
+                second_base = strand.tour[1]
                 if first_base.h != second_base.h:
                     del(strand.tour[0])
-                    strand.tour.append(first_base.id)
+                    strand.tour.append(first_base)
             #__if strand.is_circular and len(strand.tour) > 2
 
             n_strand += 1
         #__while (True):
-        return dna_topology, strands
+        return base_connectivity,strands
 
     def _set_strands_colors(self, strands):
+        """ Set the color for staple strands. 
+
+            Arguments:
+                strands (List[DnaStrand]): The list of strands for the design.
+        """
         for strand in strands:
             if (strand.is_scaffold):
                 continue 
-            id = strand.tour[0]
-            base = self.dna_structure.base_connectivity[id-1]
+            base = strand.tour[0]
             for color in self.staple_colors:
                 if ((color.vhelix_num == base.h) and (color.vhelix_pos == base.p)): 
                     strand.color = color.rgb 
+            #__for color in self.staple_colors
+        #__for strand in strands
 
-    def set_sequence_from_name(self, modified_structure, seq_name):
+    def set_sequence_from_name(self, dna_structure, modified_structure, seq_name):
         """ Set the sequence information for the staple and scaffold strands using a known
             origami vector sequence name.
 
@@ -1172,15 +1085,14 @@ class CadnanoConvertDesign(object):
         """
         #self._logger.setLevel(logging.DEBUG)
         self._logger.setLevel(logging.INFO)
-
         sequence = dna_sequence_data.get(seq_name,None)
         seq_index = 0
         sequence_length = len(sequence)
-        self._logger.debug("-------------------- set_sequence_from_name --------------------")
+        self._logger.debug("-------------------- set_sequence_from_name p --------------------")
         self._logger.debug("sequence name: %s" % seq_name)
         self._logger.debug("sequence length: %d" % len(sequence))
-        dna_structure = self.dna_structure 
         base_connectivity = dna_structure.base_connectivity
+        self._logger.debug("Size of base_connectivity %d" % len(base_connectivity))
         strands = dna_structure.strands 
         ordered_traverse = True
         ordered_traverse = False
@@ -1190,17 +1102,15 @@ class CadnanoConvertDesign(object):
                 continue 
 
             if (ordered_traverse): 
-                self._logger.debug("---------- traverse scaffold strand --------------------")
+                self._logger.debug("---------- ordered traverse scaffold strand --------------------")
                 tour = strand.tour
-                id = tour[0]
-                base = base_connectivity[id-1]
+                base = tour[0]
                 min_vh = base.h
                 min_p = base.p
                 start_index = 0
 
                 for j in xrange(0,len(tour)):
-                    id = tour[j]
-                    base = base_connectivity[id-1]
+                    base = tour[j]
                     if (base.h < min_vh):
                         min_vh = base.h
                         min_p = base.p
@@ -1209,23 +1119,23 @@ class CadnanoConvertDesign(object):
                         min_p = base.p
                         start_index = j
                 self._logger.debug("start_index %d  min_vh %d  min_p %d ", start_index, min_vh,min_p)
-                start_id = tour[start_index]
-                start_base = base_connectivity[start_id-1]
+                start_id = tour[start_index].id
+                start_base = tour[start_index]
                 base = start_base 
                 even_vh = min_vh % 2
 
                 for j in xrange(0,len(tour)):
                     letter = sequence[seq_index]
-                    up = base.up
-                    down = base.down
-                    across = base.across
+                    up_base = base.up
+                    down_base = base.down
+                    across_base = base.across
 
                     if (not modified_structure):
-                        if (across >= 0):
-                            if (base.skip != 0):
+                        if (across_base != None):
+                            if (base.num_deletions  != 0):
                                 self._logger.debug("deleted base: id %d " % base.id)
                                 letter = 'N'
-                            elif (base.loop != 0):
+                            elif (base.num_insertions != 0):
                                 self._logger.debug("inserted base: id %d " % base.id)
                                 strand.insert_seq.append(sequence[seq_index+1])
                                 seq_index += 2
@@ -1241,41 +1151,36 @@ class CadnanoConvertDesign(object):
                     self._logger.debug("base id %d  vh %d  pos %d  up %d  down %d  across %d  seq %s", 
                         base.id, base.h, base.p, up, down, across, base.seq)
 
-                    if (across >= 0):
-                        across_base = base_connectivity[base.across-1]
+                    if (across_base != None):
                         across_base.seq = self._wspair(letter)
 
                     if (even_vh):
                         if (up != -1):
-                            base_id = up
-                            base = base_connectivity[base_id-1]
-                        elif (across != -1):
-                            base_id = across
-                            base = base_connectivity[base_id-1]
+                            base = base_up
+                        elif (across_base != None):
+                            base = across_base 
                             even_vh = base.h % 2
                     else:
-                        if (down != -1):
-                            base_id = down
-                            base = base_connectivity[base_id-1]
-                        elif (across != -1):
-                            base_id = across
-                            base = base_connectivity[base_id-1]
+                        if (down_base != None):
+                            base = down_base
+                        elif (across_base != None):
+                            base = across_base
                             even_vh = base.h % 2
 
                  #__for j in xrange(0,len(tour)):
 
             else: 
+                self._logger.debug("---------- unordered traverse scaffold strand --------------------")
                 for i in xrange(0,len(strand.tour)):
                     letter = sequence[seq_index]
-                    base_index = int(strand.tour[i])-1
-                    base = base_connectivity[base_index]
-                    across = base.across
+                    base = strand.tour[i]
+                    across_base = base.across
 
                     if (not modified_structure):
-                        if (base.skip != 0):
+                        if (base.num_deletions != 0):
                             self._logger.debug("deleted base: id %d  vh %d  pos %d", base.id, base.h, base.p)
                             letter = 'N'
-                        elif (base.loop != 0):
+                        elif (base.num_insertions != 0):
                             self._logger.debug("inserted base: id %d  vh %d  pos %d", base.id, base.h, base.p)
                             strand.insert_seq.append(sequence[seq_index+1])
                             seq_index += 2
@@ -1290,10 +1195,8 @@ class CadnanoConvertDesign(object):
                     if (seq_index == sequence_length): 
                         seq_index = 0
 
-                    if (base.across >= 0):
-                        across_base = base_connectivity[base.across-1]
-                        across_base.seq = self._wspair(letter)
-
+                    if (base.across != None):
+                        base.across.seq = self._wspair(letter)
                 #__for i in xrange(0,len(strand.tour))
         #__for strand in strands
 
@@ -1305,16 +1208,14 @@ class CadnanoConvertDesign(object):
             for strand in strands:
                 tour = strand.tour 
                 self._logger.debug(">>> strand: %d  scaf: %d length: %d" % (strand.id,strand.is_scaffold,len(tour)))
-                self._logger.debugprint("    seq:")
-                for j in xrange(0,len(tour)):
-                    id = tour[j]
-                    base = base_connectivity[id-1]
+                self._logger.debug("    seq:")
+                for base in tour:
                     self._logger.debug("    vhelix: %d  pos: %d  seq: %s" % (int(base.h), int(base.p), base.seq))
             #__for i in xrange(0,len(strands))
 
     #__def set_sequence_from_name
 
-    def set_sequence(self, modified_structure, sequence):
+    def set_sequence(self, dna_structure, modified_structure, sequence):
         """ Set the sequence information for the staple and scaffold strands.
 
             The caDNAno csv file contains sequence information reflecting the insertions and deletions of a
@@ -1331,9 +1232,7 @@ class CadnanoConvertDesign(object):
         #self._logger.setLevel(logging.DEBUG)
         self._logger.setLevel(logging.INFO)
 
-        dna_structure = self.dna_structure 
         strands = dna_structure.strands 
-        base_connectivity = dna_structure.base_connectivity
         staple_ends = dna_structure.staple_ends 
         start = np.array([0,0], dtype=float)
 
@@ -1348,30 +1247,27 @@ class CadnanoConvertDesign(object):
 
             if (modified_structure):
                 for j in xrange(0,len(strands[istrand-1].tour)):
-                    k = tour[j]-1
-                    base_connectivity[k].seq = seq.letters[j]
-                    if (self.base_connectivity[k].across >= 0):
-                        k_across = self.base_connectivity[k].across
-                        self.base_connectivity[k_across-1].seq = self._wspair(seq.letters[j])
+                    base = tour[j]
+                    base.seq = seq.letters[j]
+                    if (base.across != None):
+                        base.across.seq = self._wspair(seq.letters[j])
                 #__for j
 
             else:
                 seq_index = 0
                 for j in xrange(0,len(tour)):
                     letter = seq.letters[seq_index]
-                    base_index = int(tour[j])-1
-                    base = base_connectivity[base_index]
-                    if (base.skip != 0):
+                    base = tour[j]
+                    if (base.num_deletions != 0):
                         letter = 'N'
-                    elif (base.loop != 0):
+                    elif (base.num_insertions != 0):
                         strand.insert_seq.append(seq.letters[seq_index+1])
                         seq_index += 2
                     else:
                         seq_index += 1
                     base.seq = letter
-                    if (base.across >= 0):
-                        across_base = base_connectivity[base.across-1]
-                        across_base.seq = self._wspair(letter)
+                    if (base.across != None):
+                        base.across.seq = self._wspair(letter)
                 #__for j
 
         #__for i
@@ -1385,9 +1281,7 @@ class CadnanoConvertDesign(object):
                 tour = strand.tour
                 self._logger.debug(">>> strand: %d scaf: %d len: %d" % (strand.id,strand.is_scaffold,len(tour)))
                 self._logger.debug("    seq:")
-                for j in xrange(0,len(tour)):
-                    id = tour[j]
-                    base = base_connectivity[id-1]
+                for base in tour:
                     self._logger.debug("    vhelix: %d  pos: %d  seq: %s" % (int(base.h), int(base.p), base.seq))
             #__for i in xrange(0,len(strands))
     #__def set_sequence
@@ -1504,10 +1398,10 @@ def _vrrotvec2mat(axis, theta):
 
 def _bp_interp(dnode_1, triad_1, dnode_2, triad_2, n):
     """ Interpolate the position (dnode) and orientation (triad) between two base pairs.
+
         Solve for rotation matrix R defined as the solution of: 
             R * triad_1 = triad_2 (multiply both sides by transpose(triad_1).
     """
-    #print("[bp_interp] n=%s " % str(n))
     dnode_interp = np.zeros((n,3),dtype=float)
     triad_interp = np.zeros((3,3,n),dtype=float)
 

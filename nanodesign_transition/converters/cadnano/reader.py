@@ -20,13 +20,14 @@ except ImportError as i:
     print "Could not get nanodesign_transition module"
     raise i
 
-
 class CadnanoReader(object):
     """The CadnanoReader class."""
+    instance_count = 1
 
     def __init__(self):
         self._logging_level = logging.INFO
         self._setup_logging()
+        CadnanoReader.instance_count += 1
 
     def set_logging_level(self,level):
         """Set logging level."""
@@ -197,15 +198,14 @@ class CadnanoReader(object):
 
     def _setup_logging(self):
         """ Set up logging."""
-        self._logger = logging.getLogger('cadnano:reader')
+        #self._logger = logging.getLogger(__name__ + "." + str(CadnanoReader.instance_count))
+        self._logger = logging.getLogger(__name__)
         self._logger.setLevel(self._logging_level)
-
-        # create console handler and set format
-        console_handler = logging.StreamHandler()
-        #formatter = logging.Formatter('%(asctime)s [%(name)s] %(levelname)s - %(message)s')
-        formatter = logging.Formatter('[%(name)s] %(levelname)s - %(message)s')
-        console_handler.setFormatter(formatter)
-        self._logger.addHandler(console_handler)
+        if not len(self._logger.handlers):
+            console_handler = logging.StreamHandler()
+            formatter = logging.Formatter('[%(name)s] %(levelname)s - %(message)s')
+            console_handler.setFormatter(formatter)
+            self._logger.addHandler(console_handler)
 
 def main():
     """ Read in a caDNAno file."""

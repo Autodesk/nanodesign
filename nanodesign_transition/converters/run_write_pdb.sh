@@ -22,7 +22,6 @@ fn=Nature09_squarenut_no_joins
 fn=nanorobot.v2
 fn=pointer
 fn=robot_v1.9_bent_2
-fn=Rothemund-rect
 fn=simple
 fn=simple-1
 fn=six_helix_honeycomb
@@ -38,6 +37,7 @@ fn=square-test-2
 fn=square-test-3
 
 fn=fourhelix
+fn=Rothemund-rect
 
 outfile=./results/${fn}.pdb
 
@@ -48,5 +48,5 @@ converter.py \
     --outfile=${outfile}          \
     --outformat="pdb"
 
-cp ${outfile} ~ 
+#cp ${outfile} ~ 
 

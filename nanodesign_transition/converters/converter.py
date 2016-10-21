@@ -47,7 +47,7 @@ class ConverterFileFormats(object):
     STRUCTURE = "structure"
     TOPOLOGY  = "topology"
     VIEWER    = "viewer"
-    names = [ CADNANO, CANDO, CIF, PDB, STRUCTURE, TOPOLOGY, VIEWER ]
+    names = [ CADNANO, CANDO, CIF, PDB, SIMDNA, STRUCTURE, TOPOLOGY, VIEWER ]
 
 class Converter(object):
     """ This class stores objects for various models created when reading from a file.
@@ -107,14 +107,14 @@ def read_cadnano_file(converter, file_name, seq_file_name, seq_name):
         if (file_extension == ".csv"): 
             modified_structure = False
             sequence = cadnano_reader.read_csv(seq_file_name)
-            converter.cadnano_convert_design.set_sequence(modified_structure, sequence)
+            converter.cadnano_convert_design.set_sequence(converter.dna_structure, modified_structure, sequence)
 
     # Assign a sequence using a name.
     if (seq_name): 
         if (seq_name not in dna_sequence_data):
             converter.logger.error("The sequence name %s is not recognized.", seq_name)
         modified_structure = False
-        converter.cadnano_convert_design.set_sequence_from_name(modified_structure, seq_name)
+        converter.cadnano_convert_design.set_sequence_from_name(converter.dna_structure, modified_structure, seq_name)
 
 def write_viewer_file(converter, file_name):
     """ Write a Nanodesign Viewer file.
@@ -255,7 +255,7 @@ def main():
     if args.outformat == None:
         logger.error("No output file format given.")
     elif (args.outformat not in  ConverterFileFormats.names):
-        logger.error("Unknown output file format given: %s" % args.outformat)
+        logger.error("Unknown output file format given: \'%s\'" % args.outformat)
     else:
         logger.info("Output file format: %s" % args.outformat)
         # Make the helix distance a bit larger to better visualization.
