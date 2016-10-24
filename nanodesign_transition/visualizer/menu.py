@@ -332,9 +332,10 @@ class VisMenu(object):
         model_select.add_submenu()
 
         # Create the submenus for strand representations. 
-        strand_select.add_submenu(VisStrandRepType.DOMAINS,  "Strand domains")
-        strand_select.add_submenu(VisStrandRepType.FRAMES,   "Strand frames")
-        strand_select.add_submenu(VisStrandRepType.PATH,     "Strand path")
+        strand_select.add_submenu(VisStrandRepType.CONNECTORS,  "Strand connectors")
+        strand_select.add_submenu(VisStrandRepType.DOMAINS,     "Strand domains")
+        strand_select.add_submenu(VisStrandRepType.FRAMES,      "Strand frames")
+        strand_select.add_submenu(VisStrandRepType.PATH,        "Strand path")
 
         # Create the submenus for the virtual helix representations. 
         helix_select.add_submenu(VisHelixRepType.BASE_POSITIONS,    "Virtual helix base positions") 

@@ -91,6 +91,8 @@ class DnaStructureHelix(object):
         self.possible_scaffold_crossovers = []
         self.logger = self._setup_logging()
         # Set helix ends coordinates.
+        self.end_coordinates = np.zeros((2,3), dtype=float)
+        self.end_frames = np.zeros((3,3,2), dtype=float)
         self.set_end_coords()
 
     def _setup_logging(self):
@@ -107,8 +109,6 @@ class DnaStructureHelix(object):
 
     def set_end_coords(self):
         """ Set the helix end coordinates and reference frames. """
-        self.end_coordinates = np.zeros((2,3), dtype=float)
-        self.end_frames = np.zeros((3,3,2), dtype=float)
 
         if len(self.scaffold_bases) != 0:
             point1 = self.scaffold_bases[0].coordinates
@@ -121,8 +121,16 @@ class DnaStructureHelix(object):
             frame1 = self.staple_bases[0].ref_frame
             frame2 = self.staple_bases[-1].ref_frame
 
-        self.end_coordinates[0] = point1
-        self.end_coordinates[1] = point2
+        point1 = self.helix_axis_coords[0]
+        point2 = self.helix_axis_coords[-1]
+
+        #self.logger.setLevel(logging.DEBUG)
+        self.logger.debug("End coordinates point 1 (%g %g %g) " % (point1[0], point1[1], point1[2])) 
+        self.logger.debug("End coordinates point 2 (%g %g %g) " % (point2[0], point2[1], point2[2])) 
+
+        for i in xrange(0,3):
+            self.end_coordinates[0,i] = point1[i]
+            self.end_coordinates[1,i] = point2[i]
         self.end_frames[:,:,0] = frame1
         self.end_frames[:,:,1] = frame2
 
@@ -135,6 +143,43 @@ class DnaStructureHelix(object):
         scaffold_start_pos = next((base.p for base in self.scaffold_bases if base != None),num_bases)
         start_pos = min(staple_start_pos, scaffold_start_pos)
         return start_pos 
+
+    def apply_xform(self, xform):
+        self.logger.setLevel(logging.INFO)
+        #self.logger.setLevel(logging.DEBUG)
+        self.logger.debug("=================== apply xform to helix %d ===================" % self.id)
+        R = xform.rotation_matrix
+        #xform.print_transformation()
+        translation = xform.translation 
+        center = xform.center 
+        coord = np.array([0.0,0.0,0.0], dtype=float) 
+        xcoord = np.array([0.0,0.0,0.0], dtype=float) 
+        num_coords = len(self.helix_axis_coords)
+        self.logger.debug("Number of coordinates %d" % num_coords) 
+        self.logger.debug("Xform center (%g %g %g)" % (center[0], center[1], center[2])) 
+        self.logger.debug("Xform translation (%g %g %g)" % (translation[0], translation[1], translation[2])) 
+        for i in xrange(0, num_coords):
+            if i == 0:
+                coord[:] = self.helix_axis_coords[i,:]
+                self.logger.debug(" ")
+                self.logger.debug("Coord %d (%g %g %g)" % (i, coord[0], coord[1], coord[2])) 
+            coord[:] = self.helix_axis_coords[i,:] - center
+            xcoord[:] = np.dot(R, coord) + center + translation
+	    self.helix_axis_coords[i,:] = xcoord[:] 
+            if i == 0:
+                self.logger.debug("XCoord %d (%g %g %g)" % (i, xcoord[0], xcoord[1], xcoord[2])) 
+        #__for i in xrange(0, num_coords)
+
+        # Reset helix end coordinates.
+        self.set_end_coords()
+
+    def get_center(self):
+        center = np.array([0.0,0.0,0.0], dtype=float)
+        num_coords = len(self.helix_axis_coords)
+        for i in xrange(0, num_coords):
+            center += self.helix_axis_coords[i,:]
+        center /= float(num_coords)
+        return center 
 
     def get_domain_ids(self):
         """ Get the list of IDs of the domains in this helix.  """
