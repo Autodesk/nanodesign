@@ -169,7 +169,7 @@ class VisModel(object):
         """ Start the interactive visualization of the model. """
         self.graphics.set_extent(self.extent)
         cell_width = 0.1
-        self.graphics.initial_xform.rotate_x = -90.0 
+        #self.graphics.initial_xform.rotate_x = -90.0 
         self.graphics.initialize_graphics()
         # Create the popup menu.
         self._create_menu()

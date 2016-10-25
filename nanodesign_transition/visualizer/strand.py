@@ -14,13 +14,14 @@
 """
 import logging 
 import numpy as np
-from geometry import VisGeometryAxes,VisGeometryCylinder,VisGeometryPath,VisGeometrySphere
+from geometry import VisGeometryAxes,VisGeometryCylinder,VisGeometryPath,VisGeometrySphere,VisGeometryLines
 from geometry import vector_norm
 import graphics 
 
 class VisStrandRepType:
     """ This class defines the strand visualization representation types. """
     UNKNOWN    = 'unknown'
+    CONNECTORS = 'connectors'
     DOMAINS    = 'domains'
     FRAMES     = 'frames'
     PATH       = 'path'
@@ -69,9 +70,10 @@ class VisStrand(object):
         self._logger = self._setup_logging()
         # Set the methods to create geometry for the different representations.
         self.create_rep_methods = { 
-            VisStrandRepType.DOMAINS  : self.create_domains_rep,
-            VisStrandRepType.FRAMES   : self.create_frames_rep,
-            VisStrandRepType.PATH     : self.create_path_rep 
+            VisStrandRepType.CONNECTORS : self.create_connectors_rep,
+            VisStrandRepType.DOMAINS    : self.create_domains_rep,
+            VisStrandRepType.FRAMES     : self.create_frames_rep,
+            VisStrandRepType.PATH       : self.create_path_rep 
         }
 
     def _setup_logging(self):
@@ -264,6 +266,110 @@ class VisStrand(object):
         self._logger.info("Selected Strand %s path. Location in path %d  Vhelix %d  Position %d  " % (self.name, index+1, 
             base.h, base.p)) 
         self.print_info()
+
+    def create_connectors_rep(self):
+        """ Create the geometry for the strand connectors representation. """
+        self._logger.setLevel(logging.INFO)
+        #self._logger.setLevel(logging.DEBUG)
+        #self._logger.debug("Create strand geometry rep.")
+        dist_bp = self.dna_structure.dna_parameters.base_pair_rise
+        max_dist = 2.0*self.dna_structure.dna_parameters.helix_distance
+        points1 = []
+        points1_map = set()
+        points2 = []
+        points2_map = set()
+        tour = self.dna_strand.tour 
+        for i in xrange(0,len(tour)-1):
+            base1 = tour[i]
+            pt1 = base1.coordinates
+            base2 = tour[i+1]
+            pt2 = base2.coordinates
+            dist = np.linalg.norm(pt1 - pt2)
+            if dist > max_dist:
+                self._logger.debug(" ")
+                self._logger.debug("Base 1  h %d  p %d  (%g %g %g) " % (base1.h, base1.p, 
+                        base1.coordinates[0], base1.coordinates[1], base1.coordinates[2] ))
+                self._logger.debug("Base 2  h %d  p %d  (%g %g %g) " % (base2.h, base2.p, 
+                        base2.coordinates[0], base2.coordinates[1], base2.coordinates[2] ))
+
+                if (base1.h,base1.p) not in points1_map:
+                    points1_map.add((base1.h,base1.p))
+                    points1.append(pt1)
+                #__if (base1.h,base1.p) not in points1_map
+
+                if (base2.h,base2.p) not in points2_map:
+                    points2_map.add((base2.h,base2.p))
+                    points2.append(pt2)
+                #__if (base2.h,base2.p) not in points2_map:
+            #__if dist > max_dist
+        #__for i in xrange(0,len(tour)-1)
+
+        verts = []
+        for i in xrange(0,len(points1)):
+            verts.append(points1[i])
+            verts.append(points2[i])
+
+        arrows = False
+        arrows = True
+        name = "StrandConnectors:" + str(self.id)
+        geom = VisGeometryLines(name, verts, arrows)
+        geom.line_width = 2.0
+        geom.color = [0.8,0.0,0.8,1]
+        #geom.selected_callback = self.select_path
+        self.representations[VisStrandRepType.CONNECTORS] = [geom]
+        self.graphics.add_render_geometry(geom)
+
+        if False:
+        #if True:
+            radius = 0.1
+            for pt in points1:
+                name = "StrandConnectorsPt1:%s" % self.name
+                sphere = VisGeometrySphere(name, pt, radius)
+                sphere.color = [0.0,0.8,0.0,1]
+                self.representations[VisStrandRepType.CONNECTORS].append(sphere)
+                self.graphics.add_render_geometry(sphere)
+            for pt in points2:
+                name = "StrandConnectorsPt2:%s" % self.name
+                sphere = VisGeometrySphere(name, pt, radius)
+                sphere.color = [0.8,0.0,0.0,1]
+                self.representations[VisStrandRepType.CONNECTORS].append(sphere)
+                self.graphics.add_render_geometry(sphere)
+
+        if len(self.dna_structure.connector_points) != 0:
+            radius = 0.1
+            points1 = self.dna_structure.connector_points[0]
+            points2 = self.dna_structure.connector_points[1]
+            if False:
+                verts = []
+                for i in xrange(0,len(points1)):
+                    if i == 1:
+                        verts.append(points1[i])
+                        verts.append(points2[i])
+                #__for i in xrange(0,len(points1))
+                arrows = True
+                arrows = False
+                name = "StrandConnectors:" + str(self.id)
+                geom = VisGeometryLines(name, verts, arrows)
+                geom.line_width = 3.0
+                geom.color = [0.8,0.0,0.8,1]
+                #geom.selected_callback = self.select_path
+                self.representations[VisStrandRepType.CONNECTORS] = [geom]
+                self.graphics.add_render_geometry(geom)
+
+            for pt in points1:
+                name = "StrandConnectorsPt1:%s" % self.name
+                sphere = VisGeometrySphere(name, pt, radius)
+                sphere.color = [0.0,0.8,0.0,1]
+                self.representations[VisStrandRepType.CONNECTORS].append(sphere)
+                self.graphics.add_render_geometry(sphere)
+            for pt in points2:
+                name = "StrandConnectorsPt2:%s" % self.name
+                sphere = VisGeometrySphere(name, pt, radius)
+                sphere.color = [0.8,0.0,0.0,1]
+                self.representations[VisStrandRepType.CONNECTORS].append(sphere)
+                self.graphics.add_render_geometry(sphere)
+        #__if len(self.dna_structure.connector_points) != 0
+
 
 #__class VisStrand(object)
 

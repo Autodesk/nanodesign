@@ -28,6 +28,7 @@ to a file and read in to perform operations when the visualizer starts. Commands
 as a semicolon-separated string.
 """
 import os
+import re
 import sys
 import json
 import logging
@@ -41,6 +42,7 @@ from cadnano.reader import CadnanoReader
 from cadnano.convert_design import CadnanoConvertDesign
 from dna_sequence_data import dna_sequence_data
 from nanodesign_transition.parameters import DnaParameters
+from nanodesign_transition.xform import Xform,HelixGroupXform,apply_helix_xforms,xform_from_connectors
 sys.path = sys.path[:-1]
 
 # Set path and import atomic structure.
@@ -58,6 +60,7 @@ def parse_args():
     parser.add_argument("-i",  "--infile",         help="input file")
     parser.add_argument("-is", "--inseqfile",      help="input sequence file")
     parser.add_argument("-isn","--inseqname",      help="input sequence name")
+    parser.add_argument("-x",   "--transform",  help="apply a transformation to a set of helices")
     return parser.parse_args()
 
 def _setup_logging():
@@ -71,6 +74,101 @@ def _setup_logging():
     console_handler.setFormatter(formatter)
     logger.addHandler(console_handler)
     return logger
+
+def transform_structure(logger, dna_structure, transform):
+    """ Apply 3D geometric transformations to a selected set of helices. 
+
+        The format of the transform commands is:
+            helices(0,1):rotate(90,0,0),translate(0,0,0);helices(2,3):rotate(0,90,0),translate(0,0,0)
+
+        TODO: This code is duplicated in converter.py. Change it to use that code.
+    """
+    logger.info("Transform %s" % transform)
+    helix_groups = transform.split(";")
+    logger.info("Number of helix groups %d" % len(helix_groups))
+    helix_group_xforms = []
+    helices_map = dna_structure.structure_helices_map
+    # Parse helix IDs.
+    for helix_group in helix_groups:
+        tokens = helix_group.split(":")
+        pattern = re.compile(r"[,()]")
+        helix_tokens = pattern.split(tokens[0])
+        helix_ids = []
+        for s in helix_tokens:
+            if s == "helices":
+                continue
+            elif "-" in s:
+                rtoks = s.split("-")
+                start = int(rtoks[0])
+                end = int(rtoks[1])+1
+                for id in xrange(start,end):
+                    helix_ids.append(id)
+            elif s:
+                helix_ids.append(int(s))
+        #__for s in helix_tokens
+        logger.info("Helix group %s" % str(helix_ids))
+
+        # Check helix IDs.
+        helices = []
+        for hid in helix_ids:
+            helix = helices_map.get(hid, None)
+            if not helix:
+                logger.error("Helix ID %d not found in dna structure." % hid)
+                logger.error("DNA Structure has helix IDs %s " % str(helices_map.keys()))
+                return
+            helices.append(helix)
+            #__if not helix:
+        #__for hid in helix_ids
+
+        # Parse transformations.
+        logger.info("Transformation \'%s\'" % tokens[1])
+        pattern = re.compile(r"[(),]")
+        xform_tokens = pattern.split(tokens[1])
+        xform = Xform()
+        n = 0
+        use_connectors = False
+        while (n != len(xform_tokens)): 
+            s = xform_tokens[n]
+            if s == "rotate":
+                rotations = []
+                rotations.append(float(xform_tokens[n+1]))
+                rotations.append(float(xform_tokens[n+2]))
+                rotations.append(float(xform_tokens[n+3]))
+                n += 3
+                xform.add_rotation(rotations)
+                rotations = []
+            elif s == "translate":
+                translation = []
+                translation.append(float(xform_tokens[n+1]))
+                translation.append(float(xform_tokens[n+2]))
+                translation.append(float(xform_tokens[n+3]))
+                n += 3
+                xform.set_translation(translation)
+            elif s == "connectors":
+                use_connectors = True
+                strand_name = xform_tokens[n+1]
+                n += 1
+            #__if s == "rotate"
+            n += 1
+        #__while (n != len(xform_tokens))
+
+        # Create a transformation from connectors.
+        if use_connectors:
+            logger.info("Use connectors with strand \'%s\'" % strand_name)
+            connector_strands = []
+            for strand in dna_structure.strands:
+                if strand.is_scaffold:
+                    connector_strands.append(strand)
+            helix_dist = dna_structure.dna_parameters.helix_distance
+            xform_from_connectors(connector_strands, helix_ids, helix_dist, xform)
+        #__if use_connectors
+
+        helix_group_xforms.append( HelixGroupXform(helices, xform) )
+    #__for helix_group in helix_groups
+
+    # Apply the transformation to the dna structure helices.
+    apply_helix_xforms(helix_group_xforms) 
+#__def transform_structure
 
 def read_file(args, logger):
     """ Read in a cadnano file. """
@@ -118,6 +216,10 @@ def main():
 
     # Read cadnano file and create dna structure.
     dna_structure = read_file(args, logger)
+
+    # appy a 3D transformation to the geometry of selected helices.
+    if args.transform:
+        transform_structure(logger, dna_structure, args.transform)
 
     # Generate atomic models of the dna structure.
     if not args.atomic_model or (args.atomic_model == "true"):

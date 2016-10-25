@@ -112,7 +112,7 @@ class VisHelix(object):
             else:
                 if start_base == None:
                     start_base = base
-                    self._logger.info("Start base %d" % start_base.p) 
+                    #self._logger.info("Start base %d" % start_base.p) 
                 else:
                     end_base = base
                 #__if start_base == None

@@ -61,6 +61,7 @@ class DnaStructure(object):
         self.strands = None
         self.strands_map = dict()
         self.domain_list = []
+        self.connector_points = []
         self._logger = self._setup_logging()
         self._add_structure_helices(helices)
 
@@ -80,7 +81,7 @@ class DnaStructure(object):
         """ Add a list of structural helices. 
 
             The structural helices are stored in two dictionaries, one used to look up a helix 
-            using a helix num and the other used to look up a helix using a lattice (row,col) 
+            using a helix ID and the other used to look up a helix using a lattice (row,col) 
             coordinate.
             # TODO (DaveP) We need to remove references to lattice-based geometry.
 
@@ -88,7 +89,7 @@ class DnaStructure(object):
                structure_helices (list[DnaStructureHelix]): The list of structural helices for the structure.
         """
         for helix in structure_helices:
-            self.structure_helices_map[helix.lattice_num] = helix
+            self.structure_helices_map[helix.id] = helix
             self.structure_helices_coord_map[(helix.lattice_row,helix.lattice_col)] = helix
 
     def set_lattice_type(self, lattice_type):

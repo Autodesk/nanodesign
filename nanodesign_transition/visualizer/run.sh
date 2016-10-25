@@ -32,14 +32,39 @@ fn=slottedcross-1
 #fn=C_G_1W_fixed
 
 # set the flag for generating atomic structures.
-atomic_model="false"
 atomic_model="true"
+atomic_model="false"
 
 # execute the visualizer with a cadnano file
-fn=fourhelix
 fn=protractor_30_98_v4
 fn=fourhelix_inserts_1
 fn=fourhelix_inserts_2
+fn=fourhelix
+
 #cmds="model rep=Geometry show=true"
-vis.py --infile=${dir}/${fn}.json  --inseqname=${seqname}  --atomic_model=${atomic_model} --commands="${cmds}" 
+#cmds="helix name=2  rep=base_positions  show=true;helix name=3  rep=geometry  show=true;helix name=2  rep=geometry  show=true"
+#cmds="helix name=1  rep=base_positions  show=true;helix name=1  rep=geometry  show=true;helix name=0  rep=geometry  show=true"
+cmds="strand name=Scaffold_55_7  rep=path  show=true;strand name=Scaffold_55_7  rep=connectors  show=true "
+
+transform="helices(0,1):rotate(90,0,0),translate(0,0,0)"
+transform="helices(0,1):rotate(0,90,0),translate(0,0,0)"
+transform="helices(0,1):rotate(0,0,90),translate(0,0,0)"
+transform="helices(2,3):rotate(0,0,90),translate(0,0,0)"
+transform="helices(0,1):rotate(0,0,90),translate(0,0,0)"
+transform=""
+
+fn=slottedcross
+transform="helices(0-41):rotate(180,0,90),translate(0,0,0)"
+transform="helices(0-41):rotate(0,90,0),translate(0,0,0)"
+transform="helices(0-41):rotate(0,180,90),translate(0,0,40)"
+transform="helices(0-41):rotate(0,0,0),translate(0,0,30)"
+#transform=""
+#transform="helices(0-41):connectors(scaffold)"
+transform="helices(0-41):rotate(90,0,90),translate(0,0,41.4)"
+
+vis.py --infile=${dir}/${fn}.json       \
+       --inseqname=${seqname}           \
+       --atomic_model=${atomic_model}   \
+       --transform=${transform}         \
+       --commands="${cmds}" 
 
