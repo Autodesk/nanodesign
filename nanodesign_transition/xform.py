@@ -169,3 +169,89 @@ class HelixGroupXform(object):
 #__class HelixGroupXform
 
 
+def apply_helix_xforms(helix_group_xforms):
+    """ Apply helix group transformations.
+
+        Arguments:
+            helix_group_xforms (List[HelixGroupXform]): The list of helix group transforms.
+
+        The geometry for the list of helices for each group are rotated and translated together 
+        by the given transformation. 
+    """
+    for helix_group in helix_group_xforms:
+        # Get the center of the helix group.
+        group_center = np.array([0.0,0.0,0.0], dtype=float)
+        for helix in helix_group.helices:
+            helix_center = helix.get_center()
+            group_center += helix_center 
+        #__for helix_id in helix_group.helices
+        group_center /= len(helix_group.helices)
+        helix_group.transformation.set_center(group_center)
+ 
+        # Transform helices geometry.
+        for helix in helix_group.helices:
+            helix.apply_xform(helix_group.transformation)
+        #__for helix_id in helix_group_xforms.helices:
+    #__for helix_group in helix_group_xforms
+
+#__def apply_helix_xforms
+
+
+def xform_from_connectors(connector_strands, helix_ids, helix_distance, xform):
+    """ Create a transformation to rotate and translate a group of helices so that
+        distance crossovers (connections) align.
+
+        Arguments:
+            connector_strands (List[DnaStrand]): The list of strands that contain connections. 
+            helix_ids (List[int]): The list of helix IDs to transform.
+            xform (Xform): The transformation to set the rotation and translation used to 
+                align the crossovers.
+
+        This is an attempt to automatically generate a 3D structure from distanct scaffold
+        crossovers used to assemble groups of helices. The algorithm builds two lists of 
+        points for the scaffold connections and attempts to align them. This can typically produce 
+        a transformation that only translates the two sections together but does not oriented them,  
+        the relative rotation of two components created by excluded volume interactions. 
+    """
+    # Create a set of helix IDs to include in the transformation.
+    helix_set = set()
+    for id in helix_ids:
+        helix_set.add(id)
+
+    # Create the points lists for the connections. 
+    max_dist = 2.0*helix_distance
+    points1 = []
+    points1_map = set()
+    points2 = []
+    points2_map = set()
+    for strand in connector_strands:
+        tour = strand.tour 
+        for i in xrange(0,len(tour)-1):
+            base1 = tour[i]
+            pt1 = base1.coordinates
+            base2 = tour[i+1]
+            pt2 = base2.coordinates
+            dist = np.linalg.norm(pt1 - pt2)
+            if dist > max_dist:
+                if (base1.h,base1.p) not in points1_map:
+                    points1_map.add((base1.h,base1.p))
+                    if base1.h in helix_set:
+                        points1.append(pt1)
+                    else:
+                        points2.append(pt1)
+                #__if (base1.h,base1.p) not in points1_map
+
+                if (base2.h,base2.p) not in points2_map:
+                    points2_map.add((base2.h,base2.p))
+
+                    if base2.h in helix_set:
+                        points1.append(pt2)
+                    else:
+                        points2.append(pt2)
+                #__if (base2.h,base2.p) not in points2_map:
+        #__for i in xrange(0,len(tour)-1)
+    #__for strand in connector_strands
+
+    # Set the transformation that fits points1 to points2.
+    xform.rms_fit(points1, points2)
+#__def xform_from_connectors

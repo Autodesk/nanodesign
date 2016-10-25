@@ -58,9 +58,9 @@ transform="helices(0-41):rotate(180,0,90),translate(0,0,0)"
 transform="helices(0-41):rotate(0,90,0),translate(0,0,0)"
 transform="helices(0-41):rotate(0,180,90),translate(0,0,40)"
 transform="helices(0-41):rotate(0,0,0),translate(0,0,30)"
-transform="helices(0-41):connectors(scaffold)"
 #transform=""
-#transform="helices(0-41):rotate(90,0,90),translate(0,0,41.4)"
+#transform="helices(0-41):connectors(scaffold)"
+transform="helices(0-41):rotate(90,0,90),translate(0,0,41.4)"
 
 vis.py --infile=${dir}/${fn}.json       \
        --inseqname=${seqname}           \

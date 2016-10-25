@@ -30,7 +30,7 @@ try:
     sys.path.append( base_path )
     from nanodesign_transition.dna_structure import DnaStructure
     from nanodesign_transition.parameters import DnaParameters
-    from nanodesign_transition.xform import Xform,HelixGroupXform
+    from nanodesign_transition.xform import Xform,HelixGroupXform,apply_helix_xforms,xform_from_connectors
     sys.path = sys.path[:-1]
 except ImportError as i:
     print "Could not get nanodesign_transition module"
@@ -279,14 +279,15 @@ def transform_structure(converter, transform):
             for strand in converter.dna_structure.strands:
                 if strand.is_scaffold:
                     connector_strands.append(strand)
-            converter.dna_structure.xform_from_connectors(connector_strands, helix_ids, xform)
+            helix_dist = converter.dna_structure.dna_parameters.helix_distance
+            xform_from_connectors(connector_strands, helix_ids, helix_dist, xform)
         #__if use_connectors
 
         helix_group_xforms.append( HelixGroupXform(helices, xform) )
     #__for helix_group in helix_groups
 
     # Apply the transformation to the dna structure helices.
-    converter.dna_structure.apply_helix_xforms(helix_group_xforms) 
+    apply_helix_xforms(helix_group_xforms) 
 #__def transform_structure
 
 def _setup_logging():

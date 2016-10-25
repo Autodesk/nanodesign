@@ -42,7 +42,7 @@ from cadnano.reader import CadnanoReader
 from cadnano.convert_design import CadnanoConvertDesign
 from dna_sequence_data import dna_sequence_data
 from nanodesign_transition.parameters import DnaParameters
-from nanodesign_transition.xform import Xform,HelixGroupXform
+from nanodesign_transition.xform import Xform,HelixGroupXform,apply_helix_xforms,xform_from_connectors
 sys.path = sys.path[:-1]
 
 # Set path and import atomic structure.
@@ -80,6 +80,8 @@ def transform_structure(logger, dna_structure, transform):
 
         The format of the transform commands is:
             helices(0,1):rotate(90,0,0),translate(0,0,0);helices(2,3):rotate(0,90,0),translate(0,0,0)
+
+        TODO: This code is duplicated in converter.py. Change it to use that code.
     """
     logger.info("Transform %s" % transform)
     helix_groups = transform.split(";")
@@ -157,14 +159,15 @@ def transform_structure(logger, dna_structure, transform):
             for strand in dna_structure.strands:
                 if strand.is_scaffold:
                     connector_strands.append(strand)
-            dna_structure.xform_from_connectors(connector_strands, helix_ids, xform)
+            helix_dist = dna_structure.dna_parameters.helix_distance
+            xform_from_connectors(connector_strands, helix_ids, helix_dist, xform)
         #__if use_connectors
 
         helix_group_xforms.append( HelixGroupXform(helices, xform) )
     #__for helix_group in helix_groups
 
     # Apply the transformation to the dna structure helices.
-    dna_structure.apply_helix_xforms(helix_group_xforms) 
+    apply_helix_xforms(helix_group_xforms) 
 #__def transform_structure
 
 def read_file(args, logger):

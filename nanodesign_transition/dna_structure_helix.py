@@ -121,16 +121,10 @@ class DnaStructureHelix(object):
             frame1 = self.staple_bases[0].ref_frame
             frame2 = self.staple_bases[-1].ref_frame
 
-        point1 = self.helix_axis_coords[0]
-        point2 = self.helix_axis_coords[-1]
-
-        #self.logger.setLevel(logging.DEBUG)
-        self.logger.debug("End coordinates point 1 (%g %g %g) " % (point1[0], point1[1], point1[2])) 
-        self.logger.debug("End coordinates point 2 (%g %g %g) " % (point2[0], point2[1], point2[2])) 
-
         for i in xrange(0,3):
             self.end_coordinates[0,i] = point1[i]
             self.end_coordinates[1,i] = point2[i]
+
         self.end_frames[:,:,0] = frame1
         self.end_frames[:,:,1] = frame2
 
@@ -145,6 +139,11 @@ class DnaStructureHelix(object):
         return start_pos 
 
     def apply_xform(self, xform):
+        """ Apply a transformation to the helix coordiates and reference frames.
+
+            Arguments:
+                xform (Xform): The transformation to apply to the helx geometry.
+        """
         self.logger.setLevel(logging.INFO)
         #self.logger.setLevel(logging.DEBUG)
         self.logger.debug("=================== apply xform to helix %d ===================" % self.id)
@@ -153,32 +152,32 @@ class DnaStructureHelix(object):
         translation = xform.translation 
         center = xform.center 
         coord = np.array([0.0,0.0,0.0], dtype=float) 
+        frame = np.zeros((3,3), dtype=float)
         xcoord = np.array([0.0,0.0,0.0], dtype=float) 
+        xframe = np.zeros((3,3), dtype=float)
         num_coords = len(self.helix_axis_coords)
         self.logger.debug("Number of coordinates %d" % num_coords) 
         self.logger.debug("Xform center (%g %g %g)" % (center[0], center[1], center[2])) 
         self.logger.debug("Xform translation (%g %g %g)" % (translation[0], translation[1], translation[2])) 
         for i in xrange(0, num_coords):
-            if i == 0:
-                coord[:] = self.helix_axis_coords[i,:]
-                self.logger.debug(" ")
-                self.logger.debug("Coord %d (%g %g %g)" % (i, coord[0], coord[1], coord[2])) 
             coord[:] = self.helix_axis_coords[i,:] - center
+            frame = self.helix_axis_frames[:,:,i]
             xcoord[:] = np.dot(R, coord) + center + translation
+            xframe = np.dot(R, frame)
 	    self.helix_axis_coords[i,:] = xcoord[:] 
-            if i == 0:
-                self.logger.debug("XCoord %d (%g %g %g)" % (i, xcoord[0], xcoord[1], xcoord[2])) 
+	    self.helix_axis_frames[:,:,i] = xframe[:,:]
         #__for i in xrange(0, num_coords)
 
         # Reset helix end coordinates.
         self.set_end_coords()
 
     def get_center(self):
+        """ Get helix geometric center. 
+
+            Returns the helix geometric center (NumPy 3x1 array[float]). 
+        """
         center = np.array([0.0,0.0,0.0], dtype=float)
-        num_coords = len(self.helix_axis_coords)
-        for i in xrange(0, num_coords):
-            center += self.helix_axis_coords[i,:]
-        center /= float(num_coords)
+        center = np.mean(self.helix_axis_coords, axis=0) 
         return center 
 
     def get_domain_ids(self):
@@ -396,7 +395,7 @@ class DnaHelixConnection(object):
         Attributes:
             from_helix (DnaStructureHelix): The source helix of the connection. 
             to_helix (DnaStructureHelix): The destination helix the connection. 
-            direction (NumPy 3x1 ndarray[float]): The unit vector in the direction of the connection. 
+            direction (NumPy 3x1 adarray[float]): The unit vector in the direction of the connection. 
             crossovers (List[DnaHelixCrossover]): The list of crossovers between the two helices.
     """
 
