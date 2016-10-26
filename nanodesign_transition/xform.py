@@ -16,11 +16,28 @@ class Xform(object):
             center (NumPy 3x1 ndarray[float]): The transformation center of rotation.
             rotation_matrix (NumPy 3x3 ndarray[float]): The transformation rotation matrix.
     """
-    def __init__(self):
+    def __init__(self, rotation_angles=None, translation=[0.0,0.0,0.0], 
+                       center=[0.0,0.0,0.0], rotation_matrix=None):
+        """ Initialize a transformation.
+
+            Arguments:
+                rotation_angles (List[Float], optional): The list of three Euler angles in degrees used to create a rotation matrix. 
+                translation (List[Float], optional): A list containing the x,y,z offsets for the translation.
+                center (List[Float], optional): A list containing the x,y,z offsets for the center point for any rotation.
+                rotation_matrix (NumPy 3x3 ndarray[float], optional): A 3x3 rotation matrix, stored as a 3x3 numpy.ndarray.
+
+            If you pass both a rotation_matrix paramater and a rotation_angles parameter, the rotation matrix will first be set, and then the rotation angles applied as if calling add_rotation.
+        """
         self.rotation_angles = []
-        self.translation = np.array([0.0, 0.0, 0.0], dtype=float)
-        self.center = np.array([0.0, 0.0, 0.0], dtype=float)
-        self.rotation_matrix = np.identity(3)
+        self.translation = np.array( translation, dtype=float)
+        self.center = np.array( center , dtype=float)
+        if rotation_matrix is not None:
+            self.rotation_matrix = rotation_matrix
+        else:
+            self.rotation_matrix = np.identity(3)
+
+        if rotation_angles is not None:
+            self.add_rotation( rotation_angles )
 
     def add_rotation(self, rotation_angles):
         """ Add a rotation matrix to the transformation. 
@@ -155,6 +172,10 @@ class Xform(object):
 
 #__class Xform
 
+
+# TODO: We have left this class in as a basic storage container due to possible
+# future needs. This should probably be revisited once we've worked on more
+# algorithms that generate structure configurations from the topology.
 class HelixGroupXform(object):
     """ This class stores information for a geometric transformation of a group of helices.
 
