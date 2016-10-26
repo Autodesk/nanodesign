@@ -20,6 +20,7 @@ class DnaStrand(object):
         domain_list (List[Domain]): The list of domains for this strand.
         helix_list (Dict): The list of helices the strand passes through. The dictionary maps helix IDs 
             to DnaStructureHelix objects.
+        icolor (int): The strand color as an integer. The integer color can be used as an ID to group staple strands. 
         id (int): The strand ID. 
         insert_seq (List[string]): The list of sequence letters inserted into this strand. 
         is_circular (bool): If True then the strand is circular, returning to its starting postion.
@@ -33,6 +34,7 @@ class DnaStrand(object):
         self.is_circular = False
         self.tour = []
         self.color = [1.0,1.0,1.0]
+        self.icolor = None
         self.helix_list = dict()
         self.base_id_list = dict()
         self.dna_structure = dna_structure
@@ -44,6 +46,7 @@ class DnaStrand(object):
         if (id not in self.helix_list):
             #print("[DnaStrand] ---------- strand %d  add helix %d ----------" % (self.id, id))
             self.helix_list[id] = helix
+    #__def add_helix
 
     def get_base_coords(self):
         """ Get the coordinates of bases along the dna helix axis. 
@@ -57,6 +60,7 @@ class DnaStrand(object):
             helix = self.helix_list[helix_num]
             base_coords[i] = base.coordinates
         return base_coords
+    #__def get_base_coords
 
     def get_base_index(self, base):
         """ Get the index into the strand for the given base. 
@@ -70,4 +74,5 @@ class DnaStrand(object):
             sys.stderr.write("[strand::get_base_index] **** WARNING: base %d not found in strand %d.\n" % (base.id, self.id))
             return None
         return self.base_id_list[base.id]
+    #__def get_base_index
 

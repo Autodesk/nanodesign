@@ -64,13 +64,17 @@ class CadnanoWriter(object):
         """
         self._logger.info("Number of helices %d " % len(dna_structure.structure_helices_map))
         vstrands_info = []
+        self._logger.setLevel(logging.DEBUG)
 
         # Create a map of helix nums to the list of strands that start in that helix.
         # Used for writing color information.
+        self._logger.debug("=================== map helix nums to strands ===================")
+        self._logger.debug("Number of strands %d" % len(dna_structure.strands))
         helix_strands_map = {}
         for strand in dna_structure.strands:
             if strand.is_scaffold: 
                 continue
+            self._logger.debug("Strand ID %d  start h %d  p %d" % (strand.id, strand.tour[0].h, strand.tour[0].p))  
             base = strand.tour[0]
             if base.h not in helix_strands_map: 
                 helix_strands_map[base.h] = []
@@ -84,10 +88,13 @@ class CadnanoWriter(object):
             helix_map[helix.count] = helix 
 
         # Get the base connectivity, loops and skips for the staple and scaffold strands.
+        self._logger.debug("=================== get the base connectivity ===================")
         for count in sorted(helix_map):
             helix = helix_map[count] 
-            scaffold_base_list = helix.scaffold_base_list
-            staple_base_list = helix.staple_base_list
+            scaffold_bases = helix.scaffold_bases
+            staple_bases = helix.staple_bases
+            self._logger.debug("Helix num %d  num staple bases %d   num scaffold bases %d" % (helix.id,
+                len(staple_bases), len(scaffold_bases)))
             helix_size = helix.lattice_max_vhelix_size 
             row = helix.lattice_row 
             col = helix.lattice_col
@@ -95,11 +102,12 @@ class CadnanoWriter(object):
             self._logger.info("Helix count %d  num %d  row %d  col %d" % (count, num, row, col)) 
 
             # Set the arrays for the virtual helix base information.
-            scaf_info = self._get_base_info(helix_size, scaffold_base_list)
-            stap_info = self._get_base_info(helix_size, staple_base_list)
-            loop_info = self._get_loop_info(helix_size, staple_base_list)
-            skip_info = self._get_skip_info(helix_size, staple_base_list)
-            staple_colors = self._get_staple_colors(helix_strands_map[num])
+            scaf_info = self._get_base_info(helix_size, scaffold_bases)
+            stap_info = self._get_base_info(helix_size, staple_bases)
+            loop_info = self._get_loop_info(helix_size, staple_bases)
+            skip_info = self._get_skip_info(helix_size, staple_bases)
+            if num in helix_strands_map:
+                staple_colors = self._get_staple_colors(helix_strands_map[num])
 
             vstrand = { "row": row,
                         "col": col,

@@ -131,9 +131,74 @@ class DnaStructure(object):
             for strand in self.strands:
                 self.strands_map[strand.id] = strand 
         if id not in self.strands_map:
-            self._logger.error("Failed to find strand id %d." % id)
+            #self._logger.error("Failed to find strand id %d." % id)
             return None
         return self.strands_map[id]
+
+    def remove_staples(self, retain_staples):
+        """ Remove all staple strands except for those in the given retained staples list.
+
+            Arguments:
+                retain_staples(Set[int]): The list of staples to retain.
+        """
+        removed_strands = []
+        remaining_strands = []
+        for strand in self.strands:
+            if (not strand.is_scaffold) and (strand.id not in retain_staples): 
+                removed_strands.append(strand)
+            else:
+                remaining_strands.append(strand)
+        #__for strand in self.strands
+
+        #  Remove the strands from the structure.
+        self.remove_strands(removed_strands)
+
+        # Reset strand data.
+        self.strands = remaining_strands
+        self.strands_map = dict()
+
+    def remove_strands(self, removed_strands):
+        """ Remove strands from the structure.
+        """
+        self._logger.setLevel(logging.DEBUG)
+        self._logger.debug("===================== remove strands  =====================")
+
+        # Set the bases to remove for each helix.
+        helix_base_map = {}
+        for strand in removed_strands:
+            base = strand.tour[0]
+            self._logger.debug("Remove strand ID %d  start h %d  p %d" % (strand.id, base.h, base.p))
+            for base in strand.tour:
+                if base.h not in helix_base_map: 
+                    helix_base_map[base.h] = [] 
+                helix_base_map[base.h].append(base)
+            #__for base in strand.tour
+        #__for strand in removed_strands
+
+        # Remove bases from helices.
+        for helix_id,base_list in helix_base_map.iteritems():
+            helix = self.structure_helices_map[helix_id]
+            helix.remove_bases(base_list)
+        #__for helix_id,base_list in helix_base_map.iteritems
+    #__def remove_strands
+
+    def get_staples_by_color(self, staple_colors):
+        """ Get the list of staples by their color ID. 
+
+            Arguments:
+                stape_colors (List[int]): The list of staple color IDs. 
+
+            Returns the set of staple strands IDs matching the colors in the input list.
+        """
+        staple_strands = set()
+        for color in staple_colors:
+            for strand in self.strands:
+                if (not strand.is_scaffold) and (strand.icolor == color): 
+                    staple_strands.add(strand.id)
+            #__for strand in self.strands
+        #__for color in staple_colors
+        return staple_strands
+    #__def get_staples_by_color
 
     def set_strand_helix_references(self):
         """ Set the helices referenced by each strand. """
@@ -323,7 +388,7 @@ class DnaStructure(object):
                         helix_list.append(helix)
                     domain_base_ids.append(base.id)
                 if len(helix_list) != 1:
-                    self._logger.error("The domain %d references more than one helix: %s" % str(helix_list))
+                    self._logger.error("The domain %d references more than one helix: %s" % (domain.id, str(helix_list)))
             #_for domain in domain_list
 
             if len(strand.tour) != len(domain_base_ids):

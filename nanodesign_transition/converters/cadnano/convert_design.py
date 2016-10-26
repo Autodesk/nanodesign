@@ -307,16 +307,16 @@ class CadnanoConvertDesign(object):
         helix_map = {}  # Stores DnaStructureHelix objects used later to update base lists.
         for helix in helices:
             helix_map[helix.id] = helix
-            for base in helix.staple_base_list:
+            for base in helix.staple_bases:
                 if base.num_insertions != 0:
                     num_insert_bases += base.num_insertions 
                     base_inserts[base.id] = base
-            #__for base in helix.staple_base_list
-            for base in helix.scaffold_base_list:
+            #__for base in helix.staple_bases
+            for base in helix.scaffold_bases:
                 if base.num_insertions != 0:
                     base_inserts[base.id] = base
                     self._logger.debug("Insert base id %d  h %d  pos %d" % (base.id, base.h, base.p))
-            #__for base in helix.scaffold_base_list
+            #__for base in helix.scaffold_bases
         #__for helix in helices
         self._logger.debug("Number of base inserts %d" % len(base_inserts))
         if len(base_inserts) == 0:
@@ -650,8 +650,8 @@ class CadnanoConvertDesign(object):
             structure_helix.lattice_row = row
             structure_helix.lattice_col = col
             structure_helix.lattice_max_vhelix_size = max_vhelix_size 
-            structure_helix.staple_base_list = staple_bases
-            structure_helix.scaffold_base_list = scaffold_bases
+            structure_helix.staple_bases = staple_bases
+            structure_helix.scaffold_bases = scaffold_bases
             structure_helices.append(structure_helix)
         #__for vhelix in vhelices
         return structure_helices
@@ -1057,14 +1057,19 @@ class CadnanoConvertDesign(object):
 
             Arguments:
                 strands (List[DnaStrand]): The list of strands for the design.
+
+            Strands may not have colors assigned to them. If they do then they have both
+            an RGB and integer representation. The integer representation can be used
+            as an ID to group staple strands by functionality.
         """
         for strand in strands:
             if (strand.is_scaffold):
                 continue 
             base = strand.tour[0]
-            for color in self.staple_colors:
-                if ((color.vhelix_num == base.h) and (color.vhelix_pos == base.p)): 
-                    strand.color = color.rgb 
+            for staple_color in self.staple_colors:
+                if ((staple_color.vhelix_num == base.h) and (staple_color.vhelix_pos == base.p)): 
+                    strand.color = staple_color.rgb 
+                    strand.icolor = staple_color.color
             #__for color in self.staple_colors
         #__for strand in strands
 
