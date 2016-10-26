@@ -29,7 +29,8 @@ from .core import *
 from . import data
 from . import converters
 from . import algorithms
-
+from . import utils
+from . import visualizer
 
 from .data import Domain
 
@@ -39,5 +40,5 @@ from .data import convert_temperature_K_to_C
 # Designate which components will be in the * namespace.
 __all__ = []
 __all__.extend(core.__all__)
-__all__.extend(['data','converters','algorithms'])
+__all__.extend(['data','converters','algorithms','utils','visualizer'])
 
