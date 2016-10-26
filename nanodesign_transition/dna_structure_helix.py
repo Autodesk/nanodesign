@@ -176,7 +176,6 @@ class DnaStructureHelix(object):
 
             Returns the helix geometric center (NumPy 3x1 array[float]). 
         """
-        center = np.array([0.0,0.0,0.0], dtype=float)
         center = np.mean(self.helix_axis_coords, axis=0) 
         return center 
 
