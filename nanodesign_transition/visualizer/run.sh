@@ -61,6 +61,10 @@ transform="helices(0-41):rotate(0,0,0),translate(0,0,30)"
 #transform=""
 #transform="helices(0-41):connectors(scaffold)"
 transform="helices(0-41):rotate(90,0,90),translate(0,0,41.4)"
+transform=""
+
+dir=/Users/parkerda/nanodesign/parkerda-latest/nanodesign/nanodesign_transition/converters/results/
+fn=fourhelix_nd
 
 vis.py --infile=${dir}/${fn}.json       \
        --inseqname=${seqname}           \

@@ -31,17 +31,11 @@ seq=M13mp18
 modify="true"
 
 # Execute the converter.
-fn=fourhelix_inserts
-fn=fourhelix_deletes
-fn=fourhelix_inserts_2
-fn=fourhelix_ss_inserts
-fn=protractor_30_98_v4
 fn=fourhelix
 fn=slottedcross
 
 outfile=./results/${fn}_viewer.json 
 #outfile=/Users/parkerda/tirrenu/res/testDNA/fourhelix_vis.json 
-
 
 converter.py --infile=${data}/${fn}.json      \
              --informat="cadnano"             \
@@ -54,7 +48,6 @@ echo
 echo "######### written to ${outfile} ############"
 
 compare_script=/Users/parkerda/nanodesign/parkerda-latest/nanodesign/scripts/compare-viewer-json.py 
-
 gold=/Users/parkerda/software/nanodesign/testing/viewer/results/gold/
 gold=/Users/parkerda/nanodesign/parkerda-gold/nanodesign/nanodesign/nanodesign_transition/converters/results/
 

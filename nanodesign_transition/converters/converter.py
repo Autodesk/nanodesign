@@ -78,15 +78,16 @@ class Converter(object):
 def parse_args():
     """ Parse command-line arguments."""
     parser = argparse.ArgumentParser()
-    parser.add_argument("-hd",  "--helixdist",  help="distance between DNA helices")
-    parser.add_argument("-if",  "--informat",   help="input file format: cadnano, viewer")
-    parser.add_argument("-i",   "--infile",     help="input file")
-    parser.add_argument("-is",  "--inseqfile",  help="input sequence file")
-    parser.add_argument("-isn", "--inseqname",  help="input sequence name")
-    parser.add_argument("-m",   "--modify",     help="create DNA structure using the deleted/inserted bases given in a cadnano design file")
-    parser.add_argument("-o",   "--outfile",    help="output file")
-    parser.add_argument("-of",  "--outformat",  help="output file format")
-    parser.add_argument("-x",   "--transform",  help="apply a transformation to a set of helices")
+    parser.add_argument("-hd",  "--helixdist",   help="distance between DNA helices")
+    parser.add_argument("-if",  "--informat",    help="input file format: cadnano, viewer")
+    parser.add_argument("-i",   "--infile",      help="input file")
+    parser.add_argument("-is",  "--inseqfile",   help="input sequence file")
+    parser.add_argument("-isn", "--inseqname",   help="input sequence name")
+    parser.add_argument("-m",   "--modify",      help="create DNA structure using the deleted/inserted bases given in a cadnano design file")
+    parser.add_argument("-o",   "--outfile",     help="output file")
+    parser.add_argument("-of",  "--outformat",   help="output file format")
+    parser.add_argument("-s",   "--staples",     help="staple operations")
+    parser.add_argument("-x",   "--transform",   help="apply a transformation to a set of helices")
     return parser.parse_args()
 
 def read_cadnano_file(converter, file_name, seq_file_name, seq_name):
@@ -194,6 +195,37 @@ def write_cadnano_file(converter, file_name):
     """
     cadnano_writer = CadnanoWriter(converter.dna_structure)
     cadnano_writer.write(file_name)
+
+def perform_staple_operations(converter, staples_arg):
+    """ Perform operations on staples.  
+
+        Arguments:
+            staples_arg (String): The argument to the staples command-line option.
+    """
+    print("============== perform_staple_operations ============")
+    tokens = staples_arg.split(",", 1)
+    print(">>> tokens %s" % str(tokens))
+    operation = tokens[0]
+    retain_staples = []
+    
+    # Parse retained staples IDs. 
+    if len(tokens) == 2:
+        pattern = re.compile('\W')
+        retain_tokens = pattern.split(tokens[1])
+        if retain_tokens[0] == "retain": 
+            retain_colors = [ int(color) for color in retain_tokens[1:] if color != '']
+        #__if retain_tokens[0] == "retain"
+        print(">>> retain_colors %s" % str(retain_colors))
+        retain_staples = converter.dna_structure.get_staples_by_color(retain_colors)
+        print(">>> Number of retained staples %d" % len(retain_staples))
+    #__if len(tokens) == 2
+
+    # Remove all staple strands except those given in retain_staples[].
+    if operation == "delete": 
+        converter.dna_structure.remove_staples(retain_staples)
+
+#__def perform_staple_operations
+
 
 def transform_structure(converter, transform):
     """ Apply 3D geometric transformations to a selected set of helices. 
@@ -362,6 +394,10 @@ def main():
 
     # read the input file
     converter_read_map[args.informat](converter, args.infile, args.inseqfile, args.inseqname)
+
+    # perform staple operations (e.g., delete, generate maximal set, etc.) 
+    if args.staples:
+        perform_staple_operations(converter, args.staples)
 
     # appy a 3D transformation to the geometry of selected helices.
     if args.transform:

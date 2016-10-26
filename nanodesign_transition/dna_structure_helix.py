@@ -232,6 +232,49 @@ class DnaStructureHelix(object):
         #__for connection in self.helix_connectivity:
     #__def compute_design_crossovers_p
 
+    def remove_bases(self, base_list):
+        """ Remove a list of bases from the helix.
+
+            Arguments:
+                base_list (List[DnaBase]): The list of bases to remove.
+        """
+        self.logger.setLevel(logging.DEBUG)
+        self.logger.debug("========== remove bases ==========")
+        self.logger.debug("Number of staple bases %d" % len(self.staple_bases))
+        self.logger.debug("Number of bases to remove %d" % len(base_list))
+
+        # Create base helix position maps.
+        removed_staple_bases = set()
+        removed_scaffold_bases = set()
+        for base in base_list:
+            if base.is_scaf:
+                removed_scaffold_bases.add(base.p)
+            else:
+                removed_staple_bases.add(base.p)
+        #__for base in base_list
+
+        # Modify list of staple bases.
+        remaining_staple_bases = []
+        for base in self.staple_bases:
+            if base.p not in removed_staple_bases:
+                remaining_staple_bases.append(base)
+            else:
+                #base.remove()
+                if base.across: 
+                    base.across.across = None 
+            #__if base.p not in removed_staple_bases
+        #__for base in self.staple_bases
+
+        self.logger.debug("Number of bases removed %d" % (len(self.staple_bases) - len(remaining_staple_bases)))
+        self.logger.debug("Number of bases remaining %d" % len(remaining_staple_bases)) 
+        self.staple_bases = remaining_staple_bases
+        for base in self.staple_bases:
+            self.logger.debug("Base ID %d  h %d  p %d" % (base.id, base.h, base.p))
+
+        # Regenerate the helix coordinate and reference frame  
+        # arrays from the modified list of bases.
+        self.regenerate_coordinate_arrays()
+
     def process_base_deletes(self):
         """ Process bases flagged for deletion.
 
