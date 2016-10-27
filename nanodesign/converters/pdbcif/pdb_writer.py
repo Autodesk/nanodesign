@@ -43,8 +43,6 @@ class PdbWriter(object):
         dna_structure = self.dna_structure
         base_conn = dna_structure.base_connectivity
         strands = dna_structure.strands
-        triad = dna_structure.helix_axis_frames
-        id_nt = dna_structure.id_nt
         self._logger.info("Writing PDB .pdb file: %s " % file_name)
         self._logger.info("Number of bases %d " % len(base_conn))
         self._logger.info("Number of strands %d " % len(strands))
