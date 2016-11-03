@@ -254,6 +254,9 @@ def xform_from_connectors(connector_strands, helix_ids, helix_distance, xform):
             pt2 = base2.coordinates
             dist = np.linalg.norm(pt1 - pt2)
             if dist > max_dist:
+                #print("------------- connection found -------------")
+                #print(">>> base1  h %d  p %d" % (base1.h, base1.p))
+                #print(">>> base2  h %d  p %d" % (base2.h, base2.p))
                 if (base1.h,base1.p) not in points1_map:
                     points1_map.add((base1.h,base1.p))
                     if base1.h in helix_set:

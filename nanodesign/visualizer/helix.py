@@ -20,6 +20,7 @@
         nodes - The approximate position of DNA P atoms are displayed as spheres connected by lines.
         strands - The strands passing through the helix are displayed as a continuous line with arrows.
 """
+from itertools import chain
 import logging
 import os
 import sys
@@ -30,14 +31,16 @@ from .strand import VisStrand
 class VisHelixRepType:
     """ This class defines the helix visualization representation types. """
     UNKNOWN = 'unknown'
-    BASE_POSITIONS    = 'base_positions'
-    COORDINATES       = 'coordinates'
-    COORDINATE_FRAMES = 'frames'
-    DESIGN_CROSSOVERS = 'design_crossovers'
-    DOMAINS           = 'domains'
-    GEOMETRY          = 'geometry'
-    INSERTS_DELETES   = 'inserts_deletes'
-    STRANDS           = 'strands'
+    BASE_POSITIONS     = 'base_positions'
+    COORDINATES        = 'coordinates'
+    COORDINATE_FRAMES  = 'frames'
+    DESIGN_CROSSOVERS  = 'design_crossovers'
+    DOMAINS            = 'domains'
+    GEOMETRY           = 'geometry'
+    INSERTS_DELETES    = 'inserts_deletes'
+    MAXIMAL_CROSSOVERS = 'maximal_crossovers'
+    PAIRED_GEOMETRY    = 'paired_geometry'
+    STRANDS            = 'strands'
 
 class VisHelix(object):
     """ This class is used to visualize a virtual helix from a DNA design.
@@ -72,13 +75,15 @@ class VisHelix(object):
         # Set the methods to create geometry for the different representations.
         self.create_rep_methods = { 
             VisHelixRepType.COORDINATE_FRAMES : self.create_frames_rep, 
-            VisHelixRepType.COORDINATES       : self.create_coords_rep,
-            VisHelixRepType.DESIGN_CROSSOVERS : self.create_crossovers_rep,
-            VisHelixRepType.DOMAINS           : self.create_domains_rep,
-            VisHelixRepType.GEOMETRY          : self.create_geometry_rep,
-            VisHelixRepType.INSERTS_DELETES   : self.create_inserts_deletes_rep,
-            VisHelixRepType.BASE_POSITIONS    : self.create_base_positions_rep,
-            VisHelixRepType.STRANDS           : self.create_strands_rep
+            VisHelixRepType.COORDINATES        : self.create_coords_rep,
+            VisHelixRepType.DESIGN_CROSSOVERS  : self.create_crossovers_rep,
+            VisHelixRepType.DOMAINS            : self.create_domains_rep,
+            VisHelixRepType.GEOMETRY           : self.create_geometry_rep,
+            VisHelixRepType.INSERTS_DELETES    : self.create_inserts_deletes_rep,
+            VisHelixRepType.BASE_POSITIONS     : self.create_base_positions_rep,
+            VisHelixRepType.MAXIMAL_CROSSOVERS : self.create_maximal_crossovers_rep,
+            VisHelixRepType.PAIRED_GEOMETRY    : self.create_paired_geometry_rep,
+            VisHelixRepType.STRANDS            : self.create_strands_rep
         }
 
     def _setup_logging(self):
@@ -100,7 +105,7 @@ class VisHelix(object):
         boundary_bases = []
         start_base = None
         end_base = None
-        for base in self.vhelix.staple_base_list:
+        for base in self.vhelix.staple_bases:
             if base.across == None: 
                 if start_base != None:
                     boundary_bases.append((start_base,end_base))
@@ -114,7 +119,7 @@ class VisHelix(object):
                 else:
                     end_base = base
                 #__if start_base == None
-        #__for base in self.vhelix.staple_base_list
+        #__for base in self.vhelix.staple_bases
         if end_base != None:
             boundary_bases.append((start_base,end_base))
 
@@ -151,10 +156,24 @@ class VisHelix(object):
 
             If the geometry for the representation has not been created then create and store it.
         """
-        if rep not in self.representations:
-            self.create_rep_methods[rep]()
+        self.create_rep(rep)
         for geom in self.representations[rep]:
             geom.visible = show
+        if display:
+            self.graphics.display()
+
+    def create_rep(self, rep):
+        """ Create and store the geometry for the representation if it has not been created. """
+        if rep not in self.representations:
+            self.create_rep_methods[rep]()
+
+    def set_color(self, rep, color, display=True):
+        """ Set the color for the representation. """
+        if len(color) == 3:
+            color.append(0.5)
+        self.create_rep(rep)
+        for geom in self.representations[rep]:
+            geom.color[:] = color[:]
         if display:
             self.graphics.display()
 
@@ -231,6 +250,96 @@ class VisHelix(object):
             from_vh, to_vh, pos))
         self.print_info()
 
+    def create_maximal_crossovers_rep(self):
+        """ Create the geometry for the helix maximal crossover representation. """
+        #self._logger.setLevel(logging.DEBUG)
+        self._logger.debug("Create maximal_crossover rep for helix num %d " % self.vhelix.lattice_num)
+        dna_structure = self.dna_structure
+        helix = self.vhelix
+        helix_axis_coords = helix.helix_axis_coords
+        lattice = dna_structure.lattice
+        num_neigh = lattice.number_of_neighbors
+        self._logger.debug("Number of lattice directions: %d " % num_neigh)
+
+        scaffold_crossovers = helix.possible_scaffold_crossovers
+        staple_crossovers = helix.possible_staple_crossovers
+        helix_connectivity = helix.helix_connectivity
+
+        self._logger.debug("Number of possible staple crossovers: %d " % len(staple_crossovers))
+        self._logger.debug("Number of possible scaffold crossovers: %d " % len(scaffold_crossovers))
+        self._logger.debug("Number of connected helices: %d " % len(helix_connectivity))
+
+        helix_conn_map = {}
+        for connection in helix_connectivity:
+            helix_conn_map[connection.to_helix.id] = connection
+
+        s = 1.20
+        self._logger.debug("Maximal connections:") 
+
+        for i,crossovers in enumerate([staple_crossovers,scaffold_crossovers]):
+            verts = []
+            entity_indexes = []
+            crossover_data = []
+            n = 2
+
+            if i == 0:
+               stype = "Staple"
+               is_staple = True
+            else:
+               stype = "Scaffold"
+               is_staple = False
+
+            for crossover in crossovers: 
+                to_helix = crossover[0]
+                pos = crossover[1]
+                coords = crossover[2]
+                self._logger.debug("%s Crossover to helix %d at %d " % (stype, to_helix.id, pos))
+                connection = helix_conn_map[to_helix.id]
+                nindex = lattice.get_neighbor_index(helix.lattice_row, helix.lattice_col, 
+                    to_helix.lattice_row, to_helix.lattice_col)
+                dir = connection.direction
+                pt1 = coords
+                pt2 = pt1 + s*dir
+                verts.append(pt1)
+                verts.append(pt2)
+                entity_indexes.append(n)
+                n += 2
+                crossover_data.append((helix.lattice_num,to_helix.lattice_num,pos)) 
+            #__for crossover in crossovers
+
+            name = "HelixMaximal%sCrossovers:%s" % (stype,self.id)
+            arrows = False
+            arrows = True
+            geom = VisGeometryLines(name, verts, arrows)
+            geom.line_width = 1.0 
+            if is_staple:
+                geom.color = [0.0,0.0,0.0,1]
+            else:
+                geom.color = [1.0,1.0,1.0,1]
+            geom.entity_indexes = entity_indexes
+            geom.selected_callback = self.select_maximal_crossover
+            geom.data = crossover_data 
+            self.representations[VisHelixRepType.MAXIMAL_CROSSOVERS] = [geom]
+            self.graphics.add_render_geometry(geom)
+        #__for i,crossovers in enumerate([staple_crossovers,scaffold_crossovers])
+        self._logger.setLevel(logging.INFO)
+
+    def select_maximal_crossover(self, geom, index):
+        """ Process helix crossover selection.
+
+            Arguments:
+                geom (VisGeometry): The geometry selected.
+                index (int): The index into the geometry selected.
+        """
+        crossover_data = geom.data 
+        crossover = crossover_data[index] 
+        from_vh = crossover[0]
+        to_vh = crossover[1]
+        pos = crossover[2]
+        self._logger.info("Selected Helix %s maximal crossover. From vhelix %d to vhelix %d at position %d" % (self.name,
+            from_vh, to_vh, pos))
+        self.print_info()
+
     def create_geometry_rep(self):
         """ Create the geometry for the helix geometry representation. 
 
@@ -255,6 +364,44 @@ class VisHelix(object):
                 index (int): The index into the geometry selected.
         """
         self._logger.info("Selected Helix %s geometry " % (self.name))
+        self.print_info()
+
+    def create_paired_geometry_rep(self):
+        """ Create the geometry for the helix paired geometry representation.
+
+            The helix geometry is one or more cylinders representing regions containing double-stranded DNA.
+        """
+        point1 = self.vhelix.end_coordinates[0]
+        point2 = self.vhelix.end_coordinates[1]
+        dna_structure = self.dna_structure
+        radius = 1.15
+        num_sides = 16
+        angle_offset = 45.0
+        helix = self.vhelix 
+        # Get the indexes into helix_axis_coords of dsDNA regions.
+        boundary_points = self.get_boundaries()
+        self.representations[VisHelixRepType.PAIRED_GEOMETRY] = []
+        for i,points in enumerate(boundary_points): 
+            pt1 = points[0]
+            pt2 = points[1]
+            #self._logger.info("Pt1 %s  pt2 %s" % (str(pt1), str(pt2))) 
+            name = "HelixGeometry:%d_%d" % (helix.id,i+1) 
+            geom = VisGeometryCylinder(name, radius, pt1, pt2, num_sides)
+            geom.selected_callback = self.select_paired_geometry
+            geom.color = self.color
+            geom.color[3] = 1.0 
+            self.graphics.add_render_geometry(geom)
+            self.representations[VisHelixRepType.PAIRED_GEOMETRY].append(geom)
+        #__for pos in boundary_pos 
+
+    def select_paired_geometry(self, geom, index):
+        """ Process helix geometry selection.
+
+            Arguments:
+                geom (VisGeometry): The geometry selected.
+                index (int): The index into the geometry selected.
+        """
+        self._logger.info("Selected Helix %s paired geometry " % (self.name))
         self.print_info()
 
     def create_base_positions_rep(self):
@@ -290,12 +437,12 @@ class VisHelix(object):
             spheres connected by lines.
         """
         staple_points = []
-        for base in self.vhelix.staple_base_list:
+        for base in self.vhelix.staple_bases:
             if base:
                 staple_points.append(base.nt_coords)
         #__for id in base_ids
         scaffold_points = []
-        for base in self.vhelix.scaffold_base_list:
+        for base in self.vhelix.scaffold_bases:
             if base:
                 scaffold_points.append(base.nt_coords)
         #__for id in base_ids

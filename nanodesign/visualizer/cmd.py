@@ -15,6 +15,7 @@
 """
 import logging
 import os
+import re
 from .menu import VisMenuEntity
 import model
 
@@ -131,22 +132,31 @@ class VisCommand(object):
 
     def proc_helix_cmd(self, cmd, tokens):
         """ Process a 'helix' command. """
-        args = [ 'name', 'rep', 'show' ]
+        args = [ 'color', 'name', 'names', 'rep', 'show' ]
         name = None
         rep = None
+        attributes = []
+        names = []
         for token in tokens:
             arg_name,arg_value = token.split('=')
             if arg_name not in args:
                 self._logger.error("Unknown helix argument \'%s\' " % arg_name) 
                 return
             if arg_name == 'name':
-               name = arg_value
+                names.append(arg_value)
+            elif arg_name == 'names':
+                names = self.parse_helix_ids(arg_value)
             elif arg_name == 'rep':
                rep = arg_value
             elif arg_name == 'show':
                show = (arg_value == 'true')
+               attributes.append(('show',show))
+            elif arg_name == 'color':
+               color = self.parse_color(arg_value)
+               attributes.append(('color',color))
         #__for token in tokens
-        self.model.show_helix(name, rep, show)
+        for name in names:
+            self.model.show_helix(name, rep, attributes)
         # Update the menu but after graphics is up and fully initialized (delayed=True).
         if (show and self.update_menu):
             delay = True
@@ -242,22 +252,34 @@ class VisCommand(object):
 
     def proc_strand_cmd(self, cmd, tokens):
         """ Process a 'strand' command. """
-        args = [ 'name', 'rep', 'show' ]
+        args = [ 'color', 'line_width', 'name', 'names', 'rep', 'show' ]
         name = None
         rep = None
+        attributes = []
+        names = []
         for token in tokens:
             arg_name,arg_value = token.split('=')
             if arg_name not in args:
                 self._logger.error("Unknown strand argument \'%s\' " % arg_name)
                 return
             if arg_name == 'name':
-               name = arg_value
+                names.append(arg_value)
+            elif arg_name == 'names':
+                names = self.parse_strand_ids(arg_value)
             elif arg_name == 'rep':
                rep = arg_value
             elif arg_name == 'show':
                show = (arg_value == 'true')
+               attributes.append(('show',show))
+            elif arg_name == 'color':
+               color = self.parse_color(arg_value)
+               attributes.append(('color',color))
+            elif arg_name == 'line_width':
+               line_width = float(arg_value)
+               attributes.append(('line_width',line_width))
         #__for token in tokens
-        self.model.show_strand(name, rep, show)
+        for name in names:
+            self.model.show_strand(name, rep, attributes)
         # Update the menu but after graphics is up and fully initialized (delayed=True).
         if (show and self.update_menu):
             delay = True
@@ -312,6 +334,83 @@ class VisCommand(object):
                 point = [float(x) for x in values]
                 self.model.graphics.set_center(point)
         #__for token in tokens
+    #__def proc_graphics_cmd(self, cmd, tokens)
+
+    def parse_color(self, value):
+        pattern = re.compile(r"[,()]")
+        color_tokens = pattern.split(value)
+        return [ float(color) for color in color_tokens if color != '']
+    #__def parse_color(self, value)
+
+    def parse_helix_ids(self, value):
+        """ Parse a list of helix IDs. """
+        pattern = re.compile(r"[,\[\]]")
+        tokens = pattern.split(value)
+        helix_ids = []
+        for s in tokens:
+            if "-" in s:
+                ids = self.parse_id_range(s)
+                for id in ids:
+                    helix_ids.append(str(id))
+            elif s:
+                helix_ids.append(s)
+        #__for s in tokens
+        return helix_ids
+    #__def parse_helix_ids
+
+    def parse_strand_ids(self, value):
+        """ Parse a list of strand IDs. """
+        pattern = re.compile(r"[,\[\]]")
+        tokens = pattern.split(value)
+        strand_ids = []
+
+        if (tokens[0] == "start_helices") or (tokens[0] == "in_helices"):
+            helix_ids = set()
+            for s in tokens[1:]:
+                if "-" in s:
+                    ids = self.parse_id_range(s)
+                    for id in ids: 
+                        helix_ids.add(id)
+                elif s != '':
+                    helix_ids.add(int(s))
+            #__for s in tokens[1:]
+
+            if (tokens[0] == "start_helices"):
+                for strand in self.model.strands.values():
+                    if strand.dna_strand.tour[0].h in helix_ids:
+                        strand_ids.append(strand.name)
+                #__for strand in self.model.strands
+
+            elif (tokens[0] == "in_helices"):
+                for strand in self.model.strands.values():
+                    if not strand.dna_strand.is_scaffold:
+                        for base in strand.dna_strand.tour:
+                            if base.h in helix_ids:
+                                strand_ids.append(strand.name)
+                                break
+                #__for strand in self.model.strands.values()
+
+            #__if (tokens[0] == "start_helices")
+
+        #__if tokens[0] == "start_helices or ..."
+
+        else:
+            for s in tokens:
+                strand_ids.append(s)
+        #__if tokens[0] == "start_helices"
+        return strand_ids
+    #__def parse_strand_ids
+
+    def parse_id_range(self, value):
+        """ Parse a range of integer IDs of the form '<start> - <end>'. """
+        rtoks = value.split("-")
+        start = int(rtoks[0])
+        end = int(rtoks[1])+1
+        ids = []
+        for id in xrange(start,end):
+            ids.append(id)
+        return ids
+    #__def parse_id_range
 
 #__class VisCommand(object)
 

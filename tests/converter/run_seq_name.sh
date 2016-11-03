@@ -31,8 +31,9 @@ seq=M13mp18
 modify="true"
 
 # Execute the converter.
+#fn=fourhelix_nd_del_restaple
+#data=./results
 fn=fourhelix
-fn=slottedcross
 
 outfile=./results/${fn}_viewer.json 
 

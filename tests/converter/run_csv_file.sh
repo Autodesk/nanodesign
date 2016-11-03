@@ -12,7 +12,6 @@ if [ ! -d "results/" ]; then
     mkdir results
 fi
 
-
 ../../scripts/converter.py --infile=${data}/${fn}.json             \
              --inseqfile=${data}/${fn}_${seq}.csv    \
              --informat="cadnano"                    \
