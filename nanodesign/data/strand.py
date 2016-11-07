@@ -100,7 +100,9 @@ class DnaStrand(object):
 
     def get_base_index(self, base):
         """ Get the index into the strand for the given base. 
-            This is only used when writing a visualization file.
+
+            Arguments:
+                base (DnaBase): The base to get the index for.
         """
         num_bases = len(self.tour)
         if (not self.base_id_list):

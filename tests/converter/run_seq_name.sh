@@ -7,12 +7,14 @@ data=../samples
 
 # A list of various cadnano design file names.
 fn=42hb
+fn=6hb
 fn=aNANO_3D_7_14_final
 fn=fourhelix
 fn=fourhelix_deletes
 fn=icosahedron
 fn=protractor_30_98_v4
 fn=robot_v1.9_bent_2
+fn=rr_triangle
 fn=slottedcross-1
 fn=slottedcross
 
@@ -27,13 +29,15 @@ seq=p7560
 seq=M13mp18
 
 # Set to true to modify structure with inserts and deletes.
-#modify="false"
-modify="true"
+modify="false"
+#modify="true"
 
 # Execute the converter.
 #fn=fourhelix_nd_del_restaple
 #data=./results
 fn=fourhelix
+fn=6hb
+fn=rr_triangle
 
 outfile=./results/${fn}_viewer.json 
 

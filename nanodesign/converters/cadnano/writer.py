@@ -35,7 +35,6 @@ class CadnanoWriter(object):
         """
         self._logger.info("Writing caDNAno design JSON file: %s " % file_name)
         dna_structure = self.dna_structure
-        dna_structure.compute_aux_data()
         vstrand_info = self._get_vstrand_info(dna_structure)
 
         design = { 'name'    : os.path.basename(file_name),

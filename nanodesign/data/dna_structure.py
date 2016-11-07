@@ -72,6 +72,7 @@ class DnaStructure(object):
         self.connector_points = []
         self._logger = self._setup_logging()
         self._add_structure_helices(helices)
+        self.aux_data_computed = False
 
     def _setup_logging(self):
         """ Set up logging."""
@@ -120,6 +121,8 @@ class DnaStructure(object):
             relationships, and crossovers. This data is needed for visualization, calculating melting
             temperature and other applications.
         """
+        if self.aux_data_computed:
+            return 
         for strand in self.strands:
             strand.dna_structure = self
         self.set_strand_helix_references()
@@ -127,6 +130,7 @@ class DnaStructure(object):
         self._compute_domains()
         self._set_helix_connectivity()
         self._compute_helix_design_crossovers()
+        self.aux_data_computed = True
 
     def get_domains(self):
         if (not self.domain_list): 

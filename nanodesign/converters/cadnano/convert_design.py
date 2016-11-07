@@ -133,9 +133,13 @@ class CadnanoConvertDesign(object):
             defined for each virtual helix and stored in the appropriate DnaStructureHelix object. The
             global list of DnaBase objects are stored in the self.base_map dict.
         """
+        #self._logger.setLevel(logging.DEBUG)
         self._logger.info("Distance between adjacent helices %g " % self.dna_parameters.helix_distance)
         self._logger.info("Helix radius %g " % self.dna_parameters.helix_radius) 
         self._timer.start()
+        # Reset these in case this function is called multiple times. 
+        self.base_id = 0
+        self.base_map = OrderedDict()
 
         # Create a list of DnaStructureHelix objects for the design. 
         helices = self._create_structure_topology_and_geometry(design)
@@ -178,7 +182,6 @@ class CadnanoConvertDesign(object):
                 base_connectivity[base.id] = base
                 num_bases += 1
         #_for bindex, base in self.base_map.items()
-        print_base_connectivity = True
         print_base_connectivity = False
         if print_base_connectivity:
             self._logger.info("---------- base_connectivity  ---------- ")
@@ -233,15 +236,17 @@ class CadnanoConvertDesign(object):
 
         # Generate strands.
         strands = create_strands(self.dna_structure)
+        if strands == None:
+            self._logger.error("Create strands failed.")
+            sys.exit(1)
         self._set_strands_colors(strands)
         self.dna_structure.strands = strands
         self._logger.info("Number of strands %d " % len(strands)) 
-        print_strands = False
-        if print_strands:
+        if self._logger.getEffectiveLevel() == logging.DEBUG:
             for strand in strands:
-                self._logger.info("Strand %4d  bases %4d  scaf %6s  start helix %4d  pos %4d" % (strand.id, 
+                self._logger.debug("Strand %4d  bases %4d  scaf %6s  start helix %4d  pos %4d" % (strand.id, 
                     len(strand.tour), strand.is_scaffold, strand.tour[0].h,  strand.tour[0].p))
-        #__if print_strands
+        #__if self._logger.getEffectiveLevel() == logging.DEBUG
 
         # Calculate staple ends.
         self.dna_structure.staple_ends = self._calculate_staple_ends(strands)

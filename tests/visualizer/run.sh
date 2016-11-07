@@ -36,13 +36,16 @@ atomic_model="false"
 # execute the visualizer with a cadnano file
 fn=slottedcross
 fn=fourhelix
+fn=42hb
+fn=42hb_recode
+fn=6hb_recode
 
-cmds="helix name=0 rep=geometry color=(1,0.5,0) show=true"
-cmds="strand name=staple_0_26  rep=path  color=(1,0,0) show=true"
-cmds="strand names=start_helices[0]  rep=path  color=(1,0,0) line_width=4.0  show=true"
-cmds="strand names=in_helices[19]  rep=path  color=(1,0,0) line_width=4.0  show=true"
-cmds="helix names=[0-41] rep=paired_geometry color=(1,0.5,0) show=true; helix names=[42-83] rep=paired_geometry color=(0,0.5,1) show=true"
-cmds=""
+if [ $fn == "fourhelix" ]; then
+   cmds="helix name=0 rep=geometry color=(1,0.5,0) show=true"
+   cmds="strand name=staple_0_26  rep=path  color=(1,0,0) show=true"
+   cmds="strand names=start_helices[0]  rep=path  color=(1,0,0) line_width=4.0  show=true"
+   cmds="strand names=in_helices[19]  rep=path  color=(1,0,0) line_width=4.0  show=true"
+fi
 
 ../../scripts/vis.py --infile=${dir}/${fn}.json       \
                      --inseqname=${seqname}           \
