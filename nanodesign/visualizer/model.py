@@ -198,28 +198,44 @@ class VisModel(object):
         #self._logger.info("Atomic structure names %s " % str(self.atomic_structure_names))
         self.graphics.menu = self.menu 
 
-    def show_helix(self, name, rep, show):
+    def show_helix(self, name, rep, attributes):
         """ Show a helix with the given representation. 
 
             Arguments:
                 name (String): The name of the helix. 
                 rep (String): The representation name from VisHelixRepType.
-                show (bool): If true then show the geometry for the representation, else hide it.
+                attributes (List[String,Object)]: The list of attributes for the helix. 
         """
+        show = None
+        color = None
+
+        # Process attributes.
+        for key,value in attributes: 
+            if key == 'show':
+                show = value
+            elif key == 'color':
+                color = value
+        #__for name,value in attibutes
+
         if name not in self.helix_names:
             self._logger.error("Unknown helix named \'%s\' " % name) 
             return
+
         # Show or hide all helices.
         if name == VisMenuItem.ALL:
             self._logger.info("Show all ") 
             display = False
             for i,helix in enumerate(self.helices.values()):
                 helix.show(rep,show,display)
-            self.graphics.display()
+
         # Show a helix named 'name'.
         else:
             helix = self.helices[name]
-            helix.show(rep,show)
+            if color != None:
+                helix.set_color(rep, color)
+            if show != None:
+                helix.show(rep,show)
+        self.graphics.display()
 
     def show_atomic_struct(self, name, rep, show):
         """ Show an atomic structure with the given representation.
@@ -242,17 +258,31 @@ class VisModel(object):
             atomic_struct = self.atomic_structures[name]
             atomic_struct.show(rep,show)
 
-    def show_strand(self, name, rep, show):
+    def show_strand(self, name, rep, attributes):
         """ Show a strand with the given representation. 
 
             Arguments:
                 name (String): The name of the strand . 
                 rep (String): The representation name from VisStrandRepType.
-                show (bool): If true then show the geometry for the representation, else hide it.
+                attributes (List[String,Object)]: The list of attributes for the helix. 
         """
+        # Process attributes.
+        show = None
+        color = None
+        line_width = None
+        for key,value in attributes:
+            if key == 'show':
+                show = value
+            elif key == 'color':
+                color = value
+            elif key == 'line_width':
+                line_width = value
+        #__for name,value in attibutes
+
         if name not in self.strand_names:
             self._logger.error("Unknown strand named \'%s\' " % name)
             return
+
         # Show or hide all strands.
         if name == VisMenuItem.ALL:
             self._logger.info("Show all ")
@@ -262,9 +292,14 @@ class VisModel(object):
             self.graphics.display()
         # Show a strand named 'name'.
         else:
-            #self._logger.info("Show strand \'%s\' " % name)
             strand = self.strands[name]
-            strand.show(rep,show)
+            if color != None:
+                strand.set_color(rep, color)
+            if line_width != None:
+                strand.set_line_width(rep, line_width)
+            if show != None:
+                strand.show(rep,show)
+            self.graphics.display()
 
     def show_bounding_box(self, show):
         """ Show a box bounding the model extent. """

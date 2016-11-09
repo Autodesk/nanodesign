@@ -117,6 +117,29 @@ class VisStrand(object):
         if display:
             self.graphics.display()
 
+    def create_rep(self, rep):
+        """ Create and store the geometry for the representation if it has not been created. """
+        if rep not in self.representations:
+            self.create_rep_methods[rep]()
+
+    def set_color(self, rep, color, display=True):
+        """ Set the color for the representation. """
+        if len(color) == 3:
+            color.append(0.5)
+        self.create_rep(rep)
+        for geom in self.representations[rep]:
+            geom.color[:] = color[:]
+        if display:
+            self.graphics.display()
+
+    def set_line_width(self, rep, line_width, display=True):
+        """ Set the line width for the representation. """
+        self.create_rep(rep)
+        for geom in self.representations[rep]:
+            geom.line_width = line_width 
+        if display:
+            self.graphics.display()
+
     def print_info(self):
         """ Print strand information. """ 
         start_base = self.tour[0]

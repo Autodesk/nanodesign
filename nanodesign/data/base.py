@@ -56,6 +56,10 @@ class DnaBase(object):
 
     def remove(self):
         """ Remove the base from the DNA structure.
+
+            This function is used to remove bases flagged for deletion in the design file. 
+            and is called when the design file is being processed. It will reset neighboring
+            bases connectivity including the paired base if there is one. 
         """
         # Find the four neighboring bases.
         neighbor_up = self.up
@@ -73,8 +77,15 @@ class DnaBase(object):
             neighbor_up.down = neighbor_down
         if neighbor_down != None:
             neighbor_down.up = neighbor_up
+
+        # Update paired base connectivity.
         if neighbor_across_up != None:
             neighbor_across_up.down = neighbor_across_down
         if neighbor_across_down != None:
             neighbor_across_down.up = neighbor_across_up
+
+    #__def remove
+
+#__class DnaBase(object)
+
 

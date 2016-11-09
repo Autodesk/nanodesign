@@ -4,6 +4,7 @@ This module is used to store information for a DNA strand.
 
 A DNA strand is a continuous chain of nucleotides. It can be either a scaffold of a staple.
 """
+import random
 import sys
 import os
 from sets import Set
@@ -25,15 +26,25 @@ class DnaStrand(object):
         insert_seq (List[string]): The list of sequence letters inserted into this strand. 
         is_circular (bool): If True then the strand is circular, returning to its starting postion.
         is_scaffold (bool): If True then the strand is a scaffold strand.
-        tour (List[int]): The list of base IDs making up the strand. 
+        tour (List[DnaBase]): The list of base objects making up the strand. 
     """
 
-    def __init__(self, id, dna_structure):
+    def __init__(self, id, dna_structure, is_scaffold, is_circular, tour):
+        """ Initialize a DnaStand object.
+
+            Arguments:
+                id (int): The strand ID.
+                dna_structure (DnaStructure): The DNA structure this strand belongs to. 
+                is_scaffold (bool): If True then the strand is a scaffold strand.
+                is_circular (bool): If True then the strand is circular, returning to its starting postion.
+                tour (List[DnaBase]): The list of base objects making up the strand. 
+
+        """
         self.id = id
-        self.is_scaffold = False
-        self.is_circular = False
-        self.tour = []
-        self.color = [1.0,1.0,1.0]
+        self.is_scaffold = is_scaffold
+        self.is_circular = is_circular
+        self.tour = tour
+        self.color = self.create_random_color() 
         self.icolor = None
         self.helix_list = dict()
         self.base_id_list = dict()
@@ -41,10 +52,35 @@ class DnaStrand(object):
         self.domain_list = []
         self.insert_seq = []
 
+    def create_random_color(self): 
+        """ Create a random color for the strand. """
+        if self.is_scaffold:
+            r = 1.0
+            g = 1.0
+            b = 1.0
+        else:
+            r = random.random()
+            g = random.random()
+            b = random.random()
+            # Don't generate a pure blue, that's for a scaffold in cadnano.
+            if (r + g == 0.0) and (b == 1.0):
+                g = random.random()
+                r = random.random()
+            elif (r + g + b > 2.8):
+                g = random.random()
+                r = random.random()
+        #__if self.is_scaffold
+        return [r, g, b]
+    #__def create_random_color
+
     def add_helix(self, helix): 
+        """ Add a helix reference to the strand. 
+
+            Arguments:
+                helix (DnaStructureHelix): The helix to add.
+        """
         id = helix.lattice_num
         if (id not in self.helix_list):
-            #print("[DnaStrand] ---------- strand %d  add helix %d ----------" % (self.id, id))
             self.helix_list[id] = helix
     #__def add_helix
 

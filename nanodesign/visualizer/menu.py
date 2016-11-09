@@ -345,6 +345,8 @@ class VisMenu(object):
         helix_select.add_submenu(VisHelixRepType.DOMAINS,           "Virtual helix domains")
         helix_select.add_submenu(VisHelixRepType.GEOMETRY,          "Virtual helix geometry")
         helix_select.add_submenu(VisHelixRepType.INSERTS_DELETES,   "Virtual helix inserts and deletes")
+        helix_select.add_submenu(VisHelixRepType.MAXIMAL_CROSSOVERS,"Virtual helix maximal crossovers")
+        helix_select.add_submenu(VisHelixRepType.PAIRED_GEOMETRY,   "Virtual helix paired geometry")
         helix_select.add_submenu(VisHelixRepType.STRANDS,           "Virtual helix strands")
 
         # Add the quit menu item.

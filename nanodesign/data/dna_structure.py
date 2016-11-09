@@ -9,12 +9,16 @@ from collections import OrderedDict
 import json
 import logging
 import numpy as np
+import sys 
 
 # imports from other parts of the package
 from .parameters import DnaParameters
+from ..converters.cadnano.utils import create_strands
 from ..converters.cadnano.common import CadnanoLatticeType
+from ..converters.cadnano.utils import generate_coordinates
 from .dna_structure_helix import DnaStructureHelix,DnaHelixConnection
 from .lattice import Lattice
+from .strand import DnaStrand
 from . import Domain
 
 # # temp code to handle objects as they are being transitioned into the main package
@@ -143,31 +147,147 @@ class DnaStructure(object):
         """ Remove all staple strands except for those in the given retained staples list.
 
             Arguments:
-                retain_staples(Set[int]): The list of staples to retain.
+                retain_staples(List[DnaStrand]): The list of staple objects to retain.
         """
-        removed_strands = []
-        remaining_strands = []
-        for strand in self.strands:
-            if (not strand.is_scaffold) and (strand.id not in retain_staples): 
-                removed_strands.append(strand)
-            else:
-                remaining_strands.append(strand)
-        #__for strand in self.strands
+        # Create lists of strands to remove and strands to keep.
+        removed_strands, remaining_strands = self.create_removed_staple_lists(retain_staples)
 
         #  Remove the strands from the structure.
-        self.remove_strands(removed_strands)
+        self.remove_helices_bases(removed_strands)
 
         # Reset strand data.
         self.strands = remaining_strands
         self.strands_map = dict()
 
-    def remove_strands(self, removed_strands):
-        """ Remove strands from the structure.
+        #self._logger.setLevel(logging.DEBUG)
+        if self._logger.getEffectiveLevel() == logging.DEBUG:
+            self._logger.debug("=================== remove staples ===================")
+            for strand in removed_strands: 
+                self._logger.debug("Remove staple strand ID %d  start helix %d  position %d" % (strand.id,
+                    strand.tour[0].h, strand.tour[0].p)) 
+            #__for strand in removed_strands
+
+            self._logger.debug("=================== retain staples ===================")
+            for strand in remaining_strands: 
+                if not strand.is_scaffold:
+                    self._logger.debug("Retain staple strand ID %d  start helix %d  position %d" % (strand.id,
+                        strand.tour[0].h, strand.tour[0].p)) 
+            #__for strand in remaining_strands
+        #__if self._logger.getEffectiveLevel() == logging.DEBUG
+    #__def remove_staples
+
+    def create_base_connectivity_table(self):
+        """ Create the base connectivity table. 
+
+            The base connectivity table stores all the bases (DnaBase) for the structure. 
+            Bases are obtained from the base lists stored in the structure helices. The
+            base ID is set to its location in the table.
         """
-        self._logger.setLevel(logging.DEBUG)
+        self._logger.setLevel(logging.INFO)
+        #self._logger.setLevel(logging.DEBUG)
+        self._logger.debug("=================== create base connectivity table ===================")
+        base_connectivity = []
+        # Add bases from helices. 
+        id = 0
+        for helix in self.structure_helices_map.values():
+            for base in helix.staple_bases:
+                base.id = id
+                base_connectivity.append(base)
+                id += 1
+            for base in helix.scaffold_bases:
+                base.id = id
+                base_connectivity.append(base)
+                id += 1
+        #__for helix in self.structure_helices_map.values()
+
+        if self._logger.getEffectiveLevel() == logging.DEBUG:
+            self._logger.debug("Base connectivity table size %d" % len(base_connectivity))
+            self._logger.debug("------------------- base connectivity table -------------------")
+            for i,base in enumerate(base_connectivity):
+                 up_id = base.up.id if base.up else -1
+                 down_id = base.down.id if base.down else -1
+                 self._logger.debug("%3d id %3d  h %3d  p %3d  up %3d  down %3d  %d" % (i, base.id, base.h, base.p, 
+                     up_id, down_id, base.is_scaf))
+            #__for i,base in enumerate(base_connectivity)
+        #__if self._logger.getEffectiveLevel() == logging.DEBUG
+
+        self.base_connectivity = base_connectivity
+    #__def create_base_connectivity_table
+
+    def generate_maximal_staple_set(self, retain_staples):
+        """ Generate the maximal staple set retaining those in the given retained staples list.
+
+            Arguments:
+                retain_staples(List[DnaStrand]): The list of staple objects to retain.
+
+            Strands are first removed from the structure. New bases are then created and added to helices
+            at locations not occupied by the bases in the retained strands. Crossover information is then 
+            added to the helices by setting down and up pointers for crossover bases.
+
+            The structure base connectivity table is generated and a new list of strands are created from it. 
+        """
+        self._logger.setLevel(logging.INFO)
+        #self._logger.setLevel(logging.DEBUG)
+        self._logger.info("Add maximal staple set")
+
+        # Create lists of strands to remove and strands to keep.
+        removed_strands, remaining_strands = self.create_removed_staple_lists(retain_staples)
+        self._logger.info("Number of retained staples %d" % len(retain_staples))
+
+        #  Remove the bases from the structure helices.
+        self.remove_helices_bases(removed_strands)
+
+        # Add maximal set of staple strands bases.
+        for helix in self.structure_helices_map.values():
+            helix.add_maximal_staple_bases()
+
+        # Add maximal set of staple strands crossovers and generate the helix 
+        # axis coordinates and frames, and DNA helix nucleotide coordinates.
+        for helix in self.structure_helices_map.values():
+            helix.add_maximal_staple_crossovers()
+            axis_coords, axis_frames, scaffold_coords, staple_coords = \
+                generate_coordinates(self.dna_parameters, self.lattice_type, helix.lattice_row, helix.lattice_col, \
+                    helix.lattice_num, helix.scaffold_bases, helix.staple_bases)
+            helix.set_coordinates(axis_coords, axis_frames, scaffold_coords, staple_coords) 
+        #__for helix in self.structure_helices_map.values()
+
+        # Create the base connectivity needed for strand generation.
+        self.create_base_connectivity_table()
+
+        # Create the list of strands from the new base connectivity.
+        self.strands = create_strands(self)
+        self.strands_map = dict()
+        self._logger.info("Number of added staples %d" % (len(self.strands)-len(remaining_strands)))
+        self._logger.info("Total number of strands %d" % len(self.strands))
+    #__def generate_maximal_staple_set
+
+    def create_removed_staple_lists(self, retain_staples):
+        # Create lists of strands to remove and strands to keep.
+        removed_strands = []
+        remaining_strands = []
+        for strand in self.strands:
+            if (not strand.is_scaffold) and (strand.id not in retain_staples):
+                removed_strands.append(strand)
+            else:
+                remaining_strands.append(strand)
+        #__for strand in self.strands
+        return removed_strands, remaining_strands
+    #__def create_removed_staple_list
+
+    def remove_helices_bases(self, removed_strands):
+        """ Remove bases for the strands in the list of removed strands from the structure helices.
+
+            Arguments:
+                removed_strands (List[DnaStrand]): The list of strands to remove.
+
+           A list of bases for each helix is first created from removed strands bases. 
+           The bases for each helix are then removed using that list.
+        """
+        self._logger.setLevel(logging.INFO)
+        #self._logger.setLevel(logging.DEBUG)
         self._logger.debug("===================== remove strands  =====================")
 
-        # Set the bases to remove for each helix.
+        # Create lists of bases to remove for each helix.
         helix_base_map = {}
         for strand in removed_strands:
             base = strand.tour[0]
@@ -184,7 +304,7 @@ class DnaStructure(object):
             helix = self.structure_helices_map[helix_id]
             helix.remove_bases(base_list)
         #__for helix_id,base_list in helix_base_map.iteritems
-    #__def remove_strands
+    #__def remove_helices_bases
 
     def get_staples_by_color(self, staple_colors):
         """ Get the list of staples by their color ID. 
@@ -211,6 +331,7 @@ class DnaStructure(object):
                 helix = self.structure_helices_map[base.h]
                 strand.add_helix(helix)
         #__for strand in self.strands__
+    #__def set_strand_helix_references
 
     def _compute_domains(self):
         """ Compute DNA domains from strands. 

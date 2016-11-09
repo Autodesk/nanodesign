@@ -170,9 +170,7 @@ class Converter(object):
             Arguments:
                 staples_arg (String): The argument to the staples command-line option.
         """
-        print("============== perform_staple_operations ============")
         tokens = staples_arg.split(",", 1)
-        print(">>> tokens %s" % str(tokens))
         operation = tokens[0]
         retain_staples = []
 
@@ -183,17 +181,18 @@ class Converter(object):
             if retain_tokens[0] == "retain": 
                 retain_colors = [ int(color) for color in retain_tokens[1:] if color != '']
             #__if retain_tokens[0] == "retain"
-            print(">>> retain_colors %s" % str(retain_colors))
             retain_staples = self.dna_structure.get_staples_by_color(retain_colors)
-            print(">>> Number of retained staples %d" % len(retain_staples))
         #__if len(tokens) == 2
 
         # Remove all staple strands except those given in retain_staples[].
         if operation == "delete": 
             self.dna_structure.remove_staples(retain_staples)
 
-    #__def perform_staple_operations
+        # Generaqte the maximal staple strand set except those given in retain_staples[].
+        elif operation == "maximal_set": 
+            self.dna_structure.generate_maximal_staple_set(retain_staples)
 
+    #__def perform_staple_operations
 
     def transform_structure(self, transform):
         """ Apply 3D geometric transformations to a selected set of helices. 

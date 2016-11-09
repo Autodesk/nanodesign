@@ -55,10 +55,10 @@ class CadnanoWriter(object):
         """
         self._logger.info("Number of helices %d " % len(dna_structure.structure_helices_map))
         vstrands_info = []
-        self._logger.setLevel(logging.DEBUG)
 
         # Create a map of helix nums to the list of strands that start in that helix.
         # Used for writing color information.
+        #self._logger.setLevel(logging.DEBUG)
         self._logger.debug("=================== map helix nums to strands ===================")
         self._logger.debug("Number of strands %d" % len(dna_structure.strands))
         helix_strands_map = {}
@@ -99,6 +99,8 @@ class CadnanoWriter(object):
             skip_info = self._get_skip_info(helix_size, staple_bases)
             if num in helix_strands_map:
                 staple_colors = self._get_staple_colors(helix_strands_map[num])
+            else:
+                staple_colors = []
 
             vstrand = { "row": row,
                         "col": col,

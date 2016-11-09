@@ -7,8 +7,8 @@ DnaBase objects are created from the scaffold and staple bases defined for each 
 in the appropriate DnaStructureHelix object. A DnaStructure object object is created for the design. It 
 stores the list of DnaStructureHelix objects and a list of all the bases defined for the design. 
 
-This code is based on a direct translation of the set MATLAB scripts to convert a caDNAno design to a CanDo 
-.cndo file from Mark Bathe's Laboratory for Computational Biology & Biophysics at MIT.
+This code is initially based on a direct translation of the set MATLAB scripts to convert a caDNAno design 
+to a CanDo .cndo file from Mark Bathe's Laboratory for Computational Biology & Biophysics at MIT.
 """
 from collections import OrderedDict
 import csv
@@ -19,13 +19,13 @@ import string
 import sys
 import time
 import numpy as np
-from math import sqrt,cos,acos,sin,asin,pi
+from math import sqrt
 from ..dna_sequence_data import dna_sequence_data
-
 
 from .design import CadnanoDesign,CadnanoVirtualHelix,CadnanoBase
 from .reader import CadnanoReader 
 from .common import CadnanoLatticeType
+from .utils import generate_coordinates,get_start_coordinates_angle,vrrotvec2mat,deg2rad,bp_interp,find_row,create_strands
 
 from ...data.base import DnaBase 
 from ...data.strand import DnaStrand
@@ -178,6 +178,7 @@ class CadnanoConvertDesign(object):
                 base_connectivity[base.id] = base
                 num_bases += 1
         #_for bindex, base in self.base_map.items()
+        print_base_connectivity = True
         print_base_connectivity = False
         if print_base_connectivity:
             self._logger.info("---------- base_connectivity  ---------- ")
@@ -187,9 +188,10 @@ class CadnanoConvertDesign(object):
                 up = base.up.id if base.up else -1
                 down = base.down.id if base.down else -1
                 across = base.across.id if base.across else -1
-                self._logger.info("%4d: base id %4d  up %4s  down %4s  across %4s  h %4d  p %4d  scaf %d" %
-                    ( i, base.id, up, down, across, base.h, base.p, base.is_scaf))
+                self._logger.info("%4d  id %4d  h %4d  p %4d  up %4d  down %4d  across %4d  scaf %d" %
+                    ( i, base.id, base.h, base.p, up, down, across, base.is_scaf))
         #__if print_base_connectivity_p
+        #sys.exit(0)
 
         # Remove deleted bases.
         if (modify):
@@ -230,7 +232,7 @@ class CadnanoConvertDesign(object):
         self.dna_structure.set_lattice_type(design.lattice_type)
 
         # Generate strands.
-        base_connectivity,strands = self._build_strands(base_connectivity)
+        strands = create_strands(self.dna_structure)
         self._set_strands_colors(strands)
         self.dna_structure.strands = strands
         self._logger.info("Number of strands %d " % len(strands)) 
@@ -242,8 +244,7 @@ class CadnanoConvertDesign(object):
         #__if print_strands
 
         # Calculate staple ends.
-        staple_ends = self._calculate_staple_ends(base_connectivity)
-        self.dna_structure.staple_ends = staple_ends
+        self.dna_structure.staple_ends = self._calculate_staple_ends(strands)
 
         # Set possible cross-overs. 
         self._set_possible_crossovers(design)
@@ -420,9 +421,9 @@ class CadnanoConvertDesign(object):
         curr_frame = curr_base.ref_frame.copy()
         curr_frame = curr_frame.reshape(3,3)
         next_coords = curr_coords + [0, -dist_bp*helix_axis[1], 0]
-        rot_mat = _vrrotvec2mat(y_up_vec, _deg2rad(ang_bp))
+        rot_mat = vrrotvec2mat(y_up_vec, deg2rad(ang_bp))
         next_frame = np.dot(rot_mat,curr_frame)
-        [insert_coords, insert_frames] = _bp_interp(curr_coords, curr_frame, next_coords, next_frame, num_inserts)
+        [insert_coords, insert_frames] = bp_interp(curr_coords, curr_frame, next_coords, next_frame, num_inserts)
         last_base = None
         self._logger.debug("Current coords %g %g %g" % (curr_coords[0], curr_coords[1], curr_coords[2]))
         self._logger.debug("Next coords %g %g %g" % (next_coords[0], next_coords[1], next_coords[2]))
@@ -503,7 +504,7 @@ class CadnanoConvertDesign(object):
         curr_frame = curr_frame.reshape(3,3)
         #next_coords = curr_coords + [0, dist_bp, 0]
         next_coords = curr_coords + [0, -dist_bp*helix_axis[1], 0]
-        rot_mat = _vrrotvec2mat(y_up_vec, _deg2rad(ang_bp))
+        rot_mat = vrrotvec2mat(y_up_vec, deg2rad(ang_bp))
         next_frame = np.dot(rot_mat,curr_frame)
         [insert_coords, insert_frames] = _bp_interp(curr_coords, curr_frame, next_coords, next_frame, num_inserts/2)
         self._logger.debug("Insert dsDNA")
@@ -617,14 +618,12 @@ class CadnanoConvertDesign(object):
             # Get the bases for the helix.
             scaffold_bases, staple_bases = self._create_single_helix(vhelix, lattice_type)
             self._logger.debug("Number of scaffold bases %d " % len(scaffold_bases)) 
-            if (False):
+	    self._logger.debug("Number of staple bases %d " % len(staple_bases)) 
+            if self._logger.getEffectiveLevel() == logging.DEBUG:
                 s = ""
                 for base in scaffold_bases:
                     s += str(base.p) + " "
                 self._logger.debug("Scaffold bases positions %s " % s) 
-
-	    self._logger.debug("Number of staple bases %d " % len(staple_bases)) 
-            if (False):
                 s = ""
                 for base in staple_bases:
                     s += str(base.p) + " "
@@ -632,70 +631,19 @@ class CadnanoConvertDesign(object):
    
             # Generate the helix axis coordinates and frames, and DNA helix nucleotide coordinates.
             axis_coords, axis_frames, scaffold_coords, staple_coords = \
-                self._generate_coordinates(lattice_type, row, col, num, scaffold_bases, staple_bases)
+                generate_coordinates(self.dna_parameters, lattice_type, row, col, num, scaffold_bases, staple_bases)
 
             # Create a dna structure object that stores the helix information. 
-            structure_helix = DnaStructureHelix(i, num, scaffold_polarity, axis_coords, axis_frames, scaffold_bases, 
-                                                staple_bases)
+            structure_helix = DnaStructureHelix(i, num, scaffold_polarity, axis_coords, axis_frames, 
+                scaffold_coords, staple_coords, scaffold_bases, staple_bases)
             structure_helix.lattice_num = num
             structure_helix.lattice_row = row
             structure_helix.lattice_col = col
             structure_helix.lattice_max_vhelix_size = max_vhelix_size 
-            structure_helix.staple_bases = staple_bases
-            structure_helix.scaffold_bases = scaffold_bases
             structure_helices.append(structure_helix)
         #__for vhelix in vhelices
         return structure_helices
-
-    def _create_nt_map_table(self, base_connectivity, dnode, id_nt_0):
-        """ Create the map table (id_nt). """
-        self._logger.info("================================= _create_nt_map_table =======================")
-        n_bp = dnode.shape[0]
-        id_nt = np.zeros((n_bp, 2), dtype=int)
-        self._logger.info("n_bp %d" % n_bp)
-
-        num_pairs = 0
-        for i,base in enumerate(base_connectivity):
-           if not (base.across and base.is_scaf): 
-               continue 
-           id_nt[num_pairs,0] = base.id 
-           id_nt[num_pairs,1] = base.across.id 
-           num_pairs += 1
-        self._logger.info("num_pairs %d" % num_pairs)
-        return id_nt 
-
-        for i in xrange(0,n_bp):
-            # Scaffold nucleotide
-            base_data = id_nt_0[i,0:3]
-            id_nt[i,0] = self._find_base_location(base_data, base_maps)
-            # Staple nucleotide
-            base_data = id_nt_0[i,3:6]
-            id_nt[i,1] = self._find_base_location(base_data, base_maps)
-        return id_nt 
-
-    def _find_base_location(self, base_data, base_maps):
-        """ Find the location in the base topology array of the given base using the helix number it is in 
-            and its position within that helix. 
-
-            This is used to convert a helix-based base indexing using a helix number and position to a global ID.
-            The query is a tuple (helix num, position). For a base with no up, down or across base the query
-            will be (-1,-1) and the location returned -1.
-
-            Arguments:
-                base_data (list(float)[3]): A list of three values representing the helix number, position 
-                    within that helix and a flag if it is from a scaffold(0) or a staple(1) strand.
-                base_maps (list(dict)[2]): A list of two base maps: 0:scaffold, 1:staple. 
-
-            Returns the index into the base topology array of the given base.
-        """
-        query = tuple(int(base_data[j]) for j in xrange(0,2))
-        strand_type = int(base_data[2])
-        base_map = base_maps[strand_type]
-        if query not in base_map:
-            loc = -1
-        else:
-            loc = base_map[query]
-        return loc
+    #__def _create_structure_topology_and_geometry
 
     def _create_single_helix(self, vhelix, lattice_type):
         """ Create the geometry for a single cadnano virtual helix.
@@ -782,131 +730,18 @@ class CadnanoConvertDesign(object):
             new_base.across = None
 
         return new_base
+    #__def _add_base
 
-    def _generate_coordinates(self, lattice_type, row, col, helix_num, scaffold_bases, staple_bases):
-        """ Generate the axis coordinates, axis reference frames, and nucleotide coordinate for the
-            virtual helix. 
+    def _calculate_staple_ends(self, strands):
+        """ Find the start helix and position for the staple strands in the structure. 
 
             Arguments:
-                lattice_type (CadnanoLatticeType): The lattice type for this design.
-                row (int): The caDNAno row number. 
-                col (int): The caDNAno column number. 
-                helix_num (int): The caDNAno virtual helix number. 
-                scaffold_bases (List[DnaBase]): The list of scaffold bases for this helix. 
-                staple_bases (List[DnaBase]): The list of staple bases for this helix. 
+                strands (List[DnaStrand]): The list a DnaStrand objects.
 
-            The helix coordinates and reference frames are generated for all of the virtural helix
-            positions that contain a base. The coordinates and refereance frames are also set for 
-            scaffold and staple bases. 
+            Returns a Dict mapping 2-tuples (start helix, start position) to strand ID.
         """
-        #self._logger.setLevel(logging.DEBUG)
-        self._logger.setLevel(logging.INFO)
-        self._logger.debug("-------------------- generate_coordinates --------------------")
-        r_strand = self.dna_parameters.helix_distance / 2.0 # half the distance between the axes of adjacent DNA helices.
-        r_helix = self.dna_parameters.helix_radius          # radius of DNA helices (nm)
-        dist_bp = self.dna_parameters.base_pair_rise        # rise between two neighboring base-pairs (nm)
-        ang_bp = self.dna_parameters.base_pair_twist_angle  # twisting angle between two neighboring base-pairs (degrees)
-        ang_minor = self.dna_parameters.minor_groove_angle  # angle of the minor groove (degrees)
-
-        # Positions of the scaffold nucleotide and staple nucleotide
-        # in the local reference frame.
-        scaf_local = r_helix * np.array([cos(_deg2rad(180-ang_minor/2)), sin(_deg2rad(180-ang_minor/2)), 0.0]).transpose()
-        stap_local = r_helix * np.array([cos(_deg2rad(180+ang_minor/2)), sin(_deg2rad(180+ang_minor/2)), 0.0]).transpose()
-
-        # Set the helix start coordinates, based on helix (row,col), and frame orientation, 
-        # based on helix number (polarity).
-        if (lattice_type == CadnanoLatticeType.honeycomb):
-            xpos =  sqrt(3.0) * col * r_strand
-            zpos = -3.0 * row * r_strand;
-            if ( ((row % 2 == 0) and (col % 2 == 0)) or ((row % 2 != 0) and (col % 2 != 0))):
-                zpos = zpos + r_strand
-            if ( helix_num % 2 == 0 ):
-                init_ang = -30 + ang_bp / 2
-            else:
-                init_ang = 150 + ang_bp / 2
-        elif (lattice_type == CadnanoLatticeType.square): 
-            xpos =  2.0 * col * r_strand
-            zpos = -2.0 * row * r_strand
-            if helix_num % 2 == 0:
-                init_ang = 180 + ang_bp / 2
-            else:
-                init_ang = 0 + ang_bp / 2
-        #__if (lattice_type == CadnanoLatticeType.honeycomb)
-
-        init_coord_ang_strand = np.array([xpos, 0.0, zpos, init_ang]);
-
-        if (helix_num % 2 == 0):
-            e3 = np.array([0, 1, 0],dtype=float)
-        else:
-            e3 = np.array([0, -1, 0],dtype=float)
-
-        # Create a list of sorted base positions.
-        base_positions = set()
-        for base in scaffold_bases: 
-            base_positions.add(base.p)
-        for base in staple_bases: 
-            base_positions.add(base.p)
-        #self._logger.debug("Base positions %s" % str(sorted_base_positions))
-
-        # Compute helix axis coordinates and frames.
-        num_base_positions = len(base_positions)
-        axis_coords = np.zeros((num_base_positions,3), dtype=float)
-        axis_frames = np.zeros((3,3,num_base_positions), dtype=float);
-        pos_map = {}
-        self._logger.debug("Axis frames: ")
-        for i,p in enumerate(sorted(base_positions)): 
-            pos_map[p] = i
-            ref_coord = init_coord_ang_strand + np.array([0, dist_bp*p, 0, ang_bp*p]);
-            # Base coordinate. 
-            axis_coords[i,:] = ref_coord[0:3];
-            # Base orientation.
-            e2 = np.array([cos(-_deg2rad(ref_coord[3])), 0, sin(-_deg2rad(ref_coord[3]))])
-            e1 = np.cross(e2, e3);
-            axis_frames[:,:,i] = np.array([e1, e2, e3]).transpose();
-            self._logger.debug("pos %d  frame 1 %g %g %g " % (p, axis_frames[0,0,i], axis_frames[1,0,i], axis_frames[2,0,i]))
-            self._logger.debug("        frame 2 %g %g %g " % (   axis_frames[0,1,i], axis_frames[1,1,i], axis_frames[2,1,i]))
-            self._logger.debug("        frame 3 %g %g %g " % (   axis_frames[0,2,i], axis_frames[1,2,i], axis_frames[2,2,i]))
-        #__for base in staple_bases
-
-        # Compute scaffold nucleotide positions and set base coordinates and frame.
-        num_scaffold_bases = len(scaffold_bases)
-        scaffold_coords = np.zeros((num_scaffold_bases,3), dtype=float)
-        for i,base in enumerate(scaffold_bases): 
-            j = pos_map[base.p]
-            base.coordinates = axis_coords[j]
-            base.ref_frame = axis_frames[:,:,j]
-            scaffold_coords[i,:] = axis_coords[j,:] + np.dot(axis_frames[:,:,j], scaf_local)
-            base.nt_coords = scaffold_coords[i]
-        #__for base in scaffold_bases 
-
-        # Compute staple nucleotide positions and set base coordinates and frame.
-        num_staple_bases = len(staple_bases)
-        staple_coords = np.zeros((num_staple_bases,3), dtype=float)
-        for i,base in enumerate(staple_bases): 
-            j = pos_map[base.p]
-            base.coordinates = axis_coords[j]
-            base.ref_frame = axis_frames[:,:,j]
-            staple_coords[i,:] = axis_coords[j,:] + np.dot(axis_frames[:,:,j], stap_local)
-            base.nt_coords = staple_coords[i]
-        #__for base in stape_bases
-
-        return axis_coords, axis_frames, scaffold_coords, staple_coords 
-
-    def _calculate_lattice_directions(self):
-        """ Calculate the unit vectors pointing to neighboring cells.
-        """
-        if (lattice_type == CadnanoLatticeType.honeycomb):
-            dx =  sqrt(3.0) 
-            dz = -3.0 
-
-        elif (lattice_type == CadnanoLatticeType.square):
-            dx =  2.0 
-            dz = -2.0 
-
-    def _calculate_staple_ends(self, base_connectivity):
-        base_connectivity,strands = self._build_strands(base_connectivity)
         num_strands = len(strands)
-        staple_ends = np.empty(shape=(0,5),dtype=float)
+        staple_ends = {}
 
         for i in xrange(0,num_strands):
             strand = strands[i]
@@ -918,9 +753,10 @@ class CadnanoConvertDesign(object):
                 p0 = strand.tour[0].p
                 h1 = strand.tour[-1].h
                 p1 = strand.tour[-1].p
-                staple_ends = np.concatenate((staple_ends, [[i+1, h0, p0, h1, p1]]), axis=0)
+                staple_ends[(h0,p0)] = i+1
         #__for i in xrange(0,num_strands)__
         return staple_ends
+    #__def _calculate_staple_ends
 
     def _set_possible_crossovers(self,design):
         """ Set the possible cross-overs for scaffold and staple strands.
@@ -928,14 +764,16 @@ class CadnanoConvertDesign(object):
         #self._logger.setLevel(logging.DEBUG)
         self._logger.setLevel(logging.INFO)
         self._logger.debug("-------------------- set_possible_crossovers --------------------")
+        lattice_type = design.lattice_type
+        dist_bp = self.dna_parameters.base_pair_rise 
         scaffold_crossovers = []
         staple_crossovers = [] 
-        #structure_helices = self.dna_structure.structure_helices
         structure_helices_coord_map = self.dna_structure.structure_helices_coord_map
         for vhelix in design.helices:
             num = vhelix.num 
             col = vhelix.col
             row = vhelix.row
+            init_coord,_ = get_start_coordinates_angle(self.dna_parameters, lattice_type, row, col, num)
             self._logger.debug(">>> vhelix: num: %d  row: %d  col: %d " % (num, row, col))
             staple_crossovers = vhelix.possible_staple_crossovers
             scaffold_crossovers = vhelix.possible_scaffold_crossovers
@@ -944,104 +782,15 @@ class CadnanoConvertDesign(object):
             for cross_vh,index in staple_crossovers:
                 self._logger.debug("            staple cross-over: %d,%d " % (cross_vh.num,index))
                 cross_sh = structure_helices_coord_map[(cross_vh.row,cross_vh.col)]
-                shelix.possible_staple_crossovers.append((cross_sh,index))
+                coord = init_coord + np.array([0, dist_bp*index, 0]);
+                shelix.possible_staple_crossovers.append((cross_sh,index,coord))
             self._logger.debug("            num scaffold cross-overs: %d " % len(scaffold_crossovers)) 
             for cross_vh,index in scaffold_crossovers:
                 self._logger.debug("            scaffold cross-over: %d,%d " % (cross_vh.num,index))
                 cross_sh = structure_helices_coord_map[(cross_vh.row,cross_vh.col)]
-                shelix.possible_scaffold_crossovers.append((cross_sh,index))
+                coord = init_coord + np.array([0, dist_bp*index, 0]);
+                shelix.possible_scaffold_crossovers.append((cross_sh,index,coord))
         #__for vhelix in design.helices
-
-    def _build_strands(self, base_connectivity):
-        #self._logger.setLevel(logging.DEBUG)
-        self._logger.setLevel(logging.INFO)
-        self._logger.debug("==================== build strands ====================")
-        num_bases = len(base_connectivity)
-        self._logger.debug("Number of bases %d" % num_bases) 
-        strands = []
-        n_strand = 0
-        is_visited = [False]*num_bases
-
-        while (True):
-            try:
-                base_index = is_visited.index(False)
-                curr_base = base_connectivity[base_index]
-                self._logger.debug("------------- find first base --------------")
-                self._logger.debug("Base_index %d" % base_index)
-                self._logger.debug("Curr_base id %d  h %d  p %d  up %s" % (curr_base.id, curr_base.h, curr_base.p, curr_base.up))
-            except:
-                break
-
-            init_base = curr_base
-            #init_baseID = curr_base.id
-
-            # Find the first base in the current strand.
-            self._logger.debug("------------- walk bases --------------")
-            while curr_base.up and (curr_base.up.id != init_base.id):
-                curr_base = curr_base.up
-                self._logger.debug(" curr_base id %d  h %d  p %d" % (curr_base.id, curr_base.h,  curr_base.p))
-                if (is_visited[curr_base.id]):
-                    print('[build_strand] **** ERROR: Reached a visited base.');
-                    return None,None
-            #_while 
-    
-            self._logger.debug("---------- add strand %d ----------" % n_strand)
-            self._logger.debug("first strand base: curr_base.id %d" % curr_base.id)
-            strand = DnaStrand(n_strand,self.dna_structure)
-            strands.append(strand)
-    
-            if not curr_base.up:                     # currBase is at the 5'-end of the strand
-                strand.is_circular = False
-            elif curr_base.up.id == init_base.id:    # currBase goes back to the starting point
-                strand.is_circular = True
-                curr_base = init_base
-                self._logger.debug("strand is circular. " )
-                self._logger.debug("curr_base.id %d" % curr_base.id)
-            else:
-                print('[build_strand] **** ERROR: Exception.')
-                return None,None
-    
-            # Walk through the current strand.
-            n_residue = 1
-            strand.tour.append(curr_base)
-            curr_base.strand = n_strand
-            curr_base.residue = n_residue
-            is_visited[curr_base.id] = True
-    
-            while ( (not strand.is_circular and curr_base.down) or 
-                    (strand.is_circular and (curr_base.down.id != init_base.id)) ):
-                curr_base = curr_base.down
-                #if debug: print "[build_strand] curr_base id %d  h %d  p %d" % (curr_base.id, curr_base.h, curr_base.p )
-    
-                if (is_visited[curr_base.id]):
-                    sys.stderr.write('[build_strand] **** ERROR: Reached a visited base.\n')
-                    return None,None
-    
-                if (n_residue == 1):
-                    strand.is_scaffold = curr_base.is_scaf
-    
-                n_residue = n_residue + 1
-                strand.tour.append(curr_base)
-                curr_base.strand = n_strand
-                curr_base.residue = n_residue
-                is_visited[curr_base.id] = True
-            #__while((not strand.is_circular 
-
-            # Modify the strand if it is circular and the first base crosses over to another helix.
-            # The first base is moved to the end of the strand. This will prevent later issues, like
-            # domains that don't follow the strand tour because the strand first domain would be
-            # merged with the last domain during domain calculation.
-            if strand.is_circular and len(strand.tour) > 2:
-                first_base = strand.tour[0]
-                second_base = strand.tour[1]
-                if first_base.h != second_base.h:
-                    del(strand.tour[0])
-                    strand.tour.append(first_base)
-            #__if strand.is_circular and len(strand.tour) > 2
-
-            n_strand += 1
-        #__while (True):
-        return base_connectivity,strands
 
     def _set_strands_colors(self, strands):
         """ Set the color for staple strands. 
@@ -1224,20 +973,17 @@ class CadnanoConvertDesign(object):
                modified_structure (bool): If True then the structure has been modified with deletions and insertions. 
                sequence (DnaSequence): A list of DnaSequence objects representing the sequences for staple or scaffold strands.
         """
-
         #self._logger.setLevel(logging.DEBUG)
         self._logger.setLevel(logging.INFO)
 
         strands = dna_structure.strands 
         staple_ends = dna_structure.staple_ends 
-        start = np.array([0,0], dtype=float)
 
         for i in xrange(0,len(sequence)):
             seq = sequence[i]
-            start[0] = sequence[i].start[0]
-            start[1] = sequence[i].start[1]
-            row = _find_row(start, staple_ends[:,1:3])[0]
-            istrand = int(staple_ends[row,0])
+            h0 = int(sequence[i].start[0])
+            p0 = int(sequence[i].start[1])
+            istrand = staple_ends[(h0,p0)]
             strand = strands[istrand-1]
             tour = strand.tour
 
@@ -1267,19 +1013,6 @@ class CadnanoConvertDesign(object):
                 #__for j
 
         #__for i
-
-        print_strands = True
-        print_strands = False
-        if (print_strands):
-            self._logger.debug("---------- strands sequences ----------")
-            self._logger.debug(">>> number of strands: %d " % len(strands))
-            for strand in strands:
-                tour = strand.tour
-                self._logger.debug(">>> strand: %d scaf: %d len: %d" % (strand.id,strand.is_scaffold,len(tour)))
-                self._logger.debug("    seq:")
-                for base in tour:
-                    self._logger.debug("    vhelix: %d  pos: %d  seq: %s" % (int(base.h), int(base.p), base.seq))
-            #__for i in xrange(0,len(strands))
     #__def set_sequence
 
     def _wspair(self, x):
@@ -1320,10 +1053,7 @@ class CadnanoConvertDesign(object):
             else:
                return []
 
-
 #__class CadnanoTopology(object)
-
-
 
 
 class _Timer(object):
@@ -1342,86 +1072,6 @@ class _Timer(object):
         self.secs = self.end_time - self.start_time
         self.msecs = self.secs * 1000  # millisecs
         return self.secs
-
-def _deg2rad(deg):
-    """Convert degrees into radians. """
-    rad = (pi/180)* deg;
-    return rad
-
-def _find_row(neigh, curr_bases):
-    tmp = curr_bases - neigh
-    s = np.sum(np.abs(tmp),1)
-    ind = np.where(s==0)[0]
-    return ind
-
-
-
-def _vrrotmat2vec(R):
-    """ Extract the equivalent rotation about an axis from a rotation matrix. """
-    m00 = R[0,0]
-    m01 = R[0,1]
-    m02 = R[0,2]
-    m10 = R[1,0]
-    m11 = R[1,1]
-    m12 = R[1,2]
-    m20 = R[2,0]
-    m21 = R[2,1]
-    m22 = R[2,2]
-    angle = acos(( m00 + m11 + m22 - 1)/2.0)
-    x = (m21 - m12) / sqrt( pow(m21-m12,2) + pow(m02-m20,2) + pow(m10-m01,2) )
-    y = (m02 - m20) / sqrt( pow(m21-m12,2) + pow(m02-m20,2) + pow(m10-m01,2) )
-    z = (m10 - m01) / sqrt( pow(m21-m12,2) + pow(m02-m20,2) + pow(m10-m01,2) )
-    return np.array([x,y,z],dtype=float),angle
-
-
-def _vrrotvec2mat(axis, theta):
-    """ Create a rotation matrix to rotate theta degrees about the axis defined by vec. """
-    s = np.sin(theta)
-    c = np.cos(theta)
-    t = 1 - c
-    #print("[vrrotvec2mat] theta=%s" % str(theta))
-
-    # normalize the vector
-    x,y,z = axis / np.linalg.norm(axis)
-    #print("[vrrotvec2mat] x=%s" % str(x))
-    #print("[vrrotvec2mat] y=%s" % str(y))
-    #print("[vrrotvec2mat] z=%s" % str(z))
-
-    return np.array([ [t*x*x + c,   t*x*y - s*z,  t*x*z + s*y],
-                      [t*x*y + s*z, t*y*y + c,    t*y*z - s*x],
-                      [t*x*z - s*y, t*y*z + s*x,  t*z*z + c  ]])
-
-
-def _bp_interp(dnode_1, triad_1, dnode_2, triad_2, n):
-    """ Interpolate the position (dnode) and orientation (triad) between two base pairs.
-
-        Solve for rotation matrix R defined as the solution of: 
-            R * triad_1 = triad_2 (multiply both sides by transpose(triad_1).
-    """
-    dnode_interp = np.zeros((n,3),dtype=float)
-    triad_interp = np.zeros((3,3,n),dtype=float)
-
-    # solve for rotation matrix R
-    R = np.dot(triad_2,triad_1.T)
-    #print("[bp_interp] R=%s " % str(R))
-    #print("[bp_interp] R.shape=%s " % str(R.shape))
-
-    a,theta = _vrrotmat2vec(R)
-    #print("[bp_interp] a=%s " % str(a))
-    #print("[bp_interp] theta=%s " % str(theta))
-
-    # Calculate for dNode_interp and triad_interp
-    for i in xrange(0,n):
-        dnode_interp[i,:] = (dnode_1*(n+1-(i+1)) + dnode_2*(i+1)) / (n+1)
-        angle = theta*(i+1)/(n+1)
-        #print("[bp_interp] angle=%s " % str(angle))
-        rot_mat = _vrrotvec2mat(a, angle)
-        #print("[bp_interp] rot_mat=%s\n" % str(rot_mat))
-        #print("[bp_interp] rot_mat.shape=%s\n" % str(rot_mat.shape))
-        triad_interp[:,:,i] = np.dot(rot_mat,triad_1)
-
-    return dnode_interp, triad_interp
-
 
 def main():
     """ Create a topology table from a caDNAno JSON design file."""
