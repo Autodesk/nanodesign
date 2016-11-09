@@ -30,7 +30,7 @@ class DnaStrand(object):
     """
 
     def __init__(self, id, dna_structure, is_scaffold, is_circular, tour):
-        """ Initialize a DnaStand object.
+        """ Initialize a DnaStrand object.
 
             Arguments:
                 id (int): The strand ID.
@@ -62,8 +62,8 @@ class DnaStrand(object):
             r = random.random()
             g = random.random()
             b = random.random()
-            # Don't generate a pure blue, that's for a scaffold in cadnano.
-            if (r + g == 0.0) and (b == 1.0):
+            # Don't generate blue, that's for a scaffold in cadnano.
+            if (r + g < 0.1) and (b > 0.9):
                 g = random.random()
                 r = random.random()
             elif (r + g + b > 2.8):

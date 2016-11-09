@@ -3,8 +3,17 @@
 This module defines the classes used to define a structure helix of a DNA structure.
 
 A structure helix is a region in a DNA structure that forms a cylindrical structural element. It can be composed of 
-one or two DNA strands. 
+one or two DNA strands defined by the set of scaffold and staple bases assigned to the helix. 
 
+A helix can be considered to be a container for storing scaffold and staple bases. The position of a base in a helix 
+is given by an integer between 0 and N-1, where N is the maximum number of bases staple or scaffold, assigned to it. 
+
+    Positions     0       1       2       3       4       5             N-1
+              -----------------------------------------------------------------
+    scaffold  | base1 | base2 | base3 | base4 | base5 | base6 |  ...  | baseN |
+              -----------------------------------------------------------------
+    staple    | base1 | base2 | base3 | base4 | base5 | base6 |       | baseN |
+              -----------------------------------------------------------------
 """
 from collections import OrderedDict
 import inspect
@@ -18,20 +27,6 @@ from .parameters import DnaParameters,DnaPolarity
 from ..converters.cadnano.common import CadnanoLatticeType
 from .lattice import Lattice
 from .base import DnaBase
-
-# # temp code to handle objects as they are being transitioned into the main package
-# try:
-#     # TODO: JS 3/25 This will need to change at some point once everything is transitioned.
-#     import os.path
-#     import sys
-#     base_path = os.path.abspath( os.path.dirname(__file__) + '/../' )
-#     sys.path.append(base_path)
-#     import nanodesign as nd
-#     from nanodesign_transition.lattice import Lattice
-#     sys.path = sys.path[:-1]
-# except ImportError:
-#     print "Cannot locate nanodesign package, it hasn't been installed in main packages, and is not reachable relative to the nanodesign_transition directory."
-#     raise ImportError
 
 class DnaStructureHelix(object):
     """ This class stores information for a DNA structure helix. 
@@ -163,11 +158,10 @@ class DnaStructureHelix(object):
 
     def get_start_pos(self):
         """ Get the starting helix position of the scaffold or staple strands. 
-            This is used for visualization.
         """
         num_bases = len(self.staple_bases)
-        staple_start_pos = next((base.p for base in self.staple_bases if base != None),num_bases)
-        scaffold_start_pos = next((base.p for base in self.scaffold_bases if base != None),num_bases)
+        staple_start_pos = self.staple_bases[0].p
+        scaffold_start_pos = self.scaffold_bases[0].p
         start_pos = min(staple_start_pos, scaffold_start_pos)
         return start_pos 
     #__def get_start_pos

@@ -1,16 +1,25 @@
-#-------------------------------------------------------------------------------------#
-#                         run the converter with staple operations                    #
-#-------------------------------------------------------------------------------------#
+# This script tests running the converter with commands to perform staple operations: 
+#
+#     - delete staples 
+#
+#     - generate a maximal staple set 
+#
+# for a caDNAno design. A caDNAno design file is written with the modified staples.
+#
+# A list of staple colors, matching those defined for staples in the cadnano files, may 
+# be given to identify the staples retained after an operation.
+
+# Set the cadnano design directory.
 data=../samples
 
-# Set caDNAno design file.
+# Set the input caDNAno design file.
 fn=fourhelix
 
-# Set operation.
+# Set the staple operation.
 op=delete
 op=maximal_set
 
-# Set commands depending on input file name.
+# Set staple commands depending on the input file name.
 if [ $fn == "fourhelix" ]; then
     # Delete staples.
     if [ $op == "delete" ]; then

@@ -1,15 +1,9 @@
-#-------------------------------------------------------------------------------------#
-#                             write out a cadnano file                                #
-#-------------------------------------------------------------------------------------#
+# This script tests writing out a caDNAno design file.
+
+# Set the cadnano design files directory.
 data=../samples
 
-fn=Nature09_squarenut_no_joins
-fn=square-test-1
-fn=exampleOverhang
-fn=slottedcross
-fn=Rothemund-rect
-fn=robot_v1.9_bent_2
-fn=endcap_issues
+# Set the input caDNAno design file.
 fn=fourhelix
 
 if [ ! -d "results/" ]; then

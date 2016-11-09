@@ -25,7 +25,7 @@ from ..dna_sequence_data import dna_sequence_data
 from .design import CadnanoDesign,CadnanoVirtualHelix,CadnanoBase
 from .reader import CadnanoReader 
 from .common import CadnanoLatticeType
-from .utils import generate_coordinates,get_start_coordinates_angle,vrrotvec2mat,deg2rad,bp_interp,find_row,create_strands
+from .utils import generate_coordinates,get_start_coordinates_angle,vrrotvec2mat,deg2rad,bp_interp,find_row
 
 from ...data.base import DnaBase 
 from ...data.strand import DnaStrand
@@ -55,7 +55,6 @@ class CadnanoConvertDesign(object):
         """
         self._logging_level = logging.INFO
         self._setup_logging()
-        self._timer = _Timer()
         self.dna_structure = None 
         self.staple_colors = []
         self.dna_parameters = dna_parameters
@@ -136,7 +135,6 @@ class CadnanoConvertDesign(object):
         #self._logger.setLevel(logging.DEBUG)
         self._logger.info("Distance between adjacent helices %g " % self.dna_parameters.helix_distance)
         self._logger.info("Helix radius %g " % self.dna_parameters.helix_radius) 
-        self._timer.start()
         # Reset these in case this function is called multiple times. 
         self.base_id = 0
         self.base_map = OrderedDict()
@@ -144,7 +142,6 @@ class CadnanoConvertDesign(object):
         # Create a list of DnaStructureHelix objects for the design. 
         helices = self._create_structure_topology_and_geometry(design)
         self._logger.info("Number of bases in design %d " % len(self.base_map))
-        self._logger.info("Time to create structure topology table %s " % self._timer.finish())
 
         # Set the bases up and down attributes pointing to terminal bases to point to None. 
         # These scaffold and staple terminal bases are automatically added when adding caDNAno 
@@ -182,19 +179,18 @@ class CadnanoConvertDesign(object):
                 base_connectivity[base.id] = base
                 num_bases += 1
         #_for bindex, base in self.base_map.items()
-        print_base_connectivity = False
-        if print_base_connectivity:
-            self._logger.info("---------- base_connectivity  ---------- ")
-            self._logger.info("size of base_connectivity: %d " % len(base_connectivity))
+        if self._logger.getEffectiveLevel() == logging.DEBUG:
+            self._logger.debug("---------- base_connectivity  ---------- ")
+            self._logger.debug("size of base_connectivity: %d " % len(base_connectivity))
             for i in xrange(0,num_bases):
                 base = base_connectivity[i]
                 up = base.up.id if base.up else -1
                 down = base.down.id if base.down else -1
                 across = base.across.id if base.across else -1
-                self._logger.info("%4d  id %4d  h %4d  p %4d  up %4d  down %4d  across %4d  scaf %d" %
+                self._logger.debug("%4d  id %4d  h %4d  p %4d  up %4d  down %4d  across %4d  scaf %d" %
                     ( i, base.id, base.h, base.p, up, down, across, base.is_scaf))
         #__if print_base_connectivity_p
-        #sys.exit(0)
+        #__if self._logger.getEffectiveLevel() == logging.DEBUG
 
         # Remove deleted bases.
         if (modify):
@@ -235,7 +231,7 @@ class CadnanoConvertDesign(object):
         self.dna_structure.set_lattice_type(design.lattice_type)
 
         # Generate strands.
-        strands = create_strands(self.dna_structure)
+        strands = self.dna_structure.create_strands()
         if strands == None:
             self._logger.error("Create strands failed.")
             sys.exit(1)
@@ -1059,24 +1055,6 @@ class CadnanoConvertDesign(object):
                return []
 
 #__class CadnanoTopology(object)
-
-
-class _Timer(object):
-    """ The Timer class is used to calculare elapsed time between calls to the start and finish methods."""
-    def __init__(self):
-        self.start_time = 0.0
-        self.end_time = 0
-        self.secs = 0
-        self.msecs = 0
-
-    def start(self):
-        self.start_time = time.time()
-
-    def finish(self):
-        self.end_time = time.time()
-        self.secs = self.end_time - self.start_time
-        self.msecs = self.secs * 1000  # millisecs
-        return self.secs
 
 def main():
     """ Create a topology table from a caDNAno JSON design file."""

@@ -1,21 +1,17 @@
+# This script tests converting a caDNAno design file into an Autodesk Nanodesign 
+# viewer file. No sequence information is created.
+
+# Set the cadnano design file directory.
 data=../samples
 
-fn=42hb
-fn=exampleOverhang
-fn=fourhelix
-fn=hc-test-9
-fn=nanorobot.v2
-fn=Nature09_squarenut_no_joins
-fn=protractor_180_98_v3
-fn=slottedcross
-fn=square-test-1
-
+# Set the input caDNAno design file.
 fn=fourhelix
 
 if [ ! -d "results/" ]; then
     mkdir results
 fi
 
+# Set the name of the output viewer file.
 outfile=./results/${fn}_viewer.json  
 
 ../../scripts/converter.py --infile=${data}/${fn}.json \

@@ -1,15 +1,9 @@
+# This script tests converting a caDNAno design file into a SimDNA file. 
+
+# Set the cadnano design files directory.
 data=../samples
 
-fn=slottedcross
-fn=Rothemund-rect_adjusted
-fn=fourhelix-deletes
-fn=fourhelix-deletes-3
-fn=Rothemund-rect
-fn=protractor_30_98_v4
-fn=protractor_30_no_wrap
-fn=Rothemund-rect_adjusted
-fn=monolith_right_twist_no_wrap
-fn=monolith_right_twist_no_wrap_no_ss
+# Set the input caDNAno design file.
 fn=fourhelix
 
 outfile=./results/${fn}_nd.pairs
@@ -18,10 +12,8 @@ if [ ! -d "results/" ]; then
     mkdir results
 fi
 
-
 ../../scripts/converter.py --infile=${data}/${fn}.json   \
-             --informat="cadnano"          \
-             --modify=true                 \
-             --outfile=${outfile}          \
-             --outformat="simdna"
-
+                           --informat="cadnano"          \
+                           --modify=true                 \
+                           --outfile=${outfile}          \
+                           --outformat="simdna"
