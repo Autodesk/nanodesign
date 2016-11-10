@@ -21,6 +21,7 @@ import itertools
 import json
 import logging
 import numpy as np
+import sys
 
 # Within package imports
 from .parameters import DnaParameters,DnaPolarity
@@ -277,8 +278,6 @@ class DnaStructureHelix(object):
 
     def add_maximal_staple_crossovers(self):
         """ Add crossover connections for bases for the maximal staple set. """
-        self.logger.setLevel(logging.INFO)
-        #self.logger.setLevel(logging.DEBUG)
         self.logger.debug("=================== add maximal staple crossovers %d ===================" % self.id)
         self.logger.debug("Scaffold polarity %s" % self.scaffold_polarity)
 
@@ -293,7 +292,7 @@ class DnaStructureHelix(object):
             to_helix = crossover[0]
             pos = crossover[1]
             has_staple,has_scaffold = self.has_base_pos(pos)
-            if has_staple and has_scaffold:
+            if has_staple and has_scaffold and (pos in to_helix.staple_pos):
                 base = self.staple_pos[pos]
                 to_base = to_helix.staple_pos[pos]
                 if five_prime:
