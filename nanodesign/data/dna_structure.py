@@ -322,7 +322,8 @@ class DnaStructure(object):
         self.create_base_connectivity_table()
 
         # Create the list of strands from the new base connectivity.
-        self.strands = self.create_strands()
+        self.create_strands()
+        self.strands = self.strands
         self.strands_map = dict()
         self._logger.info("Number of added staples %d" % (len(self.strands)-len(remaining_strands)))
         self._logger.info("Total number of strands %d" % len(self.strands))
