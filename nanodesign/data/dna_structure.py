@@ -119,6 +119,8 @@ class DnaStructure(object):
 
     def create_strands(self):
         """ Create the list of strands connecting contiguous sequences of bases.  
+
+            Returns the list of strands (List[DnaStrand]).
         """
         base_connectivity = self.base_connectivity 
         num_bases = len(base_connectivity)
@@ -193,6 +195,7 @@ class DnaStructure(object):
         #__while (True):
 
         self.strands = strands
+        return self.strands
     #_def create_strands
 
     def get_domains(self):
@@ -323,7 +326,6 @@ class DnaStructure(object):
 
         # Create the list of strands from the new base connectivity.
         self.create_strands()
-        self.strands = self.strands
         self.strands_map = dict()
         self._logger.info("Number of added staples %d" % (len(self.strands)-len(remaining_strands)))
         self._logger.info("Total number of strands %d" % len(self.strands))

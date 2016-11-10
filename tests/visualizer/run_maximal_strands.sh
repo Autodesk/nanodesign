@@ -25,14 +25,14 @@ if [ $fn == "fourhelix" ]; then
     #     0: [26,29184]  ,[60,7536862]
     #     3: [8, 5749504]
     #     2: [46, 243362 ], [60, 16225054] 
-   strand_cmd="maximal_set,retain=[11184640,243362]"
-   strand_cmd="maximal_set,retain=[29184]"
-   strand_cmd="maximal_set"
-
+    strand_cmd="maximal_set,retain=[11184640,243362]"
+    strand_cmd="maximal_set,retain=[29184]"
+    strand_cmd="maximal_set"
     # Set the command to show all stand paths.
     cmds="strand name=All  rep=path  show=true;helix name=0  rep=maximal_crossovers  show=true"
 else
-   strand_cmd="maximal_set"
+    strand_cmd="maximal_set"
+    cmds="strand name=All  rep=path  show=true"
 fi
 
 ../../scripts/vis.py --infile=${dir}/${fn}.json       \
