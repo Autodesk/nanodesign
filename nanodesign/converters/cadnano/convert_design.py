@@ -231,7 +231,8 @@ class CadnanoConvertDesign(object):
         self.dna_structure.set_lattice_type(design.lattice_type)
 
         # Generate strands.
-        strands = self.dna_structure.create_strands()
+        self.dna_structure.create_strands()
+        strands = self.dna_structure.strands
         if strands == None:
             self._logger.error("Create strands failed.")
             sys.exit(1)

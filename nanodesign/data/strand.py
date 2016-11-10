@@ -64,8 +64,10 @@ class DnaStrand(object):
             b = random.random()
             # Don't generate blue, that's for a scaffold in cadnano.
             if (r + g < 0.1) and (b > 0.9):
-                g = random.random()
                 r = random.random()
+                g = random.random()
+                b = random.uniform(0.0, 0.5)
+            # Don't generate colors that are too light.
             elif (r + g + b > 2.8):
                 g = random.random()
                 r = random.random()

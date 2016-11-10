@@ -75,12 +75,12 @@ class CadnanoWriter(object):
         # they were read in from the original caDNAno file.
         helix_map = {}
         for helix in dna_structure.structure_helices_map.itervalues():
-            helix_map[helix.count] = helix 
+            helix_map[helix.load_order] = helix 
 
         # Get the base connectivity, loops and skips for the staple and scaffold strands.
         self._logger.debug("=================== get the base connectivity ===================")
-        for count in sorted(helix_map):
-            helix = helix_map[count] 
+        for load_order in sorted(helix_map):
+            helix = helix_map[load_order] 
             scaffold_bases = helix.scaffold_bases
             staple_bases = helix.staple_bases
             self._logger.debug("Helix num %d  num staple bases %d   num scaffold bases %d" % (helix.id,
@@ -89,7 +89,7 @@ class CadnanoWriter(object):
             row = helix.lattice_row 
             col = helix.lattice_col
             num = helix.lattice_num
-            self._logger.info("Helix count %d  num %d  row %d  col %d" % (count, num, row, col)) 
+            self._logger.info("Helix load order %d  num %d  row %d  col %d" % (load_order, num, row, col)) 
 
             # Set the arrays for the virtual helix base information.
             scaf_info = self._get_base_info(helix_size, scaffold_bases)
@@ -112,7 +112,7 @@ class CadnanoWriter(object):
                       }
 
             vstrands_info.append( vstrand )
-        #__for count in sorted(helix_map)
+        #__for load_order in sorted(helix_map)
 
         return vstrands_info
     #__def _get_vstrand_info

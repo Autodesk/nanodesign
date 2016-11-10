@@ -1,6 +1,6 @@
 # This script tests writing a dna structure created from a caDNAno design file to JSON-formated 
 # and plain text files. The files contain information about the bases, strands and domains created
-# from a design.
+# from a design. This is useful to inspect the contents of internal data structures when debugging. 
 
 # Set the cadnano design files directory.
 data=../samples

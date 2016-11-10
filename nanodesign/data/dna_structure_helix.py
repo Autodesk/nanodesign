@@ -32,8 +32,7 @@ class DnaStructureHelix(object):
     """ This class stores information for a DNA structure helix. 
 
         Attributes:
-            count (int): The helix count (0 based) of the order the helix was processed. This is needed when
-                writing a caDNAno file.
+            load_order (int): The order (0-based) the helix was processed. This is needed when writing a caDNAno file. 
             dna_parameters (DnaParameters): The DNA parameters to use when creating the 3D geometry for the design.
             end_coordinates (NumPy 2x3 ndarray[float]): The coordinates at the ends of the helix.
             end_frames (NumPy 3x3x2 ndarray[float]): The coordinate frames at the ends of the helix.
@@ -66,12 +65,12 @@ class DnaStructureHelix(object):
 
     # TODO (DaveP) We need to remove the references to caDNAno lattice-based information.
 
-    def __init__(self, count, id, scaffold_polarity, helix_axis_coords, helix_axis_frames, scaffold_coords, staple_coords,
+    def __init__(self, load_order, id, scaffold_polarity, helix_axis_coords, helix_axis_frames, scaffold_coords, staple_coords,
                  scaffold_bases, staple_bases):
         """ Initialize a DnaStructureHelix object.
 
             Arguments:
-                count (int): The helix count (0 based) of the order the helix was processed.
+                load_order (int): The order the helix was processed.
                 id (int): The helix ID.
                 scaffold_polarity (DnaPolarity): The helix polarity. 
                 helix_axis_coords (NumPy Nx3 ndarray[float]): The coordinates of base nodes along the helix axis. 
@@ -82,7 +81,7 @@ class DnaStructureHelix(object):
                 staple_coords (NumPy Nx3 ndarray[float]): The staple DNA helix nucleotide coordinates. 
         """
         self.id = id
-        self.count = count 
+        self.load_order = load_order
         self.staple_bases = staple_bases
         self.staple_coords = staple_coords
         self.scaffold_bases = scaffold_bases

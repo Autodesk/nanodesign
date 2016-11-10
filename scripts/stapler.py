@@ -817,11 +817,9 @@ class Stapler(object):
                         #print "strand nr",strand_nr,"path nr",path_nr,"domain nr",domain,"has < 2 bases, cannot break" 
                     else:
                         helix = self.dna_structure.strands[strand_nr].domain_list[domain].helix.lattice_num
-                        length_domain = len(self.dna_structure.strands[strand_nr].domain_list[domain].base_list)
                         position1 = self.dna_structure.strands[strand_nr].domain_list[domain].base_list[ break_base ].p
                         position2 = self.dna_structure.strands[strand_nr].domain_list[domain].base_list[ break_base + 1 ].p
-                        helix_index = self.dna_structure.structure_helices_map[ helix ].count
-                        cadnano_helix = self.cadnano_design.helices[ helix_index ]
+                        helix_index = self.dna_structure.structure_helices_map[ helix ].load_order
                         self.cadnano_design.helices[helix_index].staple_strands[position2].initial_strand=-1
                         self.cadnano_design.helices[helix_index].staple_strands[position2].initial_base=-1
                         self.cadnano_design.helices[helix_index].staple_strands[position1].final_strand=-1
@@ -831,8 +829,8 @@ class Stapler(object):
 
                 else:         
                     crossover = self.path_crossover_list[path_nr][domain][1]
-                    helix_index_3 = self.dna_structure.structure_helices_map[ crossover[3] ].count 
-                    helix_index_0 = self.dna_structure.structure_helices_map[ crossover[0] ].count 
+                    helix_index_3 = self.dna_structure.structure_helices_map[ crossover[3] ].load_order
+                    helix_index_0 = self.dna_structure.structure_helices_map[ crossover[0] ].load_order
                     self.cadnano_design.helices[ helix_index_3 ].staple_strands[crossover[4]].initial_strand=-1
                     self.cadnano_design.helices[ helix_index_3 ].staple_strands[crossover[4]].initial_base=-1
                     self.cadnano_design.helices[ helix_index_0 ].staple_strands[crossover[1]].final_strand=-1

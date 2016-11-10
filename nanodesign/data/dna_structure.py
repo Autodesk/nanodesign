@@ -57,7 +57,7 @@ class DnaStructure(object):
         self.connector_points = []
         self._logger = self._setup_logging()
         self._add_structure_helices(helices)
-        self.aux_data_computed = False
+        self._aux_data_computed = False
 
     def _setup_logging(self):
         """ Set up logging."""
@@ -106,7 +106,7 @@ class DnaStructure(object):
             relationships, and crossovers. This data is needed for visualization, calculating melting
             temperature and other applications.
         """
-        if self.aux_data_computed:
+        if self._aux_data_computed:
             return 
         for strand in self.strands:
             strand.dna_structure = self
@@ -115,15 +115,10 @@ class DnaStructure(object):
         self._compute_domains()
         self._set_helix_connectivity()
         self._compute_helix_design_crossovers()
-        self.aux_data_computed = True
+        self._aux_data_computed = True
 
     def create_strands(self):
         """ Create the list of strands connecting contiguous sequences of bases.  
-
-            Attributes:
-                dna_structure (DnaStructure): The DnaStructure object.
-
-            Retrurns a list of strands (List[DnaStrand]).
         """
         base_connectivity = self.base_connectivity 
         num_bases = len(base_connectivity)
@@ -197,7 +192,7 @@ class DnaStructure(object):
             n_strand += 1
         #__while (True):
 
-        return strands
+        self.strands = strands
     #_def create_strands
 
     def get_domains(self):
