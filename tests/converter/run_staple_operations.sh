@@ -43,6 +43,18 @@ if [ $fn == "fourhelix" ]; then
         staple_cmd=${mset_cmd}
         outfile=./results/${fn}_nd_max.json  
     fi
+else 
+    if [ $op == "maximal_set" ]; then
+        mset_cmd="maximal_set"
+        staple_cmd=${mset_cmd}
+        outfile=./results/${fn}_nd_max.json  
+    fi
+
+    if [ $op == "delete" ]; then
+        del_cmd="delete"
+        staple_cmd=${del_cmd}
+        outfile=./results/${fn}_nd_del.json
+    fi
 fi
 
 if [ ! -d "results/" ]; then

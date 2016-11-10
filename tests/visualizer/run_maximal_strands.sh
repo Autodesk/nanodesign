@@ -17,7 +17,7 @@ atomic_model="false"
 # Set cadnano file name.
 fn=fourhelix
 
-# set the staples to retain.
+# Set the strand operation command.
 
 if [ $fn == "fourhelix" ]; then
     # The valid staple colors from the fourhelix design file (helix number: [position,color], ...):
@@ -31,6 +31,8 @@ if [ $fn == "fourhelix" ]; then
 
     # Set the command to show all stand paths.
     cmds="strand name=All  rep=path  show=true;helix name=0  rep=maximal_crossovers  show=true"
+else
+   strand_cmd="maximal_set"
 fi
 
 ../../scripts/vis.py --infile=${dir}/${fn}.json       \
