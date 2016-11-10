@@ -1,39 +1,24 @@
-#-------------------------------------------------------------------------------------#
-#                     run the converter with a sequence name.                         #
-#-------------------------------------------------------------------------------------#
+# This script tests converting a caDNAno design file into an Autodesk Nanodesign
+# viewer file. 
+#
+# The sequence to assign to the design is given by a sequence name.
 
 # Set the cadnano design files directory.
 data=../samples
 
-# A list of various cadnano design file names.
-fn=42hb
-fn=aNANO_3D_7_14_final
+# Set the input caDNAno design file.
 fn=fourhelix
-fn=fourhelix_deletes
-fn=icosahedron
-fn=protractor_30_98_v4
-fn=robot_v1.9_bent_2
-fn=slottedcross-1
-fn=slottedcross
 
-# A list of various sequence names.
-seq=p7308
-seq=p7704
-seq=p8064
-seq=p8100
-seq=p8634
-seq=M13KO7
-seq=p7560
+# Set the sequence name. 
 seq=M13mp18
 
-# Set to true to modify structure with inserts and deletes.
-#modify="false"
-modify="true"
+# Set the sequence name.
+# Valid names are: p7308, p7704, p8064, p8100, p8634, M13KO7, p7560 and M13mp18.
+seq=M13mp18
 
-# Execute the converter.
-#fn=fourhelix_nd_del_restaple
-#data=./results
-fn=fourhelix
+# Modify the design with the inserts and deletes given in the caDNAno design file.
+# Set to "true" to modify the design.
+modify="false"
 
 outfile=./results/${fn}_viewer.json 
 
@@ -41,15 +26,10 @@ if [ ! -d "results/" ]; then
     mkdir results
 fi
 
-../../scripts/converter.py --infile=${data}/${fn}.json      \
-             --informat="cadnano"             \
-             --inseqname=${seq}               \
-             --modify=${modify}               \
-             --outfile=${outfile}             \
-             --outformat="viewer"
-
-echo
-echo "######### written to ${outfile} ############"
-
-
+../../scripts/converter.py --infile=${data}/${fn}.json  \
+                           --informat="cadnano"         \
+                           --inseqname=${seq}           \
+                           --modify=${modify}           \
+                           --outfile=${outfile}         \
+                           --outformat="viewer"
 

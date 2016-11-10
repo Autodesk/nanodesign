@@ -30,7 +30,7 @@ class DnaStrand(object):
     """
 
     def __init__(self, id, dna_structure, is_scaffold, is_circular, tour):
-        """ Initialize a DnaStand object.
+        """ Initialize a DnaStrand object.
 
             Arguments:
                 id (int): The strand ID.
@@ -53,24 +53,28 @@ class DnaStrand(object):
         self.insert_seq = []
 
     def create_random_color(self): 
-        """ Create a random color for the strand. """
+        """ Create a random color for the strand. 
+
+            Colors are generated from the limited set of intensity values 
+            in color_list[] to make them more distinguishable. 
+        """
+        # Create a list of n colors.
+        n = 4
+        dc = 1.0 / (n-1)
+        color_list = [i*dc for i in range(n)]
+
         if self.is_scaffold:
-            r = 1.0
-            g = 1.0
-            b = 1.0
+            rgb = [1.0, 1.0, 1.0]
         else:
-            r = random.random()
-            g = random.random()
-            b = random.random()
-            # Don't generate a pure blue, that's for a scaffold in cadnano.
-            if (r + g == 0.0) and (b == 1.0):
-                g = random.random()
-                r = random.random()
-            elif (r + g + b > 2.8):
-                g = random.random()
-                r = random.random()
+            rgb = [random.choice(color_list) for i in range(3)]
+            # Don't generate blue (that's for a scaffold in cadnano) or black.
+            if (rgb[0] == 0.0) and (rgb[1] == 0.0):
+                rgb[0] = random.choice(color_list[1:])
+                if rgb[2] == 0.0: 
+                    rgb[2] = random.choice(color_list[1:])    
+            #__if (rgb[0] == 0) and (rgb[1] == 0)
         #__if self.is_scaffold
-        return [r, g, b]
+        return rgb 
     #__def create_random_color
 
     def add_helix(self, helix): 
@@ -100,7 +104,9 @@ class DnaStrand(object):
 
     def get_base_index(self, base):
         """ Get the index into the strand for the given base. 
-            This is only used when writing a visualization file.
+
+            Arguments:
+                base (DnaBase): The base to get the index for.
         """
         num_bases = len(self.tour)
         if (not self.base_id_list):

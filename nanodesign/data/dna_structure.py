@@ -13,27 +13,12 @@ import sys
 
 # imports from other parts of the package
 from .parameters import DnaParameters
-from ..converters.cadnano.utils import create_strands
 from ..converters.cadnano.common import CadnanoLatticeType
 from ..converters.cadnano.utils import generate_coordinates
 from .dna_structure_helix import DnaStructureHelix,DnaHelixConnection
 from .lattice import Lattice
 from .strand import DnaStrand
 from . import Domain
-
-# # temp code to handle objects as they are being transitioned into the main package
-# try:
-#     # TODO: JS 3/25 This will need to change at some point once everything is transitioned.
-#     import os.path
-#     import sys
-#     base_path = os.path.abspath( os.path.dirname(__file__) + '/../' )
-#     sys.path.append(base_path)
-#     import nanodesign as nd
-#     from nanodesign_transition.lattice import Lattice
-#     sys.path = sys.path[:-1]
-# except ImportError:
-#     print "Cannot locate nanodesign package, it hasn't been installed in main packages, and is not reachable relative to the nanodesign_transition directory."
-#     raise ImportError
 
 class DnaStructure(object):
     """ This class stores the base connectivity and geometry for a DNA model. 
@@ -72,6 +57,7 @@ class DnaStructure(object):
         self.connector_points = []
         self._logger = self._setup_logging()
         self._add_structure_helices(helices)
+        self._aux_data_computed = False
 
     def _setup_logging(self):
         """ Set up logging."""
@@ -120,6 +106,8 @@ class DnaStructure(object):
             relationships, and crossovers. This data is needed for visualization, calculating melting
             temperature and other applications.
         """
+        if self._aux_data_computed:
+            return 
         for strand in self.strands:
             strand.dna_structure = self
         self.set_strand_helix_references()
@@ -127,6 +115,88 @@ class DnaStructure(object):
         self._compute_domains()
         self._set_helix_connectivity()
         self._compute_helix_design_crossovers()
+        self._aux_data_computed = True
+
+    def create_strands(self):
+        """ Create the list of strands connecting contiguous sequences of bases.  
+
+            Returns the list of strands (List[DnaStrand]).
+        """
+        base_connectivity = self.base_connectivity 
+        num_bases = len(base_connectivity)
+        strands = []
+        n_strand = 0
+        is_visited = [False]*num_bases
+
+        while (True):
+            try:
+                base_index = is_visited.index(False)
+                curr_base = base_connectivity[base_index]
+            except:
+                break
+
+            init_base = curr_base
+
+            # Find the first base in the current strand.
+            while curr_base.up and (curr_base.up.id != init_base.id):
+                curr_base = curr_base.up
+                if (is_visited[curr_base.id]):
+                    return None
+            #_while 
+
+            if not curr_base.up:                     # currBase is at the 5'-end of the strand
+                is_circular = False
+            elif curr_base.up.id == init_base.id:    # currBase goes back to the starting point
+                is_circular = True
+                curr_base = init_base
+            else:
+                return None
+
+            # Walk through the current strand.
+            n_residue = 1
+            tour = [curr_base]
+            curr_base.strand = n_strand
+            curr_base.residue = n_residue
+            is_visited[curr_base.id] = True
+            is_scaffold = False
+
+            while ( (not is_circular and curr_base.down) or 
+                    (is_circular and (curr_base.down.id != init_base.id)) ):
+                curr_base = curr_base.down
+
+                if (is_visited[curr_base.id]):
+                    return None
+
+                if (n_residue == 1):
+                    is_scaffold = curr_base.is_scaf
+
+                n_residue = n_residue + 1
+                tour.append(curr_base)
+                curr_base.strand = n_strand
+                curr_base.residue = n_residue
+                is_visited[curr_base.id] = True
+            #__while((not is_circular 
+
+            # Modify the strand if it is circular and the first base crosses over to another helix.
+            # The first base is moved to the end of the strand. This will prevent later issues, like
+            # domains that don't follow the strand tour because the strand first domain would be
+            # merged with the last domain during domain calculation.
+            if is_circular and len(tour) > 2:
+                first_base = tour[0]
+                second_base = tour[1]
+                if first_base.h != second_base.h:
+                    del(tour[0])
+                    tour.append(first_base)
+            #__if is_circular and len(tour) > 2
+
+            strand = DnaStrand(n_strand, self, is_scaffold, is_circular, tour)
+            strands.append(strand)
+            n_strand += 1
+        #__while (True):
+
+        self.strands = strands
+        return self.strands
+    #_def create_strands
 
     def get_domains(self):
         if (not self.domain_list): 
@@ -255,7 +325,7 @@ class DnaStructure(object):
         self.create_base_connectivity_table()
 
         # Create the list of strands from the new base connectivity.
-        self.strands = create_strands(self)
+        self.create_strands()
         self.strands_map = dict()
         self._logger.info("Number of added staples %d" % (len(self.strands)-len(remaining_strands)))
         self._logger.info("Total number of strands %d" % len(self.strands))

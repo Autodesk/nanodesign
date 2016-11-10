@@ -1,36 +1,33 @@
-#-------------------------------------------------------------------------------------#
-#                          visualize a transformed structure                          #
-#-------------------------------------------------------------------------------------#
+# This shell script demonstrates how to execute the visualizer and show a transformed structure.
+# The geometry of the helices in the design are rotated and translated.
 
-# directory path to cadnano design files.
+# Set the directory path to cadnano design files.
 dir=../samples/
 
-# sequence file name
-seqfile=fourhelix_M13mp18
-
-# sequence name
+# Set the sequence name.
 seqname=M13mp18
 
-# set cadnano file name
-fn=convex_triangle
+# Set cadnano file name
+fn=fourhelix
 
-# set the flag for generating atomic structures.
-atomic_model="true"
+# Set the flag for generating atomic structures.
 atomic_model="false"
 
-if [ $fn == "slottedcross" ]; then 
-    transform="helices(0-41):connectors(scaffold)"
-    transform="helices(0-41):rotate(270,0,0),translate(0,0,41.4)"
-    cmds="strand name=Scaffold_55_7 rep=path show=true;strand name=Scaffold_55_7 rep=connectors show=true;helix name=19  rep=geometry show=true;helix name=46 rep=geometry show=true;helix name=19  rep=base_positions  show=true"
+# Set the helix IDs and transformations.
+#
+# The 'helices' option sepcifies a list of caDNAno helix IDs .
+#
+# The transformation is given by
+#
+#    rotate(rx,ry,rz) - rotates about x, y and z axes.
+#
+#    translate(tx,ty,tz) - translates by tx, ty and tz.
 
-elif [ $fn == "convex_triangle" ]; then
-    transform="helices(1-10):connectors(scaffold)"
-   transform=""
-else
-   transform=""
+if [ $fn == "fourhelix" ]; then 
+    transform="helices(0,1):rotate(90,0,0),translate(0.5,0,0);helices(2,3):rotate(0,90,0),translate(0,0,0)"
+    cmds="helix name=All  rep=geometry  show=true"
 fi
 
-# execute the visualizer 
 ../../scripts/vis.py --infile=${dir}/${fn}.json       \
                      --inseqname=${seqname}           \
                      --atomic_model=${atomic_model}   \

@@ -3,8 +3,17 @@
 This module defines the classes used to define a structure helix of a DNA structure.
 
 A structure helix is a region in a DNA structure that forms a cylindrical structural element. It can be composed of 
-one or two DNA strands. 
+one or two DNA strands defined by the set of scaffold and staple bases assigned to the helix. 
 
+A helix can be considered to be a container for storing scaffold and staple bases. The position of a base in a helix 
+is given by an integer between 0 and N-1, where N is the maximum number of bases staple or scaffold, assigned to it. 
+
+    Positions     0       1       2       3       4       5             N-1
+              -----------------------------------------------------------------
+    scaffold  | base1 | base2 | base3 | base4 | base5 | base6 |  ...  | baseN |
+              -----------------------------------------------------------------
+    staple    | base1 | base2 | base3 | base4 | base5 | base6 |       | baseN |
+              -----------------------------------------------------------------
 """
 from collections import OrderedDict
 import inspect
@@ -12,6 +21,7 @@ import itertools
 import json
 import logging
 import numpy as np
+import sys
 
 # Within package imports
 from .parameters import DnaParameters,DnaPolarity
@@ -19,26 +29,11 @@ from ..converters.cadnano.common import CadnanoLatticeType
 from .lattice import Lattice
 from .base import DnaBase
 
-# # temp code to handle objects as they are being transitioned into the main package
-# try:
-#     # TODO: JS 3/25 This will need to change at some point once everything is transitioned.
-#     import os.path
-#     import sys
-#     base_path = os.path.abspath( os.path.dirname(__file__) + '/../' )
-#     sys.path.append(base_path)
-#     import nanodesign as nd
-#     from nanodesign_transition.lattice import Lattice
-#     sys.path = sys.path[:-1]
-# except ImportError:
-#     print "Cannot locate nanodesign package, it hasn't been installed in main packages, and is not reachable relative to the nanodesign_transition directory."
-#     raise ImportError
-
 class DnaStructureHelix(object):
     """ This class stores information for a DNA structure helix. 
 
         Attributes:
-            count (int): The helix count (0 based) of the order the helix was processed. This is needed when
-                writing a caDNAno file.
+            load_order (int): The order (0-based) the helix was processed. This is needed when writing a caDNAno file. 
             dna_parameters (DnaParameters): The DNA parameters to use when creating the 3D geometry for the design.
             end_coordinates (NumPy 2x3 ndarray[float]): The coordinates at the ends of the helix.
             end_frames (NumPy 3x3x2 ndarray[float]): The coordinate frames at the ends of the helix.
@@ -71,12 +66,12 @@ class DnaStructureHelix(object):
 
     # TODO (DaveP) We need to remove the references to caDNAno lattice-based information.
 
-    def __init__(self, count, id, scaffold_polarity, helix_axis_coords, helix_axis_frames, scaffold_coords, staple_coords,
+    def __init__(self, load_order, id, scaffold_polarity, helix_axis_coords, helix_axis_frames, scaffold_coords, staple_coords,
                  scaffold_bases, staple_bases):
         """ Initialize a DnaStructureHelix object.
 
             Arguments:
-                count (int): The helix count (0 based) of the order the helix was processed.
+                load_order (int): The order the helix was processed.
                 id (int): The helix ID.
                 scaffold_polarity (DnaPolarity): The helix polarity. 
                 helix_axis_coords (NumPy Nx3 ndarray[float]): The coordinates of base nodes along the helix axis. 
@@ -87,7 +82,7 @@ class DnaStructureHelix(object):
                 staple_coords (NumPy Nx3 ndarray[float]): The staple DNA helix nucleotide coordinates. 
         """
         self.id = id
-        self.count = count 
+        self.load_order = load_order
         self.staple_bases = staple_bases
         self.staple_coords = staple_coords
         self.scaffold_bases = scaffold_bases
@@ -163,11 +158,10 @@ class DnaStructureHelix(object):
 
     def get_start_pos(self):
         """ Get the starting helix position of the scaffold or staple strands. 
-            This is used for visualization.
         """
         num_bases = len(self.staple_bases)
-        staple_start_pos = next((base.p for base in self.staple_bases if base != None),num_bases)
-        scaffold_start_pos = next((base.p for base in self.scaffold_bases if base != None),num_bases)
+        staple_start_pos = self.staple_bases[0].p
+        scaffold_start_pos = self.scaffold_bases[0].p
         start_pos = min(staple_start_pos, scaffold_start_pos)
         return start_pos 
     #__def get_start_pos
@@ -284,8 +278,6 @@ class DnaStructureHelix(object):
 
     def add_maximal_staple_crossovers(self):
         """ Add crossover connections for bases for the maximal staple set. """
-        self.logger.setLevel(logging.INFO)
-        #self.logger.setLevel(logging.DEBUG)
         self.logger.debug("=================== add maximal staple crossovers %d ===================" % self.id)
         self.logger.debug("Scaffold polarity %s" % self.scaffold_polarity)
 
@@ -300,7 +292,7 @@ class DnaStructureHelix(object):
             to_helix = crossover[0]
             pos = crossover[1]
             has_staple,has_scaffold = self.has_base_pos(pos)
-            if has_staple and has_scaffold:
+            if has_staple and has_scaffold and (pos in to_helix.staple_pos):
                 base = self.staple_pos[pos]
                 to_base = to_helix.staple_pos[pos]
                 if five_prime:

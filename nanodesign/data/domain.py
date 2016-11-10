@@ -1,9 +1,24 @@
+#!/usr/bin/env python
+"""
+This module is used to store information for a DNA domain. 
+
+A domain is a contiguous sequence of bases within a strand. They are bounded by single->double 
+or double->single strand transitions, crossovers between helices or strand termination.
+"""
 __all__ = ["Domain"]
 
 from .energymodel import energy_model, convert_temperature_K_to_C
 
 class Domain(object):
-    """ This class stores information for a DNA domain. """
+    """ This class stores information for a DNA domain. 
+
+        Attributes:
+            id (int): The domain ID.
+            helix (DnaStructureHelix): The helix the domain is contained in.
+            strand (DnaStrand): The strand the domain is part of.
+            base_list (List[DnaBase]): The list of bases in the domain.
+            _color (List[Float]): The list of three RGB values defining the domain color.
+    """
     def __init__(self, id, helix, strand, bases):
         self.id = id
         self.helix = helix
@@ -42,11 +57,10 @@ class Domain(object):
         base2 = self.base_list[-1]
         point1 = base1.coordinates
         point2 = base2.coordinates
-        #print("[get_end_points] base 1 p %d  h %d  coord %g %g %g" % (base1.p, base1.h, point1[0], point1[1], point1[2]))
-        #print("                 base 2 p %d  h %d  coord %g %g %g" % (base2.p, base2.h, point2[0], point2[1], point2[2]))
         return point1,point2
 
     def melting_temperature(self):
+        """ Calculate the domain melting temperature. """
         # If we are not paired, return a nonphysical melting temperature.
         if self.connected_domain == -1: 
             return -500.0

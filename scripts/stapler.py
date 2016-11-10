@@ -5,18 +5,21 @@ import logging
 import argparse
 import numpy as np
 
-base_path = os.path.abspath( os.path.dirname(__file__) + '../nanodesign_transition/converters' )
-sys.path.append( base_path )
-
-from converter import Converter
-from cadnano.reader import CadnanoReader
-from cadnano.writer import CadnanoWriter
-from cadnano.convert_design import CadnanoConvertDesign
-
-sys.path = sys.path[:-1]
+try:
+    from nanodesign.converters.converter import Converter,ConverterFileFormats
+except ImportError:
+    import sys
+    base_path = os.path.abspath( os.path.join( os.path.dirname(os.path.abspath( __file__)), '../'))
+    sys.path.append(base_path)
+    from nanodesign.converters.converter import Converter,ConverterFileFormats
+    from nanodesign.converters.cadnano.reader import CadnanoReader
+    from nanodesign.converters.cadnano.writer import CadnanoWriter
+    from nanodesign.converters.cadnano.convert_design import CadnanoConvertDesign
+    from nanodesign.data.parameters import DnaParameters
+    sys.path = sys.path[:-1]
 
 #reduce logging level TODO
-logging.disable(logging.ERROR)
+#logging.disable(logging.ERROR) davep
 
 class Stapler(object):
     """
@@ -77,35 +80,53 @@ class Stapler(object):
         self.template_offsets = []
         self.break_positions = []
         self.single_strand_side_exception = []
+        self._logger = self._setup_logging()
 
         self._generate_paths()
         self._join_crossovers()
+
+    def _setup_logging(self):
+        """ Set up logging."""
+        logger = logging.getLogger("stapler")
+        logger.setLevel(logging.INFO)
+    
+        # create console handler and set format
+        console_handler = logging.StreamHandler()
+        formatter = logging.Formatter('[%(name)s] %(levelname)s - %(message)s')
+        console_handler.setFormatter(formatter)
+        logger.addHandler(console_handler)
+        return logger
     
     def _generate_paths(self):
         """ create path_list, crossovers, crossovers_sorted, path_crossover_list, strand_index
         """
+        #self._logger.setLevel(logging.DEBUG)
+        self._logger.debug("=====================  generate paths =====================")
         path_number = 0
+
         for strand_nr, strand in enumerate(self.dna_structure.strands):
             if not strand.is_scaffold:
                 path = []                      #list of domain lengths
                 path_crossovers = []           #list of crossover placeholders
+                self._logger.debug("")
+                self._logger.debug("---------- strand %d ---------" % strand.id)
+                self._logger.debug("Number of domains %d " % len(strand.domain_list))
                 
                 for domain_nr, domain in enumerate(strand.domain_list):
                     path.append(len(domain.base_list))      #add domain length
                     
-                    #collect crossover information, add to crossover list
+                    # Collect crossover information, add to crossover list.
                     if strand.is_circular or domain_nr < ( len(strand.domain_list) - 1 ):
                         helix1 = domain.helix.lattice_num
                         helix2 = strand.domain_list[( domain_nr + 1 ) % len(strand.domain_list)].helix.lattice_num
                         base1 = domain.base_list[-1].p
                         base2 = strand.domain_list[( domain_nr + 1 ) % len(strand.domain_list)].base_list[0].p
                         """ TODO
-                            scaff_base1 and scaff_base2 are scaffold base indices of crossover
-                            information is based on base_connectivity, in which base ids are shifted by -1. Not clear why, may not be relied on.
                             scaffold strand is required to be strand 0
                         """
-                        scaff_base1 = self.dna_structure.strands[0].get_base_index(self.dna_structure.base_connectivity[domain.base_list[-1].across-1])
-                        scaff_base2 = self.dna_structure.strands[0].get_base_index(self.dna_structure.base_connectivity[strand.domain_list[( domain_nr + 1 ) % len(strand.domain_list)].base_list[0].across-1])
+                        scaff_base1 = self.dna_structure.strands[0].get_base_index(domain.base_list[-1].across)
+                        scaff_base2 = self.dna_structure.strands[0].get_base_index(strand.domain_list[( domain_nr + 1 ) % len(strand.domain_list)].base_list[0].across)
+                       
                         self.crossovers.append([helix1, base1, scaff_base1, helix2, base2, scaff_base2, strand.id, domain.id, path_number, domain_nr])
                         path_crossovers.append([[],self.crossovers[-1]])  #add crossover placeholder for path crossover list, crossover information
 
@@ -182,20 +203,18 @@ class Stapler(object):
         
         for path_nr, path in enumerate(self.path_list):
             template_type = np.random.randint( 0 , len( self.template ) )
-            
             self.template_types.append( [ template_type ] )   #type of template placed on current part of current path
             self.template_positions.append( [ np.random.randint( 0 , len( path ) ) ] )   #random placement of initial template on each path
             self.template_offsets.append([ np.random.randint( 0, len( self.template[ template_type ] ) ) ] ) #random offset of template to position
             
             if self.dna_structure.strands[self.strand_index[path_nr]].is_circular:  #add one break to circular strands
-                
                 break_pos_temp = np.random.randint( 0, 2 * len(path) )
                 
-                #if crossver break, check if double crossover, if not, reroll position
+                # If crossver break, check if double crossover, if not, reroll position.
                 while ( ( break_pos_temp % 2 ) == 1 ) and ( self.crossovers_joint[ self.path_crossover_list[path_nr][ break_pos_temp // 2 ][0] ] < 2 ):
                     break_pos_temp = np.random.randint( 0, 2 * len(path) )
             
-                #add break, reduce crossover counter in crossovers_joint if crossover break
+                # Add break, reduce crossover counter in crossovers_joint if crossover break.
                 self.break_positions.append([break_pos_temp])
                 if ( break_pos_temp % 2 ) == 1:
                     self.crossovers_joint[ self.path_crossover_list[path_nr][ break_pos_temp // 2 ][0] ] -= 1
@@ -209,7 +228,7 @@ class Stapler(object):
                 self.break_positions.append([ 2 * len(path) - 1 ])       #place a permanent break at final possible break position for linear strands
                 self.single_strand_side_exception.append(0)
 
-        #calculate total energy of system
+        # Calculate total energy of system.
         for path_nr in range(len(self.path_list)):
             self.energy.append( self._calculate_energy(self.template_positions,self.template_offsets,self.break_positions,self.single_strand_side_exception,self.template_types,path_nr) )
         
@@ -360,14 +379,14 @@ class Stapler(object):
                 4 = change template type
         """
         
-        #determine path to change
+        # Determine path to change.
         current_path = np.random.choice(range(len(self.path_list)), None, p = self.path_probabilities)
         current_strand = self.strand_index[current_path]
         
-        #determine type of change
+        # Determine type of change.
         change_type = np.random.choice((0,1,2,3,4), None, p = self.step_probabilities)
         
-        #copy system state
+        # Copy system state.
         crossovers_joint_temp = self.crossovers_joint[:]
         
         template_positions_temp = []
@@ -393,7 +412,7 @@ class Stapler(object):
        
         if change_type == 0:        #add new break to path
             
-            #list of non-broken locations in path
+            # List of non-broken locations in path.
             break_positions_available = [pos for pos in range( 2 * len(self.path_list[current_path]) ) if pos not in break_positions_temp[current_path]]
 
             if not break_positions_available:   #no positions available
@@ -402,24 +421,24 @@ class Stapler(object):
             else:
                 break_pos_new = np.random.choice( break_positions_available )          #roll new break position
                 
-                #check if single crossover in unique crossover location
+                # Check if single crossover in unique crossover location.
                 if ( ( break_pos_new % 2 ) == 1 ) and ( crossovers_joint_temp[ self.path_crossover_list[current_path][ break_pos_new // 2 ][0] ] < 2 ):
                     forbidden = True
                 else:
                     insertion_index = -1
 
-                    #reduce crossover counter in crossovers_joint_temp if crossover break
+                    # Reduce crossover counter in crossovers_joint_temp if crossover break.
                     if ( break_pos_new % 2 ) == 1:
                         crossovers_joint_temp[ self.path_crossover_list[current_path][ break_pos_new // 2 ][0] ] -= 1
 
-                    #unbroken (single break) strand, insert break directly at index 0 of break_positions
+                    # Unbroken (single break) strand, insert break directly at index 0 of break_positions.
                     if len(break_positions_temp[current_path]) == 1:
                         break_positions_temp[current_path].insert(0, break_pos_new)
                         insertion_index = 0
                         break_pos_left = break_positions_temp[current_path][1]
                         break_pos_right = break_pos_left
                 
-                    #find insertion index for new break_pos
+                    # Find insertion index for new break_pos
                     else:
                         #find break positions larger than new break position
                         breaks_larger = [[index, break_pos] for index, break_pos in enumerate(break_positions_temp[current_path]) if break_pos > break_pos_new]
@@ -724,46 +743,61 @@ class Stapler(object):
     def _break_json(self):
         """ write all breaks into cadnano_design
         """
+        self._logger.setLevel(logging.DEBUG)
+        self._logger.debug("=====================  break json =====================")
         
         for path_nr, path_breaks in enumerate(self.break_positions):
-           
+            self._logger.debug("")
+            self._logger.debug("---------- path %d ----------" % path_nr)
             strand_nr = self.strand_index[ path_nr ]
+            self._logger.debug("Strand number %d" % strand_nr)
+            self._logger.debug("Number of path breaks %d" % len(path_breaks))
+            is_circular = self.dna_structure.strands[strand_nr].is_circular
         
-            for break_nr,break_current in enumerate(path_breaks[0:len(path_breaks) - 1 + self.dna_structure.strands[strand_nr].is_circular]): #break all breaks if circular strand, all breaks - 1 if linear strand
+            # Break all breaks if circular strand, all breaks - 1 if linear strand.
+            for break_nr,break_current in enumerate(path_breaks[0:len(path_breaks) - 1 + is_circular]): 
                 domain = break_current // 2
+                self._logger.debug("")
+                self._logger.debug("----- Domain %d----- " % domain)
+                self._logger.debug("break_current %d " % break_current)
+
                 if break_current % 2 == 0:           #domain break
-                    
                     template_pos_left = self.template_positions[path_nr][break_nr]
-                    #shift coordinates if wrap around
+
+                    # Shift coordinates if wrap around.
                     if ( template_pos_left > domain ) or ( ( template_pos_left == domain ) and ( len(path_breaks) == 1 ) and ( self.single_strand_side_exception[path_nr] == 0 ) ):
                         template_pos_left -= len(self.path_list[path_nr])
-                    #template index at break domain
+
+                    # Template index at break domain.
                     template_domain_at_break_left = domain - template_pos_left + self.template_offsets[path_nr][break_nr]
                     
-                    #check if template covers domain to be broken, from left
+                    # Check if template covers domain to be broken, from left.
                     if ( template_domain_at_break_left>= 0 ) and ( template_domain_at_break_left < len(self.template[ self.template_types[path_nr][break_nr] ]) ):
                         domain_length_left = self.template[ self.template_types[path_nr][break_nr] ][template_domain_at_break_left]
                     else:
-                        #set preferred domain length if not covered by template
+                        # Set preferred domain length if not covered by template.
                         domain_length_left = self.standard_domain_length
                     
-                    #shift coordinates if wrap around
+                    # Shift coordinates if wrap around.
                     template_pos_right = self.template_positions[path_nr][( break_nr + 1) % len(path_breaks)]
                     if ( template_pos_right < domain ) or ( self.single_strand_side_exception[path_nr] == 1 ):
                         template_pos_right += len(self.path_list[path_nr])
-                    #template index at break domain
+
+                    # Template index at break domain.
                     template_domain_at_break_right = domain - template_pos_right + self.template_offsets[path_nr][break_nr]
                     
-                    #check if template covers domain to be broken, from right
+                    # Check if template covers domain to be broken, from right.
                     if ( template_domain_at_break_right>= 0 ) and ( template_domain_at_break_right < len(self.template[ self.template_types[path_nr][break_nr] ]) ):
                         domain_length_right = self.template[ self.template_types[path_nr][break_nr] ][template_domain_at_break_right]
                     else:
-                        #set preferred domain length if not covered by template
+                        # Set preferred domain length if not covered by template.
                         domain_length_right = self.standard_domain_length
                     
                     domain_length = self.path_list[path_nr][domain]
                     
-                    #both template domains don't overfill the domain #TODO different behavior could be implemented as well
+                    # Both template domains don't overfill the domain.
+                    # TODO Different behavior could be implemented as well.
+
                     if domain_length_left + domain_length_right <= domain_length:
                         break_base = domain_length_left - 1
                     else:
@@ -777,35 +811,38 @@ class Stapler(object):
                         else:
                             break_base = domain_length - domain_length_right - 1
                     
+                    # TODO this should not occur in standard cadnano designs, a one-base domain
                     if len(self.dna_structure.strands[strand_nr].domain_list[domain].base_list) < 2:
-                        print "strand nr",strand_nr,"path nr",path_nr,"domain nr",domain,"has < 2 bases, cannot break" #TODO this should not occur in standard cadnano designs, a one-base domain
+                        self._logger.warning("Domain %d number of domain bases < 2" % (domain))
+                        #print "strand nr",strand_nr,"path nr",path_nr,"domain nr",domain,"has < 2 bases, cannot break" 
                     else:
                         helix = self.dna_structure.strands[strand_nr].domain_list[domain].helix.lattice_num
-                        length_domain = len(self.dna_structure.strands[strand_nr].domain_list[domain].base_list)
                         position1 = self.dna_structure.strands[strand_nr].domain_list[domain].base_list[ break_base ].p
                         position2 = self.dna_structure.strands[strand_nr].domain_list[domain].base_list[ break_base + 1 ].p
-                    
-                        self.cadnano_design.helices[ self.dna_structure.structure_helices_map[ helix ].id ].staple_strands[position2].initial_strand=-1
-                        self.cadnano_design.helices[ self.dna_structure.structure_helices_map[ helix ].id ].staple_strands[position2].initial_base=-1
-                        self.cadnano_design.helices[ self.dna_structure.structure_helices_map[ helix ].id ].staple_strands[position1].final_strand=-1
-                        self.cadnano_design.helices[ self.dna_structure.structure_helices_map[ helix ].id ].staple_strands[position1].final_base=-1
+                        helix_index = self.dna_structure.structure_helices_map[ helix ].load_order
+                        self.cadnano_design.helices[helix_index].staple_strands[position2].initial_strand=-1
+                        self.cadnano_design.helices[helix_index].staple_strands[position2].initial_base=-1
+                        self.cadnano_design.helices[helix_index].staple_strands[position1].final_strand=-1
+                        self.cadnano_design.helices[helix_index].staple_strands[position1].final_base=-1
 
-                    #print "strand nr",strand_nr,"path nr",path_nr,"domain nr",domain,"has bases nr:",len(self.dna_structure.strands[strand_nr].domain_list[domain].base_list) #TODO
-                    #print "breaking domain helix",helix,"base",position1 #TODO
+                # Crossover break.
 
-                else:         #crossover break
-                    
+                else:         
                     crossover = self.path_crossover_list[path_nr][domain][1]
-                    
-                    #print "strand nr",strand_nr,"path nr",path_nr,"domain nr",domain,"crossover break after this domain" #TODO
-                    #print "breaking crossover helix",crossover[0],"base",crossover[1],"other side helix",crossover[3],"base",crossover[4] #TODO
-                        
-                    self.cadnano_design.helices[ self.dna_structure.structure_helices_map[ crossover[3] ].id ].staple_strands[crossover[4]].initial_strand=-1
-                    self.cadnano_design.helices[ self.dna_structure.structure_helices_map[ crossover[3] ].id ].staple_strands[crossover[4]].initial_base=-1
-                    self.cadnano_design.helices[ self.dna_structure.structure_helices_map[ crossover[0] ].id ].staple_strands[crossover[1]].final_strand=-1
-                    self.cadnano_design.helices[ self.dna_structure.structure_helices_map[ crossover[0] ].id ].staple_strands[crossover[1]].final_base=-1
+                    helix_index_3 = self.dna_structure.structure_helices_map[ crossover[3] ].load_order
+                    helix_index_0 = self.dna_structure.structure_helices_map[ crossover[0] ].load_order
+                    self.cadnano_design.helices[ helix_index_3 ].staple_strands[crossover[4]].initial_strand=-1
+                    self.cadnano_design.helices[ helix_index_3 ].staple_strands[crossover[4]].initial_base=-1
+                    self.cadnano_design.helices[ helix_index_0 ].staple_strands[crossover[1]].final_strand=-1
+                    self.cadnano_design.helices[ helix_index_0 ].staple_strands[crossover[1]].final_base=-1
 
-        return
+                #__if break_current % 2 == 0:
+
+            #__for break_nr,break_current in enumerate(path_breaks[0:len(path_breaks) - 1 + is_circular]):
+
+        #__for path_nr, path_breaks in enumerate(self.break_positions)
+
+    #__def _break_json
 
 def main():
     
@@ -828,7 +865,8 @@ def main():
     cadnano_reader = CadnanoReader()
     converter.cadnano_design = cadnano_reader.read_json(file_full_path_and_name)
 
-    converter.cadnano_convert_design = CadnanoConvertDesign()
+    dna_parameters = DnaParameters()
+    converter.cadnano_convert_design = CadnanoConvertDesign(dna_parameters)
     converter.dna_structure = converter.cadnano_convert_design.create_structure(converter.cadnano_design)
     converter.dna_structure.get_domains()
 
@@ -849,10 +887,9 @@ def main():
     stapler.initialize_system()
     
     stapler.temperature = 10.0
-    stapler.generate(10000000,10000,0.999975)
-    #nr_steps example values: 10000000
-    #nr_steps_timescale example values: 10000
-    #temperature_adjust_rate example values: 0.999975 - 0.9999875
+    nr_steps = 10000000
+    nr_steps_timescale = 10000
+    stapler.generate(nr_steps, nr_steps_timescale, 0.999975)
     
     """ TODO
        structure with only two staples with two segments each, one double crossover, crashes:
@@ -877,9 +914,8 @@ def main():
             lengths.append(len(domain.base_list))
         print lengths
 
-    """ Write a caDNAno JSON file."""
+    # Write a caDNAno JSON file.
     cadnano_writer = CadnanoWriter(converter.dna_structure)
-
     cadnano_writer.write(output_file_full_path_and_name)
 
 if __name__ == '__main__':

@@ -1,31 +1,27 @@
 # This shell script demonstrates how to execute the visualizer with command-line commands.
 
-# directory path to cadnano design files.
+# Set the directory path to cadnano design files.
 dir=../samples/
 
-# sequence file name
-seqfile=fourhelix_M13mp18
-
-# sequence name
+# Set the sequence name.
 seqname=M13mp18
 
-# various cadnano file names
-fn=42hb
-fn=AutodeskA
-fn=doublegear
+# Set the cadnano file name.
 fn=fourhelix
-fn=hc-test-1
-fn=nanorobot.v2
-fn=Nature09_squarenut_no_joins
-fn=robot_v1.9_bent_2
-fn=Science09_beachball_v1
-fn=slottedcross-1
 
-# set the flag for generating atomic structures.
+# Set the flag for generating atomic structures.
 atomic_model="true"
 
-# execute the visualizer with a cadnano file
-fn=fourhelix
-cmds="strand name=Scaffold_2_8  rep=path  show=true; helix name=0  rep=domains  show=true"
-../../scripts/vis.py --infile=${dir}/${fn}.json  --inseqname=${seqname}  --atomic_model=${atomic_model} --commands="${cmds}"
+# Examples of some visualizer commands.
+if [ $fn == "fourhelix" ]; then
+   cmds="helix name=0 rep=geometry color=(1,0.5,0) show=true"
+   cmds="strand name=staple_0_26  rep=path  color=(1,0,0) show=true"
+   cmds="strand names=start_helices[0]  rep=path  color=(1,0,0) line_width=4.0  show=true"
+   cmds="strand names=in_helices[19]  rep=path  color=(1,0,0) line_width=4.0  show=true"
+fi
+
+../../scripts/vis.py --infile=${dir}/${fn}.json     \
+                     --inseqname=${seqname}         \
+                     --atomic_model=${atomic_model} \
+                     --commands="${cmds}"
 
