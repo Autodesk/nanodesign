@@ -65,7 +65,7 @@ class VisStrand(object):
         self.start_pos = start_base.p
         # Set the strand name.
         self.name = VisStrand.get_strand_name(self.dna_strand)
-        self._logger = self._setup_logging()
+        self._logger = logging.getLogger(__name__ + ":" + str(self.name))
         # Set the methods to create geometry for the different representations.
         self.create_rep_methods = { 
             VisStrandRepType.CONNECTORS : self.create_connectors_rep,
@@ -73,17 +73,6 @@ class VisStrand(object):
             VisStrandRepType.FRAMES     : self.create_frames_rep,
             VisStrandRepType.PATH       : self.create_path_rep 
         }
-
-    def _setup_logging(self):
-        """ Set up logging. """
-        logger = logging.getLogger(__name__ + ":" + str(self.name))
-        logger.setLevel(logging.INFO)
-        # Create console handler and set format.
-        console_handler = logging.StreamHandler()
-        formatter = logging.Formatter('[%(name)s] %(levelname)s - %(message)s')
-        console_handler.setFormatter(formatter)
-        logger.addHandler(console_handler)
-        return logger
 
     @staticmethod
     def compare(a,b):
@@ -208,7 +197,6 @@ class VisStrand(object):
 
     def create_frames_rep(self):
         """ Create the geometry for the strand coordinate frames representation. """
-        #self._logger.setLevel(logging.DEBUG)
         self._logger.debug("Create strand frames rep.")
         base_conn = self.dna_structure.base_connectivity
         base_coords = self.dna_strand.get_base_coords()
@@ -247,8 +235,6 @@ class VisStrand(object):
 
     def create_path_rep(self):
         """ Create the geometry for the strand geometry representation. """
-        #self._logger.setLevel(logging.DEBUG)
-        #self._logger.debug("Create strand geometry rep.")
         base_coords = self.dna_strand.get_base_coords()
         self._logger.debug("Number of point %d" % len(base_coords))
         name = "Strand:%s" % self.name
@@ -290,9 +276,6 @@ class VisStrand(object):
 
     def create_connectors_rep(self):
         """ Create the geometry for the strand connectors representation. """
-        self._logger.setLevel(logging.INFO)
-        #self._logger.setLevel(logging.DEBUG)
-        #self._logger.debug("Create strand geometry rep.")
         dist_bp = self.dna_structure.dna_parameters.base_pair_rise
         max_dist = 2.0*self.dna_structure.dna_parameters.helix_distance
         points1 = []

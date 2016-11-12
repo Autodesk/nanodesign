@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 """ 
 This module is used to write SimDNA pairs files. 
 
@@ -33,12 +32,7 @@ class SimDnaWriter(object):
     """
     def __init__(self, dna_structure):
         self.dna_structure = dna_structure
-        self._logging_level = logging.INFO
-        self._setup_logging()
-
-    def set_logging_level(self,level):
-        """Set logging level."""
-        self._logger.setLevel(level)
+        self._logger = logging.getLogger(__name__)   
 
     def write(self,file_name):
         """ Write a pairs file.
@@ -95,26 +89,5 @@ class SimDnaWriter(object):
                 #__for i in xrange(0,len(strand.tour))
             #__for strand in itertools.chain(scaffold_strands, staple_strands)
         #__with open(file_name, 'w') as outfile
-
-    def _setup_logging(self):
-        """ Set up logging."""
-        self._logger = logging.getLogger(__name__)
-        self._logger.setLevel(self._logging_level)
-
-        # create console handler and set format
-        if not len(self._logger.handlers):
-            console_handler = logging.StreamHandler()
-            formatter = logging.Formatter('[%(name)s] %(levelname)s - %(message)s')
-            console_handler.setFormatter(formatter)
-            self._logger.addHandler(console_handler)
-
-def main():
-    """ Write a DNA Design Viewer JSON file."""
-    file_name = sys.argv[1]
-    cadnano_reader = CadnanoReader()
-    #cadnano_reader.set_logging_level(logging.DEBUG)
-    cadnano_reader.read_json(file_name)
-
-if __name__ == '__main__':
-    main()
-
+    #__def write
+#__class SimDnaWriter

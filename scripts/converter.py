@@ -8,31 +8,15 @@ try:
     from nanodesign.converters.converter import Converter,ConverterFileFormats
 except ImportError:
     import sys
-    # print "file: " + str(__file__)
-    # print "abspath: " + str( os.path.abspath( __file__))
-    # print "dirname: " + str( os.path.dirname(os.path.abspath( __file__)))
-    # print "join abspath: " + str( os.path.abspath( os.path.join( os.path.dirname(os.path.abspath( __file__)), '../')))
     base_path = os.path.abspath( os.path.join( os.path.dirname(os.path.abspath( __file__)), '../'))
     sys.path.append(base_path)
     from nanodesign.converters.converter import Converter,ConverterFileFormats
     sys.path = sys.path[:-1]
 
-
-# TODO (JMS 10/26/16): Move this logger back into the class init for Converter
-def _setup_logging():
-    """ Set up logging."""
-    logger = logging.getLogger('nanodesign.converter')
-    logger.setLevel(logging.INFO)
-
-    # create console handler and set format
-    console_handler = logging.StreamHandler()
-    formatter = logging.Formatter('[%(name)s] %(levelname)s - %(message)s')
-    console_handler.setFormatter(formatter)
-    logger.addHandler(console_handler)
-    return logger
-
+# Define the map between file formats and the functions that read files in that format. 
 converter_read_map = { ConverterFileFormats.CADNANO    : 'read_cadnano_file' }
 
+# Define the map between file formats and the functions that write files in that format. 
 converter_write_map = { ConverterFileFormats.VIEWER    : 'write_viewer_file',
                         ConverterFileFormats.CADNANO   : 'write_cadnano_file',
                         ConverterFileFormats.CANDO     : 'write_cando_file',
@@ -42,7 +26,6 @@ converter_write_map = { ConverterFileFormats.VIEWER    : 'write_viewer_file',
                         ConverterFileFormats.STRUCTURE : 'write_structure_file',
                         ConverterFileFormats.TOPOLOGY  : 'write_topology_file'
                       }
-
 
 def parse_args():
     """ Parse command-line arguments."""
@@ -61,9 +44,8 @@ def parse_args():
 
 
 def main():
-    logger = _setup_logging()
+    logger = logging.getLogger('nanodesign.converter')
     converter = Converter()
-    converter.logger = logger
     infiles = []
 
     # Process command-line arguments.
@@ -72,7 +54,7 @@ def main():
     if args.infile == None:
         logger.error("No input file name given.")
     else:
-        logger.info("Input file name: %s" % args.infile)
+        logger.info("Input file name %s" % args.infile)
         converter.infile = args.infile
 
     if args.informat == None:
@@ -80,7 +62,7 @@ def main():
     elif (args.informat not in ConverterFileFormats.names):
         logger.error("Unknown input file format given: %s" % args.informat)
     else:
-        logger.info("Input file format: %s" % args.informat)
+        logger.info("Input file format %s" % args.informat)
         converter.informat = args.informat
 
     if args.modify:
@@ -94,14 +76,14 @@ def main():
     if args.outfile == None:
         logger.error("No output file name given.")
     else:
-        logger.info("Output file name: %s" % args.outfile)
+        logger.info("Output file name %s" % args.outfile)
 
     if args.outformat == None:
         logger.error("No output file format given.")
     elif (args.outformat not in  ConverterFileFormats.names):
-        logger.error("Unknown output file format given: \'%s\'" % args.outformat)
+        logger.error("Unknown output file format given \'%s\'" % args.outformat)
     else:
-        logger.info("Output file format: %s" % args.outformat)
+        logger.info("Output file format %s" % args.outformat)
         # Make the helix distance a bit larger to better visualization.
         if args.outformat == ConverterFileFormats.VIEWER:
             converter.dna_parameters.helix_distance = 2.50

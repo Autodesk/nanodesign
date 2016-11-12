@@ -97,7 +97,8 @@ class DnaStructureHelix(object):
         self.helix_connectivity = []
         self.possible_staple_crossovers = []
         self.possible_scaffold_crossovers = []
-        self.logger = self._setup_logging()
+        self._logger = logging.getLogger(__name__ + ":" + str(self.id))
+
         # Set helix ends coordinates.
         self.end_coordinates = np.zeros((2,3), dtype=float)
         self.end_frames = np.zeros((3,3,2), dtype=float)
@@ -105,18 +106,6 @@ class DnaStructureHelix(object):
         self.scaffold_pos = {}
         self.set_end_coords()
         self.build_base_pos_maps()
-
-    def _setup_logging(self):
-        """ Set up logging. """
-        logger = logging.getLogger(__name__ + ":" + str(self.id))
-        logger.setLevel(logging.INFO)
-        # Create console handler and set format.
-        if not len(logger.handlers):
-            console_handler = logging.StreamHandler()
-            formatter = logging.Formatter('[%(name)s] %(levelname)s - %(message)s')
-            console_handler.setFormatter(formatter)
-            logger.addHandler(console_handler)
-        return logger
 
     def set_end_coords(self):
         """ Set the helix end coordinates and reference frames. """
@@ -220,18 +209,16 @@ class DnaStructureHelix(object):
             The helix locations to add bases are detemined by the max/min positions of the
             helix scaffold bases.
         """
-        self.logger.setLevel(logging.INFO)
-        #self.logger.setLevel(logging.DEBUG)
-        self.logger.debug("=================== add maximal staple bases %d ===================" % self.id)
-        self.logger.debug("Scaffold polarity %s" % self.scaffold_polarity)
+        self._logger.debug("=================== add maximal staple bases %d ===================" % self.id)
+        self._logger.debug("Scaffold polarity %s" % self.scaffold_polarity)
   
         # Determine the position to start adding bases.
         start_pos = self.min_scaffold_pos
-        self.logger.debug("Start base pos %d " % start_pos) 
+        self._logger.debug("Start base pos %d " % start_pos) 
 
         # Determine the position to end adding bases
         end_pos = self.max_scaffold_pos
-        self.logger.debug("End base pos %d " % end_pos) 
+        self._logger.debug("End base pos %d " % end_pos) 
 
         # Add new bases.
         id = 0
@@ -278,8 +265,8 @@ class DnaStructureHelix(object):
 
     def add_maximal_staple_crossovers(self):
         """ Add crossover connections for bases for the maximal staple set. """
-        self.logger.debug("=================== add maximal staple crossovers %d ===================" % self.id)
-        self.logger.debug("Scaffold polarity %s" % self.scaffold_polarity)
+        self._logger.debug("=================== add maximal staple crossovers %d ===================" % self.id)
+        self._logger.debug("Scaffold polarity %s" % self.scaffold_polarity)
 
         # Create a dict mapping crossover positions to crossovers.
         crossover_pos = {}
@@ -309,7 +296,7 @@ class DnaStructureHelix(object):
                     else:
                         base.up = to_base 
                         to_base.down = base 
-                self.logger.debug("Crossover base at pos %d to helix %d" % (base.p, to_helix.id))
+                self._logger.debug("Crossover base at pos %d to helix %d" % (base.p, to_helix.id))
         #__for crossover in possible_staple_crossovers
 
     #__def add_maximal_staple_crossovers
@@ -320,9 +307,7 @@ class DnaStructureHelix(object):
             Arguments:
                 xform (Xform): The transformation to apply to the helx geometry.
         """
-        self.logger.setLevel(logging.INFO)
-        #self.logger.setLevel(logging.DEBUG)
-        self.logger.debug("=================== apply xform to helix %d ===================" % self.id)
+        self._logger.debug("=================== apply xform to helix %d ===================" % self.id)
         R = xform.rotation_matrix
         #xform.print_transformation()
         translation = xform.translation 
@@ -332,9 +317,9 @@ class DnaStructureHelix(object):
         xcoord = np.array([0.0,0.0,0.0], dtype=float) 
         xframe = np.zeros((3,3), dtype=float)
         num_coords = len(self.helix_axis_coords)
-        self.logger.debug("Number of coordinates %d" % num_coords) 
-        self.logger.debug("Xform center (%g %g %g)" % (center[0], center[1], center[2])) 
-        self.logger.debug("Xform translation (%g %g %g)" % (translation[0], translation[1], translation[2])) 
+        self._logger.debug("Number of coordinates %d" % num_coords) 
+        self._logger.debug("Xform center (%g %g %g)" % (center[0], center[1], center[2])) 
+        self._logger.debug("Xform translation (%g %g %g)" % (translation[0], translation[1], translation[2])) 
         for i in xrange(0, num_coords):
             coord[:] = self.helix_axis_coords[i,:] - center
             frame = self.helix_axis_frames[:,:,i]
@@ -369,26 +354,24 @@ class DnaStructureHelix(object):
     def compute_design_crossovers(self,dna_structure):
         """ Determine the scaffold and staple crossovers in the designed structure.
         """
-        self.logger.setLevel(logging.INFO)
-        #self.logger.setLevel(logging.DEBUG)
-        self.logger.debug("=================== compute design cross-overs p helix num %d ===================" % self.lattice_num)
-        self.logger.debug("Helix polarity %s " % self.scaffold_polarity)
-        self.logger.debug("Helix connectivity: %d " % len(self.helix_connectivity)) 
+        self._logger.debug("=================== compute design cross-overs p helix num %d ===================" % self.lattice_num)
+        self._logger.debug("Helix polarity %s " % self.scaffold_polarity)
+        self._logger.debug("Helix connectivity: %d " % len(self.helix_connectivity)) 
         strands = dna_structure.strands
         for connection in self.helix_connectivity:
             num = connection.to_helix.lattice_num
-            self.logger.debug("Crossover helix num %d" % num)
-            self.logger.debug("Number of staple bases: %d" % len(self.staple_bases))
+            self._logger.debug("Crossover helix num %d" % num)
+            self._logger.debug("Number of staple bases: %d" % len(self.staple_bases))
             last_crossover = None
             for base_list in [self.staple_bases,self.scaffold_bases]:
                 for base in base_list:
                     if not base:
                         continue
-                    self.logger.debug(">>> Base  id %d" % base.id)
+                    self._logger.debug(">>> Base  id %d" % base.id)
                     if (base.down != None):
                         if (base.down.h != base.h) and (base.down.h == num):
-                            self.logger.debug("base:%4d  p:%4d  h:%4d" % (base.id, base.p, base.h))
-                            self.logger.debug("  xd:%4d  p:%4d  h:%4d" % (base.down.id, base.down.p, base.down.h))
+                            self._logger.debug("base:%4d  p:%4d  h:%4d" % (base.id, base.p, base.h))
+                            self._logger.debug("  xd:%4d  p:%4d  h:%4d" % (base.down.id, base.down.p, base.down.h))
                             strand = dna_structure.get_strand(base.strand)
                             crossover = DnaHelixCrossover(self,connection,base,strand)
                             connection.crossovers.append(crossover)
@@ -396,15 +379,15 @@ class DnaStructureHelix(object):
 
                     if (base.up != None):
                         if (base.up.h != base.h) and (base.up.h == num):
-                            self.logger.debug("base:%4d  p:%4d  h:%4d" % (base.id, base.p, base.h))
-                            self.logger.debug("  xu:%4d  p:%4d  h:%4d" % (base.up.id, base.up.p, base.up.h))
+                            self._logger.debug("base:%4d  p:%4d  h:%4d" % (base.id, base.p, base.h))
+                            self._logger.debug("  xu:%4d  p:%4d  h:%4d" % (base.up.id, base.up.p, base.up.h))
                             strand = dna_structure.get_strand(base.strand)
                             crossover = DnaHelixCrossover(self,connection,base,strand)
                             connection.crossovers.append(crossover)
                     #__if (up != -1)
                 #__for base in base_list
             #__for base_list in [self.staple_bases,self.scaffold_bases]
-            self.logger.debug(">>> added %d crossovers " % len(connection.crossovers))
+            self._logger.debug(">>> added %d crossovers " % len(connection.crossovers))
         #__for connection in self.helix_connectivity:
     #__def compute_design_crossovers_p
 
@@ -417,11 +400,9 @@ class DnaStructureHelix(object):
             This function is used to remove bases after a design file has been processed. 
             For example, it is called when removing strands from a structure.
         """
-        self.logger.setLevel(logging.INFO)
-        #self.logger.setLevel(logging.DEBUG)
-        self.logger.debug("========== remove bases ==========")
-        self.logger.debug("Number of staple bases %d" % len(self.staple_bases))
-        self.logger.debug("Number of bases to remove %d" % len(base_list))
+        self._logger.debug("========== remove bases ==========")
+        self._logger.debug("Number of staple bases %d" % len(self.staple_bases))
+        self._logger.debug("Number of bases to remove %d" % len(base_list))
 
         # Create base helix position maps.
         removed_staple_bases = set()
@@ -447,11 +428,11 @@ class DnaStructureHelix(object):
             #__if base.p not in removed_staple_bases
         #__for base in self.staple_bases
 
-        self.logger.debug("Number of bases removed %d" % (len(self.staple_bases) - len(remaining_staple_bases)))
-        self.logger.debug("Number of bases remaining %d" % len(remaining_staple_bases)) 
+        self._logger.debug("Number of bases removed %d" % (len(self.staple_bases) - len(remaining_staple_bases)))
+        self._logger.debug("Number of bases remaining %d" % len(remaining_staple_bases)) 
         self.staple_bases = remaining_staple_bases
         for base in self.staple_bases:
-            self.logger.debug("Base ID %d  h %d  p %d" % (base.id, base.h, base.p))
+            self._logger.debug("Base ID %d  h %d  p %d" % (base.id, base.h, base.p))
 
         # Regenerate the helix coordinate and reference frame  
         # arrays from the modified list of bases.
@@ -527,26 +508,24 @@ class DnaStructureHelix(object):
             Bases are inserted into the scaffold and staple base lists at the 
             position given in the base (i.e. DnaBase.p).
         """
-        #self.logger.setLevel(logging.DEBUG)
-        self.logger.setLevel(logging.INFO)
-        self.logger.debug("=================== insert_bases ===================")
-        self.logger.debug("Number of bases to insert %d" % len(insert_bases))
+        self._logger.debug("=================== insert_bases ===================")
+        self._logger.debug("Number of bases to insert %d" % len(insert_bases))
         for insert_base in insert_bases:
             if insert_base.is_scaf:
                 for i,base in enumerate(self.scaffold_bases): 
                     if base.p == insert_base.p: 
-                        self.logger.debug("Insert scaffold base at position %d" % insert_base.p)
-                        self.logger.debug("    base coord        %s" % str(base.coordinates))
-                        self.logger.debug("    insert base coord %s" % str(insert_base.coordinates))
+                        self._logger.debug("Insert scaffold base at position %d" % insert_base.p)
+                        self._logger.debug("    base coord        %s" % str(base.coordinates))
+                        self._logger.debug("    insert base coord %s" % str(insert_base.coordinates))
                         self.scaffold_bases.insert(i,insert_base)
                         break
                 #__for i,base in enumerate(self.scaffold_bases)
             else:
                 for i,base in enumerate(self.staple_bases): 
                     if base.p == insert_base.p: 
-                        self.logger.debug("Insert staple base at position  %d" % insert_base.p)
-                        self.logger.debug("    base coord        %s" % str(base.coordinates))
-                        self.logger.debug("    insert base coord %s" % str(insert_base.coordinates))
+                        self._logger.debug("Insert staple base at position  %d" % insert_base.p)
+                        self._logger.debug("    base coord        %s" % str(base.coordinates))
+                        self._logger.debug("    insert base coord %s" % str(insert_base.coordinates))
                         self.staple_bases.insert(i,insert_base)
                         break
                 #__for i,base in enumerate(self.staple_bases)
@@ -556,7 +535,6 @@ class DnaStructureHelix(object):
         if len(insert_bases) != 0:
             self.regenerate_coordinate_arrays()
             self.build_base_pos_maps()
-        self.logger.setLevel(logging.INFO)
     #__def insert_bases(self, insert_bases)
 
     def regenerate_coordinate_arrays(self):
@@ -567,9 +545,7 @@ class DnaStructureHelix(object):
             same position. The arrays will therefore be sorted by base distance from the beginning
             helix coordinates.
         """
-        #self.logger.setLevel(logging.DEBUG)
-        self.logger.setLevel(logging.INFO)
-        self.logger.debug("=================== regenerate_coordinate_arrays %d ===================" % self.lattice_num)
+        self._logger.debug("=================== regenerate_coordinate_arrays %d ===================" % self.lattice_num)
 
         # Define the origin and axis used to calculate the distance along a helix.
         origin = self.end_coordinates[0]
@@ -613,7 +589,6 @@ class DnaStructureHelix(object):
         self.helix_axis_coords = axis_coords
         self.helix_axis_frames = axis_frames
         self.set_end_coords()
-        self.logger.setLevel(logging.INFO)
     #__def regenerate_coordinate_arrays(self)
 
 #__class DnaStructureHelix

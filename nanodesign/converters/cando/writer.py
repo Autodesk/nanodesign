@@ -11,12 +11,7 @@ class CandoWriter(object):
     """
     def __init__(self, dna_structure):
         self.dna_structure = dna_structure
-        self._logging_level = logging.INFO
-        self._setup_logging()
-
-    def set_logging_level(self,level):
-        """Set logging level."""
-        self._logger.setLevel(level)
+        self._logger = logging.getLogger(__name__)   
 
     def write(self,file_name):
         """Write a .cndo file.

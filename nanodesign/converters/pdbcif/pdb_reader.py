@@ -24,42 +24,19 @@ class PdbRecordTypes(object):
 class PdbReader(object):
     """ The PdbReader class reads in a PDB format .pdb file. 
     """
-    logging_set = False
-
     def __init__(self):
-        #self._logging_level = logging.INFO
-        #self._setup_logging()
         self.current_molecule = None
         self.molecules = []
         self.process_record = { PdbRecordTypes.ATOM : PdbReader.process_atom,
                                 PdbRecordTypes.TER  : PdbReader.process_ter
                               }
-        self._logging_level = logging.INFO
-        self._setup_logging()
-
-    def set_logging_level(self,level):
-        """Set logging level."""
-        self._logger.setLevel(level)
-
-    def _setup_logging(self):
-        """ Set up logging."""
-        self._logger = logging.getLogger(__name__)
-        self._logger.setLevel(self._logging_level)
-        if PdbReader.logging_set:
-           return
-        # Create console handler and set format.
-        if not len(self._logger.handlers):
-            console_handler = logging.StreamHandler()
-            formatter = logging.Formatter('[%(name)s] %(levelname)s - %(message)s')
-            console_handler.setFormatter(formatter)
-            self._logger.addHandler(console_handler)
-            PdbReader.logging_set = True
+        self._logger = logging.getLogger(__name__)   
 
     def read(self,file_name):
-        """Read a .pdb file.
+        """ Read a .pdb file.
 
-        Args:
-            file_name (string): The name of the PDB file to read.
+            Arguments:
+                file_name (string): The name of the PDB file to read.
         """
         self._logger.info("Reading PDB file %s " % file_name)
 

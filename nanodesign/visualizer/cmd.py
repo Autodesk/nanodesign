@@ -52,7 +52,7 @@ class VisCommand(object):
         self.model = model
         #self.update_menu = False
         self.update_menu = True
-        self._logger = self._setup_logging()
+        self._logger = logging.getLogger(__name__)
         # Open command logging file.
         path = os.getcwd()
         self.file_name = os.path.join(path, "vis.cmd")
@@ -68,17 +68,6 @@ class VisCommand(object):
             VisCommandEntity.MODEL : self.proc_model_cmd, 
             VisCommandEntity.STRAND : self.proc_strand_cmd 
         }
-
-    def _setup_logging(self):
-        """ Set up logging. """
-        logger = logging.getLogger(__name__)
-        logger.setLevel(logging.INFO)
-        # Create console handler and set format.
-        console_handler = logging.StreamHandler()
-        formatter = logging.Formatter('[%(name)s] %(levelname)s - %(message)s')
-        console_handler.setFormatter(formatter)
-        logger.addHandler(console_handler)
-        return logger
 
     def write_cmd(self, cmd):
         """ Write a command to a file. """
@@ -116,9 +105,7 @@ class VisCommand(object):
 
     def execute_cmd(self, cmd):
         """ Execute a command. """
-        #self._logger.info("Execute the command \'%s\' " % cmd)
         tokens = cmd.split()
-        #self._logger.info("Tokens \'%s\' " % str(tokens))
         if not tokens:
             return
         entity = tokens[0]

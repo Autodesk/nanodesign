@@ -198,18 +198,7 @@ class VisGraphics(object):
         self.y_start = 0.0
         self.menu = None 
         self.render_geometry = {}
-        self._logger = self._setup_logging()
-
-    def _setup_logging(self):
-        """ Set up logging. """
-        logger = logging.getLogger(__name__)
-        logger.setLevel(logging.INFO)
-        # Create console handler and set format.
-        console_handler = logging.StreamHandler()
-        formatter = logging.Formatter('[%(name)s] %(levelname)s - %(message)s')
-        console_handler.setFormatter(formatter)
-        logger.addHandler(console_handler)
-        return logger
+        self._logger = logging.getLogger(__name__)
 
     def start_interactive(self):
         """ Start interactive graphics. """
@@ -398,7 +387,6 @@ class VisGraphics(object):
 
     def perform_pick(self, x, y):
         """ Perform a pick operation. """
-        #self._logger.setLevel(logging.DEBUG)
         self.clear_selections()
         self._logger.debug("Perform pick at screen (%d,%d) " % (x, y))
 

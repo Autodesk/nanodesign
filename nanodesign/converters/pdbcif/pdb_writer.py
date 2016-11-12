@@ -27,12 +27,7 @@ class PdbWriter(object):
 
     def __init__(self, dna_structure):
         self.dna_structure = dna_structure
-        self._logging_level = logging.INFO
-        self._setup_logging()
-
-    def set_logging_level(self,level):
-        """Set logging level."""
-        self._logger.setLevel(level)
+        self._logger = logging.getLogger(__name__)   
 
     def write(self,file_name):
         """Write a .pdb file.
@@ -54,7 +49,6 @@ class PdbWriter(object):
         xmin,xmax,ymin,ymax,zmin,zmax = atomic_structure.get_extent()
 
         # Write the models.
-        self.set_logging_level(logging.DEBUG)
         res_seq = 0 
         model_num = 1
         atom_id = 1
@@ -75,17 +69,6 @@ class PdbWriter(object):
             pdb_file.write("\n")
             pdb_file.write(PdbWriter.ENDMDL_FORMAT)
         self._logger.info("Done.")
-
-    def _setup_logging(self):
-        """ Set up logging."""
-        self._logger = logging.getLogger(__name__)
-        self._logger.setLevel(self._logging_level)
-        # Create console handler and set format.
-        if not len(self._logger.handlers):
-            console_handler = logging.StreamHandler()
-            formatter = logging.Formatter('[%(name)s] %(levelname)s - %(message)s')
-            console_handler.setFormatter(formatter)
-            self._logger.addHandler(console_handler)
 
     def _write_molecule(self, pdb_file, molecule, model_num, res_seq, atom_id, chain_id, xmin, ymin, zmin):
         """ Write the atoms in a molecule to a file. 

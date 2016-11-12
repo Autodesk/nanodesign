@@ -53,28 +53,12 @@ class CadnanoConvertDesign(object):
             Arguments:
                 dna_parameters (DnaParameters): The DNA parameters to use when creating the 3D geometry for the design.
         """
-        self._logging_level = logging.INFO
-        self._setup_logging()
         self.dna_structure = None 
         self.staple_colors = []
         self.dna_parameters = dna_parameters
         self.base_id = 0
         self.base_map = OrderedDict()
-
-    def _set_logging_level(self,level):
-        """Set logging level."""
-        self._logger.setLevel(level)
-
-    def _setup_logging(self):
-        """ Set up logging. """
-        self._logger = logging.getLogger(__name__)
-        self._logger.setLevel(self._logging_level)
-        # Create a console handler and set format.
-        if not len(self._logger.handlers):
-            console_handler = logging.StreamHandler()
-            formatter = logging.Formatter('[%(name)s] %(levelname)s - %(message)s')
-            console_handler.setFormatter(formatter)
-            self._logger.addHandler(console_handler)
+        self._logger = logging.getLogger(__name__)   
 
     def _add_staple_color(self, staple_color, vhelix_num):
         """ Add a caDNAno staple color for the given virtual helix. 
@@ -132,7 +116,6 @@ class CadnanoConvertDesign(object):
             defined for each virtual helix and stored in the appropriate DnaStructureHelix object. The
             global list of DnaBase objects are stored in the self.base_map dict.
         """
-        #self._logger.setLevel(logging.DEBUG)
         self._logger.info("Distance between adjacent helices %g " % self.dna_parameters.helix_distance)
         self._logger.info("Helix radius %g " % self.dna_parameters.helix_radius) 
         # Reset these in case this function is called multiple times. 
@@ -189,7 +172,6 @@ class CadnanoConvertDesign(object):
                 across = base.across.id if base.across else -1
                 self._logger.debug("%4d  id %4d  h %4d  p %4d  up %4d  down %4d  across %4d  scaf %d" %
                     ( i, base.id, base.h, base.p, up, down, across, base.is_scaf))
-        #__if print_base_connectivity_p
         #__if self._logger.getEffectiveLevel() == logging.DEBUG
 
         # Remove deleted bases.
@@ -255,7 +237,6 @@ class CadnanoConvertDesign(object):
 
     def _delete_bases(self, helices, base_connectivity):
         """ Remove bases from helices and base_connectivity.  """
-        #self._logger.setLevel(logging.DEBUG)
         self._logger.debug("==================== delete bases ====================")
 
         # Delete bases from each helix.
@@ -285,8 +266,6 @@ class CadnanoConvertDesign(object):
            The DnaBase.num_inserts attribute determines the number of bases inserted at that base. 
            Bases are inserted in the 3' direction. 
         """
-        self._logger.setLevel(logging.INFO)
-        #self._logger.setLevel(logging.DEBUG)
         self._logger.debug("==================== insert bases ====================")
         num_bases = len(base_connectivity)
         base_id = num_bases
@@ -589,8 +568,6 @@ class CadnanoConvertDesign(object):
         col_list = []
         structure_helices = [] 
         vhelices = design.helices
-        self._logger.setLevel(logging.INFO)
-        #self._logger.setLevel(logging.DEBUG)
         self._logger.debug("==================== create structure topology and geometry ====================")
 
         for i,vhelix in enumerate(vhelices):
@@ -762,8 +739,6 @@ class CadnanoConvertDesign(object):
     def _set_possible_crossovers(self,design):
         """ Set the possible cross-overs for scaffold and staple strands.
         """
-        #self._logger.setLevel(logging.DEBUG)
-        self._logger.setLevel(logging.INFO)
         self._logger.debug("-------------------- set_possible_crossovers --------------------")
         lattice_type = design.lattice_type
         dist_bp = self.dna_parameters.base_pair_rise 
@@ -829,8 +804,6 @@ class CadnanoConvertDesign(object):
                 modified_structure (bool): If true then the structure has been modified for insertions and deletions. 
                 seq_name (string): The name of the sequence as defined in the dna_sequence_data dictionary. 
         """
-        #self._logger.setLevel(logging.DEBUG)
-        self._logger.setLevel(logging.INFO)
         sequence = dna_sequence_data.get(seq_name,None)
         seq_index = 0
         sequence_length = len(sequence)
@@ -974,9 +947,6 @@ class CadnanoConvertDesign(object):
                modified_structure (bool): If True then the structure has been modified with deletions and insertions. 
                sequence (DnaSequence): A list of DnaSequence objects representing the sequences for staple or scaffold strands.
         """
-        #self._logger.setLevel(logging.DEBUG)
-        self._logger.setLevel(logging.INFO)
-
         strands = dna_structure.strands 
         staple_ends = dna_structure.staple_ends 
 
@@ -1055,21 +1025,4 @@ class CadnanoConvertDesign(object):
                return []
 
 #__class CadnanoTopology(object)
-
-def main():
-    """ Create a topology table from a caDNAno JSON design file."""
-    json_file_name = sys.argv[1]
-    cadnano_reader = CadnanoReader()
-    #cadnano_reader.set_logging_level(logging.DEBUG)
-    cadnano_model = cadnano_reader.read_json(json_file_name)
-    convert_design = CadnanoConvertDesign()
-    dna_structure = convert_design.create_structure(cadnano_model)
-
-    if (len(sys.argv) == 3):
-       csv_file_name = sys.argv[2]
-       seq = cadnano_reader.read_csv(csv_file_name)
-       structure.set_sequence(seq)
-
-if __name__ == '__main__':
-    main()
 

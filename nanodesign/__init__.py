@@ -37,6 +37,15 @@ from .data import Domain
 from .data import energy_model
 from .data import convert_temperature_K_to_C
 
+# Create a logger console handler and set logging output format.
+import logging
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+console_handler = logging.StreamHandler()
+formatter = logging.Formatter('[%(name)s] %(levelname)s - %(message)s')
+console_handler.setFormatter(formatter)
+logger.addHandler(console_handler)
+
 # Designate which components will be in the * namespace.
 __all__ = []
 __all__.extend(core.__all__)

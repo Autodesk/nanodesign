@@ -168,7 +168,7 @@ class AtomicStructure(object):
         self.dna_structure = dna_structure 
         self.molecules = [] 
         self.strands = []
-        self._logger = self._setup_logging()
+        self._logger = logging.getLogger(__name__)   
         self._init_strand_data()
 
         # Template structures file names.
@@ -176,18 +176,6 @@ class AtomicStructure(object):
         self.templatePdbStructureFile_G = os.path.join(dna_pdb_templates_dir, 'GGG.pdb')
         self.templatePdbStructureFile_C = os.path.join(dna_pdb_templates_dir, 'CCC.pdb')
         self.templatePdbStructureFile_T = os.path.join(dna_pdb_templates_dir, 'TTT.pdb')
-
-    def _setup_logging(self):
-        """ Set up logging. """
-        logger = logging.getLogger(__name__)
-        logger.setLevel(logging.INFO)
-        # Create console handler and set format.
-        if not len(logger.handlers):
-            console_handler = logging.StreamHandler()
-            formatter = logging.Formatter('[%(name)s] %(levelname)s - %(message)s')
-            console_handler.setFormatter(formatter)
-            logger.addHandler(console_handler)
-        return logger
 
     def _init_strand_data(self):
         """ Create the list of AtomicStructureStrand objects from DnaStrand objects. """
@@ -205,7 +193,6 @@ class AtomicStructure(object):
         self._logger.info("Number of bases  %d " % len(base_conn))
         self._logger.info("Number of base helix axis nodes %d " % len(base_nodes))
         self._logger.info("Number of triads: %d" % triads.shape[2])
-        #self._logger.setLevel(logging.DEBUG)
 
         # Convert base node coords to angstroms.
         for i in xrange(0,len(id_nt)):
@@ -327,7 +314,6 @@ class AtomicStructure(object):
 
             A Molecule object is created to store the atoms for the strand structure. 
         """
-        #self._logger.setLevel(logging.DEBUG)
         self._logger.debug("=================== strand ID %d =================== " % strand.id ) 
         self._logger.debug("Number of bases %d " % len(strand.tour) ) 
         self._logger.debug("Scaffold %d " % strand.is_scaffold ) 
@@ -807,10 +793,8 @@ class AtomicStructure(object):
     def generate_structure_ss(self):
         """ Generate the atomic structure for the dna model. """
         base_conn = self.dna_structure.base_connectivity
-
         self._logger.info("Generate atomic structure for ssDNA.") 
         self._logger.info("Number of bases  %d " % len(base_conn))
-        #self._logger.setLevel(logging.DEBUG)
 
         # Scale to convert base node coords in nm to angstroms.
         nm_to_ang = 10.0

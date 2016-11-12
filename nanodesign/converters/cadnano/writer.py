@@ -13,19 +13,7 @@ class CadnanoWriter(object):
     """
     def __init__(self, dna_structure):
         self.dna_structure = dna_structure
-        self._logging_level = logging.INFO
-        self._setup_logging()
-
-    def _setup_logging(self):
-        """ Set up logging."""
-        self._logger = logging.getLogger(__name__)
-        self._logger.setLevel(self._logging_level)
-        # Create console handler and set format.
-        if not len(self._logger.handlers):
-            console_handler = logging.StreamHandler()
-            formatter = logging.Formatter('[%(name)s] %(levelname)s - %(message)s')
-            console_handler.setFormatter(formatter)
-            self._logger.addHandler(console_handler)
+        self._logger = logging.getLogger(__name__)   
 
     def write(self,file_name):
         """ Write a caDNAno design JSON file.
@@ -33,7 +21,7 @@ class CadnanoWriter(object):
         Args:
             file_name (string): The name of a caDNAno JSON file to write.
         """
-        self._logger.info("Writing caDNAno design JSON file: %s " % file_name)
+        self._logger.info("Writing caDNAno design JSON file %s " % file_name)
         dna_structure = self.dna_structure
         vstrand_info = self._get_vstrand_info(dna_structure)
 
@@ -57,7 +45,6 @@ class CadnanoWriter(object):
 
         # Create a map of helix nums to the list of strands that start in that helix.
         # Used for writing color information.
-        #self._logger.setLevel(logging.DEBUG)
         self._logger.debug("=================== map helix nums to strands ===================")
         self._logger.debug("Number of strands %d" % len(dna_structure.strands))
         helix_strands_map = {}

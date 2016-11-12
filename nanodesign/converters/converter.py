@@ -13,6 +13,7 @@ import os
 import re
 import sys
 import json
+import logging
 from .cadnano.reader import CadnanoReader
 from .cadnano.writer import CadnanoWriter
 from .cadnano.convert_design import CadnanoConvertDesign
@@ -62,10 +63,9 @@ class Converter(object):
         self.infile = None
         self.informat = None
         self.outfile = None
-        self.logger = None
         self.modify = False
         self.dna_parameters = DnaParameters()
-
+        self.logger = logging.getLogger(__name__)
 
     def read_cadnano_file(self, file_name, seq_file_name, seq_name):
         """ Read in a caDNAno file. 

@@ -78,7 +78,8 @@ class VisAtomicStructure(object):
         # Set the structure name. This will just be the chain ID. There should be just one chain.
         chains = list(molecule.chains)
         self.name = chains[0]
-        self._logger = self._setup_logging()
+        logger = logging.getLogger(__name__ + ':' + self.name) 
+
         # Set the equivalent strand name for this chain.
         tokens = self.name.split(".")
         if tokens[0] == "sc":
@@ -97,17 +98,6 @@ class VisAtomicStructure(object):
             VisAtomicStructureRepType.BONDS    : self.create_bonds_rep,
             VisAtomicStructureRepType.CHECK    : self.create_check_rep 
         }
-
-    def _setup_logging(self):
-        """ Set up logging."""
-        logger = logging.getLogger(__name__ + ':' + self.name) 
-        logger.setLevel(logging.INFO)
-        # Create console handler and set format.
-        console_handler = logging.StreamHandler()
-        formatter = logging.Formatter('[%(name)s] %(levelname)s - %(message)s')
-        console_handler.setFormatter(formatter)
-        logger.addHandler(console_handler)
-        return logger
 
     @staticmethod
     def compare(a,b):
@@ -141,7 +131,6 @@ class VisAtomicStructure(object):
 
             The strand backbone is visualized by displaying its P atoms as solid spheres connected by lines.
         """
-        #self._logger.setLevel(logging.DEBUG)
         self._logger.debug("Create atomic structure backbone rep.")
         s = self.scale
         # Extract the P atom coordinates.
@@ -186,7 +175,6 @@ class VisAtomicStructure(object):
             are displayed as solid polygons. A list of which points belong to which base is created so that the base 
             number of a picked point on the bond geometry can be determined. 
         """
-        #self._logger.setLevel(logging.DEBUG)
         self._logger.debug("Create atomic structure bonds rep.")
         self._logger.debug("Number of residues %d " % len(self.molecule.residues))
         num_bond_points = 0
@@ -256,7 +244,6 @@ class VisAtomicStructure(object):
             This visualization is used to display P atoms bond lengths that deviate from too much from an average length.
             The geometry will be a set of thick lines for only those bonds whose deviation is larger than a given tolerance. 
         """
-        #self._logger.setLevel(logging.DEBUG)
         self._logger.debug("Create atomic structure check rep.")
         points = []
         s = self.scale

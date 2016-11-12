@@ -18,9 +18,6 @@ except ImportError:
     from nanodesign.data.parameters import DnaParameters
     sys.path = sys.path[:-1]
 
-#reduce logging level TODO
-#logging.disable(logging.ERROR) davep
-
 class Stapler(object):
     """
         dna_structure         = dna_structure (dna_structure.py) from converter.cadnano_convert_design.create_structure
@@ -80,27 +77,14 @@ class Stapler(object):
         self.template_offsets = []
         self.break_positions = []
         self.single_strand_side_exception = []
-        self._logger = self._setup_logging()
+        self._logger = logging.getLogger("stapler")
 
         self._generate_paths()
         self._join_crossovers()
 
-    def _setup_logging(self):
-        """ Set up logging."""
-        logger = logging.getLogger("stapler")
-        logger.setLevel(logging.INFO)
-    
-        # create console handler and set format
-        console_handler = logging.StreamHandler()
-        formatter = logging.Formatter('[%(name)s] %(levelname)s - %(message)s')
-        console_handler.setFormatter(formatter)
-        logger.addHandler(console_handler)
-        return logger
-    
     def _generate_paths(self):
         """ create path_list, crossovers, crossovers_sorted, path_crossover_list, strand_index
         """
-        #self._logger.setLevel(logging.DEBUG)
         self._logger.debug("=====================  generate paths =====================")
         path_number = 0
 
@@ -743,7 +727,6 @@ class Stapler(object):
     def _break_json(self):
         """ write all breaks into cadnano_design
         """
-        self._logger.setLevel(logging.DEBUG)
         self._logger.debug("=====================  break json =====================")
         
         for path_nr, path_breaks in enumerate(self.break_positions):

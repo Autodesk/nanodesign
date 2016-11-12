@@ -277,19 +277,8 @@ class VisMenu(object):
         self.strand_names = strand_names
         self.atomic_struct_names = atomic_struct_names 
         self.selections = {}
-        self._logger = self._setup_logging()
+        self._logger = logging.getLogger(__name__)
         self._create_menu_items()
-
-    def _setup_logging(self):
-        """ Set up logging."""
-        logger = logging.getLogger(__name__)
-        logger.setLevel(logging.INFO)
-        # Create console handler and set format.
-        console_handler = logging.StreamHandler()
-        formatter = logging.Formatter('[%(name)s] %(levelname)s - %(message)s')
-        console_handler.setFormatter(formatter)
-        logger.addHandler(console_handler)
-        return logger
 
     def _create_menu_items(self):
         """ Create items for the popup menu. 

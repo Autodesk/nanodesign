@@ -87,7 +87,7 @@ class VisModel(object):
         self.helix_numbers_geometry = []
         self.helix_projection_geometry = []
         self.structure_geometry = []
-        self._logger = self._setup_logging()
+        self._logger = logging.getLogger(__name__)
         self._set_extent()
         # Generate auxiliary data (e.g. domains) needed for certain visualizations.
         self.dna_structure.compute_aux_data()
@@ -95,17 +95,6 @@ class VisModel(object):
         self._create_helices()
         self._create_strands()
         self._create_atomic_structures()
-
-    def _setup_logging(self):
-        """ Set up logging. """
-        logger = logging.getLogger(__name__)
-        logger.setLevel(logging.INFO)
-        # Create console handler and set format.
-        console_handler = logging.StreamHandler()
-        formatter = logging.Formatter('[%(name)s] %(levelname)s - %(message)s')
-        console_handler.setFormatter(formatter)
-        logger.addHandler(console_handler)
-        return logger
 
     def _create_helices(self):
         """ Create a VisHelix object for each DnaHelix object. """
