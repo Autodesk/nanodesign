@@ -17,12 +17,7 @@ class ViewerWriter(object):
     def __init__(self, dna_structure, dna_parameters): 
         self.dna_structure = dna_structure
         self.dna_parameters = dna_parameters
-        self._logging_level = logging.INFO
-        self._setup_logging()
-
-    def set_logging_level(self,level):
-        """Set logging level."""
-        self._logger.setLevel(level)
+        self._logger = logging.getLogger(__name__)   
 
     def write(self,file_name):
         """Write a viewer JSON file.
@@ -87,7 +82,6 @@ class ViewerWriter(object):
 
     def _get_helices_info(self, dna_structure):
         """ Get JSON serialized data for helix objects. """
-        #self._logger.setLevel(logging.DEBUG)
         self._logger.debug("==================== get helix information ===================")
         helices_info = []
         # Need helices sorted by ID for indexing into helix arryay.
@@ -127,7 +121,6 @@ class ViewerWriter(object):
     def _get_strand_info(self, dna_structure):
         """ Get JSON serialized data for strands objetcs. 
         """
-        #self._logger.setLevel(logging.DEBUG)
         self._logger.debug("==================== get strand information p ===================")
         strand_info_list = []
         for strand in dna_structure.strands:
@@ -250,7 +243,6 @@ class ViewerWriter(object):
     def _get_helix_conn_info(self, helix):
         """ Get the information to write for helix connectivity.
         """
-        #self._logger.setLevel(logging.DEBUG)
         self._logger.debug("==================== get conn info for helix num %d ===================" % helix.lattice_num) 
         dna_structure = self.dna_structure
         lattice = dna_structure.lattice
@@ -331,21 +323,17 @@ class ViewerWriter(object):
         self._logger.debug("    Staple crossovers: ") 
         pos = sorted_staples.keys()
         self._get_crossover_strand_info(start_pos, pos, staples, crossover_info)
-        #print("########## staple crossover_info: size: %d" % len(crossover_info)) 
-        #print("           data: %s" % str(crossover_info)) 
 
         # Add scaffold information.
         sorted_scaffolds = collections.OrderedDict(sorted(scaffolds.items()))
         self._logger.debug("    Scaffold crossovers: ") 
         pos = sorted_scaffolds.keys()
         self._get_crossover_strand_info(start_pos, pos, scaffolds, crossover_info)
-        #print("########## scaffold crossover_info: size: %d" % len(crossover_info)) 
-        #print("           data: %s" % str(crossover_info)) 
 
         return crossover_info 
+    #__def _get_crossover_info
 
     def _get_crossover_strand_info(self, start_pos, pos, crossovers, crossover_info):
-        #self._logger.setLevel(logging.DEBUG)
         num_pos = len(pos)
         n = 0
         while n < num_pos:
@@ -387,28 +375,7 @@ class ViewerWriter(object):
             crossover_info.append(info)
         #__while n < num_pos
 
-        self._logger.setLevel(logging.INFO)
         return crossover_info
+    #__def _get_crossover_strand_info
 
-    def _setup_logging(self):
-        """ Set up logging."""
-        self._logger = logging.getLogger(__name__)
-        #self._logger = logging.getLogger('viewer:writer')
-        self._logger.setLevel(self._logging_level)
-        # Create console handler and set format.
-        if not len(self._logger.handlers):
-            console_handler = logging.StreamHandler()
-            formatter = logging.Formatter('[%(name)s] %(levelname)s - %(message)s')
-            console_handler.setFormatter(formatter)
-            self._logger.addHandler(console_handler)
-
-def main():
-    """ Write a DNA Design Viewer JSON file."""
-    file_name = sys.argv[1]
-    cadnano_reader = CadnanoReader()
-    #cadnano_reader.set_logging_level(logging.DEBUG)
-    cadnano_reader.read_json(file_name)
-
-if __name__ == '__main__':
-    main()
-
+#__class ViewerWriter

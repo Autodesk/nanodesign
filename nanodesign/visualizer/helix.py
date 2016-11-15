@@ -71,7 +71,8 @@ class VisHelix(object):
         self.strand_ids = set()
         self.representations = {}
         self.color = [0.6,0.6,0.6,0.5]
-        self._logger = self._setup_logging()
+        self._logger = logging.getLogger(__name__ + ":" + self.name)
+
         # Set the methods to create geometry for the different representations.
         self.create_rep_methods = { 
             VisHelixRepType.COORDINATE_FRAMES : self.create_frames_rep, 
@@ -85,17 +86,6 @@ class VisHelix(object):
             VisHelixRepType.PAIRED_GEOMETRY    : self.create_paired_geometry_rep,
             VisHelixRepType.STRANDS            : self.create_strands_rep
         }
-
-    def _setup_logging(self):
-        """ Set up logging. """
-        logger = logging.getLogger(__name__ + ":" + self.name)
-        logger.setLevel(logging.INFO)
-        # Create console handler and set format.
-        console_handler = logging.StreamHandler()
-        formatter = logging.Formatter('[%(name)s] %(levelname)s - %(message)s')
-        console_handler.setFormatter(formatter)
-        logger.addHandler(console_handler)
-        return logger
 
     def get_boundaries(self):
         """ Get the start-end base positions of regions of dsDNA. """
@@ -179,7 +169,6 @@ class VisHelix(object):
 
     def create_crossovers_rep(self):
         """ Create the geometry for the helix crossover representation. """
-        #self._logger.setLevel(logging.DEBUG)
         self._logger.debug("Create crossover rep for helix num %d " % self.vhelix.lattice_num)
         dna_structure = self.dna_structure
         helix = self.vhelix
@@ -232,7 +221,6 @@ class VisHelix(object):
         geom.data = crossover_data 
         self.representations[VisHelixRepType.DESIGN_CROSSOVERS] = [geom]
         self.graphics.add_render_geometry(geom)
-        self._logger.setLevel(logging.INFO)
 
     def select_crossover(self, geom, index):
         """ Process helix crossover selection.
@@ -252,7 +240,6 @@ class VisHelix(object):
 
     def create_maximal_crossovers_rep(self):
         """ Create the geometry for the helix maximal crossover representation. """
-        #self._logger.setLevel(logging.DEBUG)
         self._logger.debug("Create maximal_crossover rep for helix num %d " % self.vhelix.lattice_num)
         dna_structure = self.dna_structure
         helix = self.vhelix
@@ -322,7 +309,6 @@ class VisHelix(object):
             self.representations[VisHelixRepType.MAXIMAL_CROSSOVERS] = [geom]
             self.graphics.add_render_geometry(geom)
         #__for i,crossovers in enumerate([staple_crossovers,scaffold_crossovers])
-        self._logger.setLevel(logging.INFO)
 
     def select_maximal_crossover(self, geom, index):
         """ Process helix crossover selection.

@@ -4,14 +4,6 @@ This module is used to store data for a DNA base.
 A list of DnaBase objects, stored in the DnaStructure object, is used to define the connectivity (topology) 
 of a DNA structure: bases that are adjacent along a single DNA helix and which base they are paired with (if any). 
 """
-import os
-import sys
-import logging
-import re
-import string
-import sys
-import time
-import numpy as np
 
 class DnaBase(object):
     """ This class stores information for a DNA base. 

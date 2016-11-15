@@ -62,21 +62,10 @@ def parse_args():
     parser.add_argument("-x",   "--transform",     help="apply a transformation to a set of helices")
     return parser.parse_args()
 
-def _setup_logging():
-    """ Set up logging. """
-    logger = logging.getLogger("visualizer")
-    logger.setLevel(logging.INFO)
-
-    # Create console handler and set format.
-    console_handler = logging.StreamHandler()
-    formatter = logging.Formatter('[%(name)s] %(levelname)s - %(message)s')
-    console_handler.setFormatter(formatter)
-    logger.addHandler(console_handler)
-    return logger
-
 def read_file(args, logger):
     """ Read in a cadnano file. """
     converter = Converter()
+    logger = logging.getLogger('nanodesign.visualizer')
     converter.logger = logger
 
     if args.infile == None:
@@ -91,7 +80,7 @@ def read_file(args, logger):
     return converter
 
 def main():
-    logger = _setup_logging()
+    logger = logging.getLogger("vis")
 
     # Get command-line arguments.
     args = parse_args()

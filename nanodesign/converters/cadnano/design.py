@@ -24,30 +24,13 @@ class CadnanoDesign(object):
         self.helices_coord_map = {}
         self.max_row = 0
         self.max_col = 0
-        self._logging_level = logging.INFO
-        self._logging = self._setup_logging()
-
-    def set_logging_level(self,level):
-        """Set logging level."""
-        self._logger.setLevel(level)
-
-    def _setup_logging(self):
-        """ Set up logging."""
-        self._logger = logging.getLogger('cadnano:model')
-        self._logger.setLevel(self._logging_level)
-        # Create console handler and set format.
-        if not len(self._logger.handlers):
-            console_handler = logging.StreamHandler()
-            formatter = logging.Formatter('[%(name)s] %(levelname)s - %(message)s')
-            console_handler.setFormatter(formatter)
-            self._logger.addHandler(console_handler)
+        self._logger = logging.getLogger(__name__) 
 
     def calculate_possible_crossovers(self):
         """ Calculate the possible crossover positions for both scaffold and staples. 
 
             The method for computing cross-ovrs is based on that from the caDNAno part.py file. 
         """
-        #self.set_logging_level(logging.DEBUG)
         self._logger.debug(" ======================== calculate crossovers ======================== ")
         self._logger.debug(">>> lattice type: %s " % CadnanoLatticeType.names[self.lattice_type])
 

@@ -11,19 +11,13 @@ from .common import CadnanoLatticeName,CadnanoLatticeType,CadnanoJsonFields
 from .design import CadnanoDesign,CadnanoVirtualHelix,CadnanoBase
 from ...data.sequence import DnaSequence
 
-
 class CadnanoReader(object):
     """The CadnanoReader class."""
     instance_count = 1
 
     def __init__(self):
-        self._logging_level = logging.INFO
-        self._setup_logging()
+        self._logger = logging.getLogger(__name__)   
         CadnanoReader.instance_count += 1
-
-    def set_logging_level(self,level):
-        """Set logging level."""
-        self._logger.setLevel(level)
 
     def read_json(self,file_name):
         """Read a caDNAno DNA origami design JSON file.
@@ -39,7 +33,7 @@ class CadnanoReader(object):
         # make sure to expand the path first so we can use relative paths or ~ expansion
         import os.path
         file_name = os.path.expanduser( file_name )
-        self._logger.info("Reading caDNAno design file: {}".format(file_name))
+        self._logger.info("Reading caDNAno design file {}".format(file_name))
         with open(file_name) as json_file:
             json_data = json.load(json_file)
 
@@ -61,7 +55,7 @@ class CadnanoReader(object):
             list (DnaSequence): A list of DnaSequence objects representing the sequence for staple or scaffold strands.
         """
 
-        self._logger.info("Reading caDNAno design CSV file: %s " % file_name)
+        self._logger.info("Reading caDNAno design CSV file %s " % file_name)
         sequences = []
         num_lines = 1
         seq_start = [0,0]
@@ -88,7 +82,7 @@ class CadnanoReader(object):
                 sequences.append(seq)
                 num_lines += 1
         #__with open(file_name, 'rU') __
-        self._logger.info("Number of sequences read: %d" % len(sequences))
+        self._logger.info("Number of sequences read %d" % len(sequences))
         return sequences
 
     def parse_json_data(self, json_data):
@@ -97,10 +91,9 @@ class CadnanoReader(object):
         Args:
             json_data: The data read from a caDNAno DNA origami design JSON file.
         """
-        #self._logger.setLevel(logging.DEBUG)
         design = CadnanoDesign()
         num_bases = len(json_data[CadnanoJsonFields.VSTRANDS][0][CadnanoJsonFields.SCAF])
-        self._logger.info("Number of bases in a virtual helix: %d " % num_bases)
+        self._logger.info("Number of bases in a virtual helix %d " % num_bases)
         design.max_base_id = num_bases-1 
 
         # determine lattice type
@@ -112,7 +105,7 @@ class CadnanoReader(object):
             lattice_type = CadnanoLatticeType.honeycomb
         else:
             lattice_type = CadnanoLatticeType.honeycomb
-        self._logger.info("Lattice type: %s " % CadnanoLatticeType.names[lattice_type])
+        self._logger.info("Lattice type %s " % CadnanoLatticeType.names[lattice_type])
         design.lattice_type = lattice_type
 
         # parse helix information 
@@ -127,11 +120,11 @@ class CadnanoReader(object):
             insertions = json_helix[CadnanoJsonFields.LOOP]
             helix = CadnanoVirtualHelix(num_helix, num, row, col, insertions, deletions)
             self._logger.debug("==================== virtual helix %d ==================== " % num_helix) 
-            self._logger.debug("num %d: " % num) 
-            self._logger.debug("row %d: " % row) 
-            self._logger.debug("col %d: " % col) 
-            self._logger.debug("Number of insertions %d: " % insertions.count(-1))
-            self._logger.debug("Number of deletions %d: " % deletions.count(-1))
+            self._logger.debug("num %d " % num) 
+            self._logger.debug("row %d " % row) 
+            self._logger.debug("col %d " % col) 
+            self._logger.debug("Number of insertions %d " % insertions.count(-1))
+            self._logger.debug("Number of deletions %d " % deletions.count(-1))
 
             # Check for a vhelix with no bases.
             scaffold = json_helix[CadnanoJsonFields.SCAF]
@@ -169,8 +162,8 @@ class CadnanoReader(object):
 
             design.helices.append(helix)
 
-            self._logger.debug("Number of scaffold bases: %d " % num_scaffold_bases) 
-            self._logger.debug("Number of deletions %d: " % deletions.count(-1))
+            self._logger.debug("Number of scaffold bases %d " % num_scaffold_bases) 
+            self._logger.debug("Number of deletions %d " % deletions.count(-1))
 
             # parse staple colors
             helix.staple_colors = json_helix[CadnanoJsonFields.STAP_COLORS]
@@ -182,28 +175,16 @@ class CadnanoReader(object):
 
         design.max_row = max_row_json
         design.max_col = max_col_json
-        self._logger.info("Number of virtual helices read: %d " % num_helix) 
-        self._logger.info("Number of scaffold bases: %d " % num_scaffold_bases) 
-        self._logger.info("Maximum number of lattice rows: %d " % max_row_json) 
-        self._logger.info("Maximum number of lattice columns: %d " % max_col_json) 
+        self._logger.info("Number of virtual helices read %d " % num_helix) 
+        self._logger.info("Number of scaffold bases %d " % num_scaffold_bases) 
+        self._logger.info("Maximum number of lattice rows %d " % max_row_json) 
+        self._logger.info("Maximum number of lattice columns %d " % max_col_json) 
         return design
-
-    def _setup_logging(self):
-        """ Set up logging."""
-        #self._logger = logging.getLogger(__name__ + "." + str(CadnanoReader.instance_count))
-        self._logger = logging.getLogger(__name__)
-        self._logger.setLevel(self._logging_level)
-        if not len(self._logger.handlers):
-            console_handler = logging.StreamHandler()
-            formatter = logging.Formatter('[%(name)s] %(levelname)s - %(message)s')
-            console_handler.setFormatter(formatter)
-            self._logger.addHandler(console_handler)
 
 def main():
     """ Read in a caDNAno file."""
     file_name = sys.argv[1]
     cadnano_reader = CadnanoReader()
-    #cadnano_reader.set_logging_level(logging.DEBUG)
     cadnano_reader.read_json(file_name)
 
 if __name__ == '__main__':

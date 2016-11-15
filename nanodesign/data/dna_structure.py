@@ -34,7 +34,6 @@ class DnaStructure(object):
             strands (List[DnaStrand]): The list a DnaStrand objects. 
             strands_map (Dict[DnaStrand]): The dictionary that maps strand IDs to DnaStrand objects.
     """ 
-
     def __init__(self, name, base_connectivity, helices, dna_parameters):
         """ Initialize a DnaStructure object. 
 
@@ -55,21 +54,9 @@ class DnaStructure(object):
         self.strands_map = dict()
         self.domain_list = []
         self.connector_points = []
-        self._logger = self._setup_logging()
+        self._logger = logging.getLogger(__name__)
         self._add_structure_helices(helices)
         self._aux_data_computed = False
-
-    def _setup_logging(self):
-        """ Set up logging."""
-        logger = logging.getLogger(__name__ + ":" + str(self.name))
-        logger.setLevel(logging.INFO)
-        # Create console handler and set format.
-        if not len(logger.handlers):
-            console_handler = logging.StreamHandler()
-            formatter = logging.Formatter('[%(name)s] %(levelname)s - %(message)s')
-            console_handler.setFormatter(formatter)
-            logger.addHandler(console_handler)
-        return logger
 
     def _add_structure_helices(self, structure_helices):
         """ Add a list of structural helices. 
@@ -209,7 +196,6 @@ class DnaStructure(object):
             for strand in self.strands:
                 self.strands_map[strand.id] = strand 
         if id not in self.strands_map:
-            #self._logger.error("Failed to find strand id %d." % id)
             return None
         return self.strands_map[id]
 
@@ -229,7 +215,6 @@ class DnaStructure(object):
         self.strands = remaining_strands
         self.strands_map = dict()
 
-        #self._logger.setLevel(logging.DEBUG)
         if self._logger.getEffectiveLevel() == logging.DEBUG:
             self._logger.debug("=================== remove staples ===================")
             for strand in removed_strands: 
@@ -253,8 +238,6 @@ class DnaStructure(object):
             Bases are obtained from the base lists stored in the structure helices. The
             base ID is set to its location in the table.
         """
-        self._logger.setLevel(logging.INFO)
-        #self._logger.setLevel(logging.DEBUG)
         self._logger.debug("=================== create base connectivity table ===================")
         base_connectivity = []
         # Add bases from helices. 
@@ -296,8 +279,6 @@ class DnaStructure(object):
 
             The structure base connectivity table is generated and a new list of strands are created from it. 
         """
-        self._logger.setLevel(logging.INFO)
-        #self._logger.setLevel(logging.DEBUG)
         self._logger.info("Add maximal staple set")
 
         # Create lists of strands to remove and strands to keep.
@@ -353,8 +334,6 @@ class DnaStructure(object):
            A list of bases for each helix is first created from removed strands bases. 
            The bases for each helix are then removed using that list.
         """
-        self._logger.setLevel(logging.INFO)
-        #self._logger.setLevel(logging.DEBUG)
         self._logger.debug("===================== remove strands  =====================")
 
         # Create lists of bases to remove for each helix.
@@ -413,8 +392,6 @@ class DnaStructure(object):
             Domains are created using an integer ID starting from 0. 
             Domain objects are stored in self.domain_list[]. A list of domains is also created for each strand.
         """ 
-        self._logger.setLevel(logging.INFO)
-        #self._logger.setLevel(logging.DEBUG)
         self._logger.debug("===================== compute domains =====================")
         domain_id = 0
         self.domain_list = []
@@ -556,8 +533,6 @@ class DnaStructure(object):
             The combination of the bases in a list of domains for a strand should equal the number of base and follow the 
             order of bases in that strand. In addition each domain should only contain bases for a single helix. 
         """
-        self._logger.setLevel(logging.INFO)
-        #self._logger.setLevel(logging.DEBUG)
         self._logger.debug("============================== check domains ============================== " )
         num_failures = 0
         for strand in self.strands:
@@ -699,11 +674,9 @@ class DnaStructure(object):
             ebase = base_list[-1]
 
             if (first_sbase.h == ebase.h) and  (abs(first_sbase.p-ebase.p) == 1):
-                #self._logger.setLevel(logging.DEBUG)
                 self._logger.debug("---------- strand %d: merging domains ---------- " % strand.id)
                 self._logger.debug(">>> first domain id %d:  h %d  sb %d  eb %d" % (first_dom.id, first_sbase.h, first_sbase.p, first_ebase.p))
                 self._logger.debug(">>> base list:           sbase %d  ebase %d" % (sbase.p, ebase.p))
-                self._logger.setLevel(logging.INFO)
                 domain_was_merged = True 
                 merged_base_list = []
                 for base in base_list:

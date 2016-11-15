@@ -640,21 +640,9 @@ def compare_lists(name, list1, list2, check_order):
 
     return True
 
-def setup_logging(level):
-    """ Setup logging. """
+def main():
     global logger
     logger = logging.getLogger('compare-viewer-json')
-    logger.setLevel(level)
-
-    # Create console handler and set format.
-    console_handler = logging.StreamHandler()
-    #formatter = logging.Formatter('%(asctime)s [%(name)s] %(levelname)s - %(message)s')
-    formatter = logging.Formatter('[%(name)s] %(levelname)s - %(message)s')
-    console_handler.setFormatter(formatter)
-    logger.addHandler(console_handler)
-
-def main():
-    setup_logging(logging.INFO)
 
     if (len(sys.argv) != 3):
         sys.stderr.write("**** ERROR: Wrong number of arguments.\n") 

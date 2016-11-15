@@ -21,7 +21,6 @@ import json
 import logging
 import os 
 import numpy as np
-import time
 from .atomic_structure import AtomicStructure
 
 class CifWriter(object):
@@ -48,24 +47,7 @@ class CifWriter(object):
         """
         self.dna_structure = dna_structure
         self.entityID = 1
-        self._logging_level = logging.INFO
-        self._setup_logging()
-        self._timer = _Timer()
-
-    def _setup_logging(self):
-        """ Set up logging. """
-        self._logger = logging.getLogger(__name__)
-        self._logger.setLevel(self._logging_level)
-        # Create console handler and set format.
-        if not len(self._logger.handlers):
-            console_handler = logging.StreamHandler()
-            formatter = logging.Formatter('[%(name)s] %(levelname)s - %(message)s')
-            console_handler.setFormatter(formatter)
-            self._logger.addHandler(console_handler)
-
-    def set_logging_level(self,level):
-        """ Set logging level. """
-        self._logger.setLevel(level)
+        self._logger = logging.getLogger(__name__)   
 
     def write(self, file_name, infile, informat):
         """ Write a CIF file.
@@ -84,11 +66,9 @@ class CifWriter(object):
 
         # Generate atomic models of the dna structure. A list of Molecule objects is 
         # created for each strand.  
-        self._timer.start()
         atomic_structure = AtomicStructure(dna_structure)
         molecules = atomic_structure.generate_structure_ss()  # converts ssDNA
         #molecules = atomic_structure.generate_structure()
-        self._logger.info("Time to generate atomic structures %s " % self._timer.finish())
         self._logger.info("Number of molecules %d " % len(molecules))
         num_atoms = 0
         for molecule in molecules:
@@ -96,7 +76,6 @@ class CifWriter(object):
         self._logger.info("Number of atoms %d " % num_atoms) 
 
         # Write the CIF file.
-        self._timer.start()
         with open(file_name, 'w') as cif_file:
             cif_file.write("data_nanodesign_structure")
             cif_file.write(CifWriter.COMMENT_SPACES)
@@ -105,7 +84,6 @@ class CifWriter(object):
             self._write_struct_asym_records(cif_file, atomic_structure.strands)
             self._write_atom_site_records(cif_file, molecules)
         self._logger.info("Done.")
-        self._logger.info("Time to write CIF file %s " % self._timer.finish())
 
     def _write_struct_records(self, cif_file, informat, infile):
         """ Write CIF _struct records. 
@@ -271,20 +249,4 @@ class CifWriter(object):
             #__for atom in molecule.atoms
         #__for molecule in molecules
 
-class _Timer(object):
-    """ The Timer class is used to calculare elapsed time between calls to the start and finish methods."""
-    def __init__(self):
-        self.start_time = 0.0
-        self.end_time = 0
-        self.secs = 0
-        self.msecs = 0
-
-    def start(self):
-        self.start_time = time.time()
-
-    def finish(self):
-        self.end_time = time.time()
-        self.secs = self.end_time - self.start_time
-        self.msecs = self.secs * 1000  # millisecs
-        return self.secs
 
