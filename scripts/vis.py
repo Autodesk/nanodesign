@@ -65,6 +65,7 @@ def parse_args():
 def read_file(args, logger):
     """ Read in a cadnano file. """
     converter = Converter()
+    logger = logging.getLogger('nanodesign.visualizer')
     converter.logger = logger
 
     if args.infile == None:

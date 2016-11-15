@@ -20,6 +20,12 @@ seq=M13mp18
 # Set to "true" to modify the design.
 modify="false"
 
+# Activate debug logging for the given module name(s). 
+# Examples: 
+#     debug="nanodesign.data.dna_structure,nanodesign.data.dna_structure_helix" - activate debugging for dna_structure and dna_structure_helix modules only
+#     debug="nanodesign.data" - activate debugging for all modules under nanodesign.data 
+debug=""
+
 outfile=./results/${fn}_viewer.json 
 
 if [ ! -d "results/" ]; then
@@ -30,6 +36,7 @@ fi
                            --informat="cadnano"         \
                            --inseqname=${seq}           \
                            --modify=${modify}           \
+                           --debug=${debug}             \
                            --outfile=${outfile}         \
                            --outformat="viewer"
 

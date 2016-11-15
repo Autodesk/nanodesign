@@ -78,7 +78,7 @@ class VisAtomicStructure(object):
         # Set the structure name. This will just be the chain ID. There should be just one chain.
         chains = list(molecule.chains)
         self.name = chains[0]
-        logger = logging.getLogger(__name__ + ':' + self.name) 
+        self._logger = logging.getLogger(__name__ + ':' + self.name) 
 
         # Set the equivalent strand name for this chain.
         tokens = self.name.split(".")

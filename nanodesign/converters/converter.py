@@ -289,4 +289,11 @@ class Converter(object):
         apply_helix_xforms(helix_group_xforms) 
     #__def transform_structure
 
+    def set_module_loggers(self, names):
+        module_names = names.split(",")
+        for module in module_names:
+            logger = logging.getLogger(module)
+            logger.setLevel(logging.DEBUG)
+        #__for module in modules
+    #__def set_debugging_loggers
 

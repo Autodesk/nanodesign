@@ -30,6 +30,7 @@ converter_write_map = { ConverterFileFormats.VIEWER    : 'write_viewer_file',
 def parse_args():
     """ Parse command-line arguments."""
     parser = argparse.ArgumentParser()
+    parser.add_argument("-dbg", "--debug",       help="set modules debugging logger")
     parser.add_argument("-hd",  "--helixdist",   help="distance between DNA helices")
     parser.add_argument("-if",  "--informat",    help="input file format: cadnano, viewer")
     parser.add_argument("-i",   "--infile",      help="input file")
@@ -42,7 +43,6 @@ def parse_args():
     parser.add_argument("-x",   "--transform",   help="apply a transformation to a set of helices")
     return parser.parse_args()
 
-
 def main():
     logger = logging.getLogger('nanodesign.converter')
     converter = Converter()
@@ -50,6 +50,9 @@ def main():
 
     # Process command-line arguments.
     args = parse_args()
+
+    if args.debug:
+        converter.set_module_loggers(args.debug) 
 
     if args.infile == None:
         logger.error("No input file name given.")
