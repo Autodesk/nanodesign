@@ -325,6 +325,7 @@ class VisMenu(object):
         strand_select.add_submenu(VisStrandRepType.DOMAINS,     "Strand domains")
         strand_select.add_submenu(VisStrandRepType.FRAMES,      "Strand frames")
         strand_select.add_submenu(VisStrandRepType.PATH,        "Strand path")
+        strand_select.add_submenu(VisStrandRepType.TEMPERATURE, "Strand temperature")
 
         # Create the submenus for the virtual helix representations. 
         helix_select.add_submenu(VisHelixRepType.BASE_POSITIONS,    "Virtual helix base positions") 
@@ -337,6 +338,7 @@ class VisMenu(object):
         helix_select.add_submenu(VisHelixRepType.MAXIMAL_CROSSOVERS,"Virtual helix maximal crossovers")
         helix_select.add_submenu(VisHelixRepType.PAIRED_GEOMETRY,   "Virtual helix paired geometry")
         helix_select.add_submenu(VisHelixRepType.STRANDS,           "Virtual helix strands")
+        helix_select.add_submenu(VisHelixRepType.TEMPERATURE,       "Virtual helix temperature")
 
         # Add the quit menu item.
         self._add_menu_item("Quit", self.quit_callback) 
@@ -357,6 +359,7 @@ class VisMenu(object):
         print(" Strand domains - Show the domains defined for a strand.")
         print(" Strand frames - Show the coordinate frames for a strand. An arrow shows the direction of a strand within a virtual helix.")
         print(" Strand geometry - Show a strand as a series of straight lines. A sphere shows the start of the strand.")
+        print(" Strand temperature - Show the melting temperature for domains defined for a strand.")
 
         print(" Virtual helix base positions - Show the location of base positions along a helix axis.")
         print(" Virtual helix coordinate frames - Show the virtual helix coordinate frames. An arrow on the helix axis shows its polarity.")
@@ -366,6 +369,7 @@ class VisMenu(object):
         print(" Virtual helix domains - Show the domains defined for the virtual helix.")
         print(" Virtual helix inserts and deletes - Show the locations of base insertions and deletions for the virtual helix.")
         print(" Virtual helix strands - Show the strands that start in a virtual helix.")
+        print(" Virtual helix temperature - Show the melting temperature for domains defined for the virtual helix.")
         print("\n")
 
     def update(self):

@@ -70,6 +70,7 @@ class VisGeometry(object):
         self.id = VisGeometry.num_geometries
         self.extent = VisExtent()
         self.vertices = None 
+        self.colors = None 
         self.num_vertices = 0 
         self.data = [] 
         self.color = [1.0, 1.0, 1.0, 1.0]
@@ -337,8 +338,10 @@ class VisGeometryPath(VisGeometry):
             vertex_spheres (List[VisGeometrySphere]): The list of geometry objects for vertex spheres. 
             sphere_selected (bool): If true then a sphere has been selected.
             bend_points (List[List[Float]]): The list of points where the path bends to cross over to an adjacent helix.
+            bend_index (List[Int]): The list of indexes into the points path where the path bends to cross over to an 
+                adjacent helix. This is used to assign colors to arrows marking the path direction.
     """
-    def __init__(self, name, points, show_vertices=False, show_arrows=False):
+    def __init__(self, name, points, show_vertices=False, show_arrows=False, **kwargs):
         """ Initialize a VisGeometryLines object. 
 
             Arguments:
@@ -356,9 +359,15 @@ class VisGeometryPath(VisGeometry):
         self.vertex_spheres = []
         self.sphere_selected = False
         self.bend_points = []
-        self._create_geometry(points, show_vertices, show_arrows)
+        self.bend_index = []
+        colors = None
+        for key, value in kwargs.iteritems():
+            if key == "colors":
+                colors = value
+        #__for key, value in kwargs.iteritems()
+        self._create_geometry(points, colors, show_vertices, show_arrows)
 
-    def _create_geometry(self, points, show_vertices, show_arrows):
+    def _create_geometry(self, points, colors, show_vertices, show_arrows):
         """ Create the geometry for the path. 
 
             Arguments:
@@ -368,6 +377,8 @@ class VisGeometryPath(VisGeometry):
         """
         self.num_vertices = len(points)
         self.vertices = np.zeros((self.num_vertices,3), dtype=float);
+        if colors:
+            self.colors = colors
         for i,point in enumerate(points):
             self.vertices[i,:] = point
             if show_vertices:
@@ -389,20 +400,29 @@ class VisGeometryPath(VisGeometry):
                 offset = 0
             # Calculate bend points.
             self.bend_points.append(points[0])
+            self.bend_index.append(0)
             for i in xrange(0,len(points)-1):
                 point1 = points[i]
                 point2 = points[i+1]
-                v = [point2[i] - point1[i] for i in range(3)]
+                v = [point2[j] - point1[j] for j in range(3)]
                 dist = vector_mag(v)
                 if dist > 0.4:
                     self.bend_points.append(point1[:])
                     self.bend_points.append(point2[:])
+                    if self.colors:
+                        self.bend_index.append(i)
+                        self.bend_index.append(i)
+                #__if dist > 0.4
             #__for i in xrange(0,len(points)-1)
             last_point = points[-1]
             self.bend_points.append(last_point[:])
+            self.bend_index.append(len(points)-1)
+            self.bend_index.append(len(points)-1)
             # Create arrow geometry. Arrows are placed at the midpoint between bend points. 
             self.num_arrow_vertices = len(self.bend_points) * 8 
             self.arrow_vertices = np.zeros((self.num_arrow_vertices,3), dtype=float)
+            if self.colors:
+                self.arrow_colors = np.zeros((self.num_arrow_vertices,4), dtype=float)
             n = 0
             for i in xrange(0,len(self.bend_points)+offset):
                 # Add an arrowhead at the end of a non-circular path. 
@@ -412,13 +432,13 @@ class VisGeometryPath(VisGeometry):
                 else:
                     point1 = self.bend_points[i]
                     point2 = self.bend_points[i+1]
-                    dir = [point2[i] - point1[i] for i in range(3)]
+                    dir = [point2[j] - point1[j] for j in range(3)]
                     dist = vector_mag(dir)
                     if dist == 0.0:
                         continue
                     u = vector_norm(dir)
                     v,w = compute_basis(u)
-                    cpt = [point1[i] + 0.5*dist*u[i] for i in range(3)]
+                    cpt = [point1[j] + 0.5*dist*u[j] for j in range(3)]
                 #__if i == len(self.bend_points)-1
                 scale = 0.2
                 hs = 0.05*scale
@@ -434,11 +454,14 @@ class VisGeometryPath(VisGeometry):
                     self.arrow_vertices[n+6,j] = cpt[j] + scale*u[j]
                     self.arrow_vertices[n+7,j] = cpt[j] + hs*u[j] - asc*w[j]
                 #__for j in xrange(0,3)
+                if self.colors:
+                    k = (self.bend_index[i] + self.bend_index[i+1]) / 2
+                    for j in xrange(0,8):
+                        self.arrow_colors[n+j,:] = self.colors[k] 
+                #__if self.bend_colors
                 n += 8
             #__for i in xrange(0,len(self.bend_points)/2)
-
-        #self.update_stats(0, len(self.arrow_vertices))
-        #self.update_stats(0, len(self.vertices))
+    #__def _create_geometry
 
     def intersect_line(self, point1, point2):
         """ Intersect the geometry with a line. """ 
@@ -515,6 +538,8 @@ class VisGeometryPath(VisGeometry):
         glColor4fv(self.color)
         glBegin(GL_LINE_STRIP)
         for i in xrange(0,self.num_vertices):
+            if self.colors:
+                glColor4fv(self.colors[i])
             glVertex3dv(self.vertices[i])
         glEnd()
         glEnable(GL_LIGHTING);
@@ -628,6 +653,8 @@ class VisGeometryPath(VisGeometry):
             glDisable(GL_LIGHTING);
             glBegin(GL_LINES)
             for i in xrange(0,self.num_arrow_vertices):
+                if self.colors:
+                    glColor4fv(self.arrow_colors[i])
                 glVertex3dv(self.arrow_vertices[i])
             glEnd()
             glEnable(GL_LIGHTING);
@@ -685,6 +712,7 @@ class VisGeometryCylinder(VisGeometry):
 
         Attributes:
             axis (List[Float]): The cylinder axis; defined by point2-point1. 
+            capped (Tuple(bool,bool)): Flags for capping the ends of the cylinder.
             length (Float): The length of the cylinder; defined by |point1-point2|.
             normals ((NumPy Nx3 ndarray[float]): The cylinder polygons vertex normals. 
             num_tri (int): The number of triangles used to represent the cylinder. 
@@ -696,7 +724,7 @@ class VisGeometryCylinder(VisGeometry):
 
         The cylinder orientation (axis) and length is defined by two points.
     """ 
-    def __init__(self, name, radius, point1, point2, num_sides=20):
+    def __init__(self, name, radius, point1, point2, num_sides=20, **kwargs):
         """ Initialize a VisGeometryCylinder object. 
 
             Arguments:
@@ -719,6 +747,11 @@ class VisGeometryCylinder(VisGeometry):
         self.normals = None 
         self.num_tri = 0 
         self.tri_conn = None
+        self.capped = (True,True)
+        for key, value in kwargs.iteritems():
+            if key == "capped":
+                self.capped = value
+        #__for key, value in kwargs.iteritems()
         self._generate_cyl()
 
     def intersect_line(self, point1, point2):
@@ -847,6 +880,8 @@ class VisGeometryCylinder(VisGeometry):
         if not self.visible:
             return
         axis = self.axis
+        cap1 = self.capped[0]
+        cap2 = self.capped[1]
         num_sides = self.num_sides
         num_tri = self.num_tri 
         verts = self.vertices 
@@ -855,10 +890,9 @@ class VisGeometryCylinder(VisGeometry):
         n = 3
         conn_count = 0
         glEnable(GL_LIGHTING);
-        #glShadeModel(GL_SMOOTH);
         glColor4fv(self.color)
         # Render the side polygons.
-        for i in xrange(0,num_tri-2*num_sides):
+        for i in xrange(0,num_tri-(cap1+cap2)*num_sides):
             glBegin(GL_POLYGON)
             for j in xrange(0,n):
                 k = conn[conn_count]
@@ -875,10 +909,10 @@ class VisGeometryCylinder(VisGeometry):
         #__for i in xrange(0,num)__
 
         # Render the cap polygons.
-        for i in xrange(0,2*num_sides):
-            if ((i % 2) == 0):
+        for i in xrange(0,(cap1+cap2)*num_sides):
+            if ((i % 2) == 0) and cap1:
                s = -1.0
-            else:
+            elif cap2:
                s = 1.0
             glBegin(GL_POLYGON)
             for j in xrange(0,n):
@@ -963,13 +997,16 @@ class VisGeometryCylinder(VisGeometry):
         origin = self.point1
         self.axis = [self.point2[i] - self.point1[i] for i in range(3)]
         self.unit_axis = vector_norm(self.axis)
+        cap1 = self.capped[0]
+        cap2 = self.capped[1]
+        ncaps = cap1 + cap2
         u = self.unit_axis
         v,w = compute_basis(u)
         n = self.num_sides
         dt = 2.0*pi / n
         t = 0.0
         radius = self.radius 
-        num_verts = 2*n + 2
+        num_verts = 2*n + ncaps
         verts = np.zeros((num_verts, 3), dtype=float)
         vnorms = np.zeros((num_verts, 3), dtype=float)
 
@@ -987,15 +1024,21 @@ class VisGeometryCylinder(VisGeometry):
         #__for i in xrange(0,n)__
 
         # Cylinder end caps.
+        if cap1 and cap2:
+            offset = 1
+        else:
+            offset = 0
         for j in xrange(0, 3):
-            verts[2*n][j]    = origin[j] 
-            verts[2*n+1][j]  = origin[j] + self.axis[j]
-            vnorms[2*n][j]   = -u[j];
-            vnorms[2*n+1][j] = u[j];
+            if cap1:
+                verts[2*n][j]    = origin[j] 
+                vnorms[2*n][j]   = -u[j];
+            if cap2:
+                vnorms[2*n+offset][j] = u[j];
+                verts[2*n+offset][j]  = origin[j] + self.axis[j]
         #__for j in xrange(0, 3)
 
         # Create the side polygons connectivity.
-        num_tri = 4*n
+        num_tri = 2*n + n*ncaps
         conn = np.zeros((3*num_tri), dtype=int)
         num_tri = 0;
         for i in xrange(0, n):
@@ -1023,18 +1066,20 @@ class VisGeometryCylinder(VisGeometry):
             i2 = i 
             i3 = 2*n
             if (i1 == n): i1 = 0
-            conn[3*num_tri+0] = i1
-            conn[3*num_tri+1] = i2
-            conn[3*num_tri+2] = i3
-            num_tri += 1
+            if cap1:
+                conn[3*num_tri+0] = i1
+                conn[3*num_tri+1] = i2
+                conn[3*num_tri+2] = i3
+                num_tri += 1
             j2 = i+1+n 
             j1 = i+n 
-            j3 = 2*n+1
+            j3 = 2*n+offset
             if (j2 == 2*n): j2 = n
-            conn[3*num_tri+0] = j1
-            conn[3*num_tri+1] = j2
-            conn[3*num_tri+2] = j3
-            num_tri += 1
+            if cap2:
+                conn[3*num_tri+0] = j1
+                conn[3*num_tri+1] = j2
+                conn[3*num_tri+2] = j3
+                num_tri += 1
         #__for i in xrange(0,n)
 
         self.vertices = verts
