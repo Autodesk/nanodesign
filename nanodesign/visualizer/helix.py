@@ -1,24 +1,42 @@
-#!/usr/bin/env python
-""" This module is used to interactively visualize a virtual helix of a DNA model. 
+# Copyright 2016 Autodesk Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
-    A virtual helix of a DNA nanodesign is an abstraction used to represent a potential helix in a DNA design.
-    It is conceptualized as container for bases contributed by either the scaffold or staple strands that 
-    form a DNA double helix. This helix may have interruptions or have segments that are single-stranded. 
-    Virtual helices represent the rows in a caDNAno diagram. 
+"""This module is used to interactively visualize a virtual helix of a DNA model. 
 
-    The portion of a virtual helix containing double-stranded DNA is visualized as a transparent cylinder. 
-    The base positions, base coordinates and strands associated with a virtual helix are visualized using several 
-    representations:  
+    A virtual helix of a DNA nanodesign is an abstraction used to represent a
+    potential helix in a DNA design.  It is conceptualized as container for
+    bases contributed by either the scaffold or staple strands that form a DNA
+    double helix. This helix may have interruptions or have segments that are
+    single-stranded.  Virtual helices represent the rows in a caDNAno diagram.
 
-        coordinates - The positons of the helix bases are displayed as spheres connected by lines. 
-        frames - The coodinates frames of the helix bases are displayed as an axis with an arrowhead on the helix
-            axis. 
-        crossovers - Crossovers are displayed as an arrow placed at the helix base and pointing to the
-            crossover helix.
-        domains - Helix domains are displayed as solid cylinders.
-        geometry - The double-stranded DNA regions are displayed as transparent cylinders.
-        nodes - The approximate position of DNA P atoms are displayed as spheres connected by lines.
-        strands - The strands passing through the helix are displayed as a continuous line with arrows.
+    The portion of a virtual helix containing double-stranded DNA is visualized
+    as a transparent cylinder.  The base positions, base coordinates and strands
+    associated with a virtual helix are visualized using several
+    representations:
+
+    coordinates - The positions of the helix bases are displayed as spheres
+                  connected by lines.
+    frames - The coodinates frames of the helix bases are displayed as an axis
+             with an arrowhead on the helix axis.
+    crossovers - Crossovers are displayed as an arrow placed at the helix base
+                 and pointing to the crossover helix.
+    domains - Helix domains are displayed as solid cylinders.
+    geometry - The double-stranded DNA regions are displayed as transparent cylinders.
+    nodes - The approximate position of DNA P atoms are displayed as spheres
+            connected by lines.
+    strands - The strands passing through the helix are displayed as a
+              continuous line with arrows.
 """
 from itertools import chain
 import logging

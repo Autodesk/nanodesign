@@ -1,16 +1,35 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
+
+# Copyright 2016 Autodesk Inc.
 #
-# This script is used to compare two Autodesk Nanodesign viewer JSON files. 
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
 #
-# An Autodesk Nanodesign viewer JSON file contains data defining a DNA structure: bases, helices,
-# strands, and domains. It is used by the Autodesk Nanodesign viewer to visualize a DNA structure translated 
-# from a DNA structure design file (e.g. caDNAno design file).
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
-# Classes are defined to store data for the components (bases, domains, etc.) of the DNA structure. Each class 
-# defines methods to parse and compare component JSON data. The JSON field names specific to each component are 
-# stored in its class and used to parse its JSON data upon object initialization.
-#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+"""This script is used to compare two Autodesk Nanodesign viewer JSON files.
+
+   An Autodesk Nanodesign viewer JSON file contains data defining a DNA
+   structure: bases, helices, strands, and domains. It is used by the Autodesk
+   Nanodesign viewer to visualize a DNA structure translated from a DNA
+   structure design file (e.g. caDNAno design file).
+
+   Classes are defined to store data for the components (bases, domains, etc.)
+   of the DNA structure. Each class defines methods to parse and compare
+   component JSON data. The JSON field names specific to each component are
+   stored in its class and used to parse its JSON data upon object
+   initialization.
+
+"""
+
 import json
 import os
 import sys
@@ -664,5 +683,5 @@ def main():
     if not dna_structure1.compare(dna_structure2):
         sys.exit(1)
 
-if __name__=="__main__":
+if __name__ == "__main__":
     main()

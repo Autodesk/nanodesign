@@ -1,16 +1,31 @@
-#!/usr/bin/env python
-""" This module is used to interactively visualize a DNA model strand. 
+# Copyright 2016 Autodesk Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
-    A strand of a DNA nanodesign is an abstraction used to represent ssDNA. It is represented as a series 
-    of bases. Strands wind their way through the virtual helices of a DNA nanodesign. 
 
-     A strand ID has the following format:
+"""This module is used to interactively visualize a DNA model strand. 
 
-         <Scaffold|staple>.<vhelixNum>.<startPos>
+   A strand of a DNA nanodesign is an abstraction used to represent ssDNA. It is
+   represented as a series of bases. Strands wind their way through the virtual
+   helices of a DNA nanodesign.
 
-         where vhelixNUm = the virtual helix number from cadnano
-               startPos = the position in the virtual helix of the first base in the strand.
+   A strand ID has the following format:
 
+      <Scaffold|staple>.<vhelixNum>.<startPos>
+
+      where vhelixNUm = the virtual helix number from cadnano
+             startPos = the position in the virtual helix of the first base in
+                        the strand.
 """
 import logging 
 import numpy as np

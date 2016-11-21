@@ -1,17 +1,33 @@
-#!/usr/bin/env python
-""" This module is used to create a GLUT popup menu. 
+# Copyright 2016 Autodesk Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
-    The main menu contains items for different graphics representions of certain entities from a DNA structure design: 
-    virtual helices, strands, domains, etc. A submenu of entity names is defined for each representation. 
-    The entity names are used to selectively visualize components of the DNA structure design. The submenus for virtual 
-    helix representions contain integer IDs for the helix 'number' obtained from the caDNAno design file. 
+"""This module is used to create a GLUT popup menu. 
 
-    Most submenus contain 'All' and 'None' entries that are used to selected all or none of the entities from the 
-    submenu. When an entity from a submenu is selected its visibility is modified depending on its current selection
-    state. If it is already selected then it is set to be hidden. The entity name in the submenu is updated with a '+' 
-    if it not selected. 
+   The main menu contains items for different graphics representions of certain
+   entities from a DNA structure design: virtual helices, strands, domains,
+   etc. A submenu of entity names is defined for each representation.  The
+   entity names are used to selectively visualize components of the DNA
+   structure design. The submenus for virtual helix representions contain
+   integer IDs for the helix 'number' obtained from the caDNAno design file.
 
-    Menu selection generates a command that is then executed to perform the visualization operation.
+   Most submenus contain 'All' and 'None' entries that are used to selected all
+   or none of the entities from the submenu. When an entity from a submenu is
+   selected its visibility is modified depending on its current selection
+   state. If it is already selected then it is set to be hidden. The entity
+   name in the submenu is updated with a '+' if it not selected.
+
+   Menu selection generates a command that is then executed to perform the visualization operation.
 """
 import inspect
 import logging

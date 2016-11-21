@@ -48,8 +48,8 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'NanoDesign'
-copyright = u'2016, Joseph Schaeffer, Merry Wang, Michael Zyracki, Dave Parker, Andrew Kimoto, Peter Jones'
-author = u'Joseph Schaeffer, Merry Wang, Michael Zyracki, Dave Parker, Andrew Kimoto, Peter Jones'
+copyright = u'2016, Autodesk, Inc.'
+author = u'Joseph Schaeffer, Michael Zyracki, Dave Parker, Andrew Kimoto, Peter Jones'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the

@@ -1,24 +1,44 @@
-#!/usr/bin/env python
-""" This module is used to store and render differnt geometric objects.
+# Copyright 2016 Autodesk Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
-    The classes in this module are used to store and render the geometry of the various representations for
-    visualizing DNA design structures. The classes are derived from the VisGeometry base class.
+"""This module is used to store and render different geometric objects.
 
-    Geometry can be seleced using a 3D line defined by a graphics picking operation. The intersection
-    of the 3D line with the geometry is calculated numerically using functions (e.g comp_line_line_intersect)
-    defined here. The intersection point of the 3D geometry is stored together with the index of the selected
-    geometry element. For example, a VisGeometryLines geometry represents a set of N lines. Picking on this
-    geometry returns an index (between 0 and N-1) identifying the line element selected.
+    The classes in this module are used to store and render the geometry of the
+    various representations for visualizing DNA design structures. The classes
+    are derived from the VisGeometry base class.
 
-    Groups of elements (i.e. vertices, lines, polygons) of a geometry can often be associated with a single 
-    entity from a DNA structure (e.g. a group of lines representing the atomic bonds a base). An array of 
-    index counts is used to map entities to groups of elements. For example, suppose that a VisGeometryPath 
-    geometry that displays a DNA strand as a set of N connected lines using N+1 vertices. Each vertex in the 
-    path represnts a single base in the strand. The array of index counts for this geometry would look like:
-    entity_indexes = [0, 1, 2, ..., N-1]. 
+    Geometry can be seleced using a 3D line defined by a graphics picking
+    operation. The intersection of the 3D line with the geometry is calculated
+    numerically using functions (e.g comp_line_line_intersect) defined here. The
+    intersection point of the 3D geometry is stored together with the index of
+    the selected geometry element. For example, a VisGeometryLines geometry
+    represents a set of N lines. Picking on this geometry returns an index
+    (between 0 and N-1) identifying the line element selected.
 
-    Note that the OpenGL per-vertex operations (e.g. glColor, glNormal, glVertex) used here are now deprecated 
-    and that for large models rendering will be slow.
+    Groups of elements (i.e. vertices, lines, polygons) of a geometry can often
+    be associated with a single entity from a DNA structure (e.g. a group of
+    lines representing the atomic bonds a base). An array of index counts is
+    used to map entities to groups of elements. For example, suppose that a
+    VisGeometryPath geometry that displays a DNA strand as a set of N connected
+    lines using N+1 vertices. Each vertex in the path represnts a single base in
+    the strand. The array of index counts for this geometry would look like:
+    entity_indexes = [0, 1, 2, ..., N-1].
+
+    Note that the OpenGL per-vertex operations (e.g. glColor, glNormal,
+    glVertex) used here are now deprecated and that for large models rendering
+    will be slow.
+
 """
 from abc import ABCMeta, abstractmethod, abstractproperty
 import os
