@@ -724,7 +724,7 @@ class VisGeometryCylinder(VisGeometry):
 
         The cylinder orientation (axis) and length is defined by two points.
     """ 
-    def __init__(self, name, radius, point1, point2, num_sides=20, **kwargs):
+    def __init__(self, name, radius, point1, point2, num_sides=20, capped=(True,True)):
         """ Initialize a VisGeometryCylinder object. 
 
             Arguments:
@@ -733,6 +733,7 @@ class VisGeometryCylinder(VisGeometry):
                 point1 (List[Float]): The first endpoint defining the cylinder axis. 
                 point2 (List[Float]): The second endpoint defining the cylinder axis. 
                 num_sides (int): The number of sides (polygons) used to represent the cylinder.
+                capped (Tuple(bool,bool)): Flags for capping the ends of the cylinder.
         """
         VisGeometry.__init__(self, name)
         self.radius = radius
@@ -747,11 +748,7 @@ class VisGeometryCylinder(VisGeometry):
         self.normals = None 
         self.num_tri = 0 
         self.tri_conn = None
-        self.capped = (True,True)
-        for key, value in kwargs.iteritems():
-            if key == "capped":
-                self.capped = value
-        #__for key, value in kwargs.iteritems()
+        self.capped = capped
         self._generate_cyl()
 
     def intersect_line(self, point1, point2):
