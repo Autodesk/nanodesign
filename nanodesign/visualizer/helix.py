@@ -25,7 +25,8 @@ import logging
 import os
 import sys
 import numpy as np
-from .geometry import VisGeometryCylinder,VisGeometryPath,VisGeometryAxes,VisGeometryLines,VisGeometrySymbols
+from ..data.parameters import DnaPolarity
+from .geometry import VisGeometryCylinder,VisGeometryPath,VisGeometryAxes,VisGeometryLines,VisGeometrySymbols,vector_norm
 from .strand import VisStrand
 
 class VisHelixRepType:
@@ -41,6 +42,7 @@ class VisHelixRepType:
     MAXIMAL_CROSSOVERS = 'maximal_crossovers'
     PAIRED_GEOMETRY    = 'paired_geometry'
     STRANDS            = 'strands'
+    TEMPERATURE        = 'temperature'
 
 class VisHelix(object):
     """ This class is used to visualize a virtual helix from a DNA design.
@@ -55,7 +57,7 @@ class VisHelix(object):
             vhelix (DnaStructureHelix): The structure helix from a region in a DNA structure. This object contains
                 all the data needed to visualize a virtual helix.
     """
-    def __init__(self, graphics, dna_structure, helix):
+    def __init__(self, model, graphics, dna_structure, helix):
         """ Initialize a VisHelix object.
 
             Arguments:
@@ -65,6 +67,7 @@ class VisHelix(object):
         """
         self.id = helix.lattice_num
         self.name = str(helix.lattice_num)
+        self.model = model 
         self.graphics = graphics
         self.dna_structure = dna_structure
         self.vhelix = helix
@@ -75,7 +78,7 @@ class VisHelix(object):
 
         # Set the methods to create geometry for the different representations.
         self.create_rep_methods = { 
-            VisHelixRepType.COORDINATE_FRAMES : self.create_frames_rep, 
+            VisHelixRepType.COORDINATE_FRAMES  : self.create_frames_rep, 
             VisHelixRepType.COORDINATES        : self.create_coords_rep,
             VisHelixRepType.DESIGN_CROSSOVERS  : self.create_crossovers_rep,
             VisHelixRepType.DOMAINS            : self.create_domains_rep,
@@ -84,7 +87,8 @@ class VisHelix(object):
             VisHelixRepType.BASE_POSITIONS     : self.create_base_positions_rep,
             VisHelixRepType.MAXIMAL_CROSSOVERS : self.create_maximal_crossovers_rep,
             VisHelixRepType.PAIRED_GEOMETRY    : self.create_paired_geometry_rep,
-            VisHelixRepType.STRANDS            : self.create_strands_rep
+            VisHelixRepType.STRANDS            : self.create_strands_rep,
+            VisHelixRepType.TEMPERATURE        : self.create_temperature_rep
         }
 
     def get_boundaries(self):
@@ -496,7 +500,7 @@ class VisHelix(object):
 
     def create_domains_rep(self):
         """ Create the geometry for the helix domains representation. """
-        radius = 0.5
+        radius = self.dna_structure.dna_parameters.helix_radius / 2.0
         self.representations[VisHelixRepType.DOMAINS] = []
         domain_list = self.dna_structure.domain_list
         domain_ids = self.vhelix.get_domain_ids()
@@ -538,6 +542,99 @@ class VisHelix(object):
         self._logger.info("Selected Helix %s domain. " % (self.name))
         self._logger.info("Domain ID %d  Number of bases %d  Start pos %d  End pos %d" % (domain_id, num_bases,
             start_base.p, end_base.p))
+        self._logger.info("Domain is part of strand %s" % (strand_name))
+        self.print_info()
+
+    def create_temperature_rep(self):
+        """ Create the geometry for the helix domains temperature representation. 
+        """
+        radius = self.dna_structure.dna_parameters.helix_radius
+        base_pair_rise = self.dna_structure.dna_parameters.base_pair_rise 
+        self.representations[VisHelixRepType.TEMPERATURE] = []
+        domain_list = self.dna_structure.domain_list
+        domain_ids = self.vhelix.get_domain_ids()
+
+        # Sort domains by helix position to know when to cap them.
+        domain_map = {}
+        for id in domain_ids:
+            domain = domain_list[id]
+            if domain.strand.is_scaffold:
+                continue
+            base1 = domain.base_list[0]
+            base2 = domain.base_list[-1]
+            if base1.p < base2.p:
+                min_p = base1.p
+            else:
+                min_p = base1.p
+            domain_map[min_p] = id 
+        #__for id in domain_ids
+ 
+        # Get a spectrums of colors (blue to red) and the max/min 
+        # domain melting temperatures for all domains in the structure.
+        spectrum_colors = self.graphics.get_spectrum_colors()
+        tmin, tmax = self.model.get_domains_temperature_range()
+
+        # Sort the domains by position according to the helix polarity.
+        # This will make the axis and domains consistent: point2 = point1 + axis
+        if self.vhelix.scaffold_polarity == DnaPolarity.FIVE_PRIME:
+            sort_reversed = False
+        else:
+            sort_reversed = True
+
+        # Generate the cylinders for domains colored according to temperature.
+        axis = self.vhelix.helix_axis_frames[:,2,0]   # Vector pointing along the helix axis.
+        s = 0.5 # Base rise scale.
+        num_domains = len(domain_map)
+        for i,key in enumerate(sorted(domain_map,reverse=sort_reversed)):
+            id = domain_map[key]
+            domain = domain_list[id]
+            point1,point2 = domain.get_end_points()
+            point1 = point1.copy()
+            point2 = point2.copy()
+            # Extend the domain ends by 1/2 base rise so adjacent domains touch.
+            point1 = [point1[j] + s*base_pair_rise*axis[j] for j in xrange(0,3)]
+            point2 = [point2[j] - s*base_pair_rise*axis[j] for j in xrange(0,3)]
+            temp = domain.melting_temperature()
+            self._logger.debug("Domain ID %d  #bases %d  temp %g" % (id, len(domain.base_list), temp))
+            if temp == -500.0:
+                color = [0.5, 0.5, 0.5]
+            else:
+                color = self.graphics.map_value_to_color(spectrum_colors, tmin, tmax, temp)
+            color.append(1.0)
+            name = "HelixDomainTemperature:%s.%d" % (self.id, id)
+            if i == 0:
+                capped = (False,True)
+            elif i == num_domains-1:
+                capped = (True,False)
+            else:
+                capped = (False,False)
+            geom = VisGeometryCylinder(name, radius, point1, point2, capped=capped)
+            geom.color = color 
+            geom.selected_callback = self.select_domains_temperature
+            self.representations[VisHelixRepType.TEMPERATURE].append(geom)
+            self.graphics.add_render_geometry(geom)
+        #__for domain in self.dna_structure.domain_list
+    #__create_domains_rep(self):
+
+    def select_domains_temperature(self, geom, index):
+        """ Process helix geometry selection.
+
+            Arguments:
+                geom (VisGeometry): The geometry selected.
+                index (int): The index into the geometry selected.
+        """
+        domain_id = int(geom.name.split(".")[1])
+        domain_list = self.dna_structure.domain_list
+        domain_ids = self.vhelix.get_domain_ids()
+        domain = domain_list[domain_id]
+        num_bases = len(domain.base_list)
+        start_base = domain.base_list[0]
+        end_base = domain.base_list[-1]
+        strand_name = VisStrand.get_strand_name(domain.strand)
+        self._logger.info("Selected Helix %s domain. " % (self.name))
+        self._logger.info("Domain ID %d  Number of bases %d  Start pos %d  End pos %d" % (domain_id, num_bases,
+            start_base.p, end_base.p))
+        self._logger.info("Domain melting temperature is %g" % (domain.melting_temperature()))
         self._logger.info("Domain is part of strand %s" % (strand_name))
         self.print_info()
 
@@ -657,8 +754,7 @@ class VisHelix(object):
         """
         strand = geom.data
         strand_name = VisStrand.get_strand_name(strand)
-        base_id = strand.tour[index]
-        base = self.dna_structure.base_connectivity[base_id-1]
+        base = strand.tour[index]
         self._logger.info("Selected Helix %s Strand %s" % (self.name, strand_name))
         self._logger.info("Location in strand path %d  Vhelix %d  Position %d  " % (index+1, base.h, base.p))
         self.print_info()

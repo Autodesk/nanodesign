@@ -12,17 +12,19 @@
                startPos = the position in the virtual helix of the first base in the strand.
 
 """
+from collections import OrderedDict
 import logging 
 import numpy as np
 from .geometry import VisGeometryAxes,VisGeometryCylinder,VisGeometryPath,VisGeometrySphere,VisGeometryLines, vector_norm
 
 class VisStrandRepType:
     """ This class defines the strand visualization representation types. """
-    UNKNOWN    = 'unknown'
-    CONNECTORS = 'connectors'
-    DOMAINS    = 'domains'
-    FRAMES     = 'frames'
-    PATH       = 'path'
+    UNKNOWN     = 'unknown'
+    CONNECTORS  = 'connectors'
+    DOMAINS     = 'domains'
+    FRAMES      = 'frames'
+    PATH        = 'path'
+    TEMPERATURE = 'temperature'
 
 class VisStrand(object):
     """ This class is used to visualize a strand from a DNA design.
@@ -40,7 +42,7 @@ class VisStrand(object):
             start_helix (int): The number where the strand starts. 
             start_pos (int): The base position in the virtual helix where the strand starts. 
     """ 
-    def __init__(self, graphics, dna_structure, dna_strand):
+    def __init__(self, model, graphics, dna_structure, dna_strand):
         """ Initialize a VisStrand object.
 
             Arguments:
@@ -51,6 +53,7 @@ class VisStrand(object):
                 id (int): The strand id from 0 to the number of strands in the design - 1.
         """
         self.id = dna_strand.id
+        self.model = model
         self.graphics = graphics
         self.dna_structure = dna_structure
         self.dna_strand = dna_strand
@@ -68,10 +71,11 @@ class VisStrand(object):
         self._logger = logging.getLogger(__name__ + ":" + str(self.name))
         # Set the methods to create geometry for the different representations.
         self.create_rep_methods = { 
-            VisStrandRepType.CONNECTORS : self.create_connectors_rep,
-            VisStrandRepType.DOMAINS    : self.create_domains_rep,
-            VisStrandRepType.FRAMES     : self.create_frames_rep,
-            VisStrandRepType.PATH       : self.create_path_rep 
+            VisStrandRepType.CONNECTORS  : self.create_connectors_rep,
+            VisStrandRepType.DOMAINS     : self.create_domains_rep,
+            VisStrandRepType.FRAMES      : self.create_frames_rep,
+            VisStrandRepType.PATH        : self.create_path_rep,
+            VisStrandRepType.TEMPERATURE : self.create_temperature_rep 
         }
 
     @staticmethod
@@ -193,6 +197,76 @@ class VisStrand(object):
         self._logger.info("Selected Strand %s domain. Location in strand %d" % (self.name, domain_num+1)) 
         self._logger.info("Domain ID %d  Number of bases %d  Start pos %d  End pos %d" % (domain_id, num_bases,
             start_base.p, end_base.p)) 
+        self.print_info()
+
+    def create_temperature_rep(self):
+        """ Create the geometry for the strand melting temperature representation. 
+
+            The melting temperature from domains is determined for base positions along a strand.
+            The strand geometry is displayed as a sequence of lines with endpoints colored by mapping 
+            temperatures to a color spectrum. 
+        """
+        # Create the strand path vertices.
+        base_coords = self.dna_strand.get_base_coords()
+        self._logger.debug("Number of point %d" % len(base_coords))
+        verts = []
+        for coords in base_coords:
+            verts.append([coords[0], coords[1], coords[2]])
+        if self.dna_strand.is_circular:
+            coords = base_coords[0]
+            verts.append( [coords[0], coords[1], coords[2]])
+        #__if self.dna_strand.is_circular
+
+        # Create temperature colors for each strand vertex (base position).
+        base_domain_map = OrderedDict()
+        for base in self.dna_strand.tour:
+            base_domain_map[(base.h,base.p)] = None
+        #__for base in self.dna_strand.tour
+        for domain in self.dna_strand.domain_list:
+            for base in domain.base_list:
+                base_domain_map[(base.h,base.p)] = domain
+        #__for domain in self.dna_strand.domain_list
+        spectrum_colors = self.graphics.get_spectrum_colors()
+        tmin, tmax = self.model.get_domains_temperature_range()
+        colors = []
+        temp_data = []
+        for domain in base_domain_map.values():
+            temp = domain.melting_temperature()
+            temp_data.append(temp)
+            if temp == -500.0:
+                color = [0.5, 0.5, 0.5]
+            else:
+                color = self.graphics.map_value_to_color(spectrum_colors, tmin, tmax, temp)
+            color.append(1.0)
+            colors.append(color)
+        #__for domain in base_domain_map.values()
+        if self.dna_strand.is_circular:
+            colors.append(colors[0])
+
+        # Create the strand path geometry.
+        name = "StrandTemperature:%s" % self.name
+        show_verts = False
+        show_arrows = True
+        geom = VisGeometryPath(name, verts, show_verts, show_arrows, colors=colors)
+        geom.start_marker = True
+        geom.select_vertex = True
+        geom.line_width = 3.0
+        geom.entity_indexes = range(0,len(base_coords))
+        geom.data = temp_data 
+        geom.selected_callback = self.select_temperature
+        self.representations[VisStrandRepType.TEMPERATURE] = [geom]
+        self.graphics.add_render_geometry(geom)
+
+    def select_temperature(self, geom, index):
+        """ Process strand domain selection.
+
+            Arguments:
+                geom (VisGeometry): The geometry selected.
+                index (int): The index into the geometry selected.
+        """
+        base = self.tour[index]
+        self._logger.info("Selected Strand %s. Domain melting temperature %g " % (self.name, geom.data[index]))
+        self._logger.info("Location in path %d  Vhelix %d  Position %d " % (index+1, base.h, base.p))
         self.print_info()
 
     def create_frames_rep(self):

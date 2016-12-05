@@ -87,6 +87,7 @@ class VisModel(object):
         self.helix_numbers_geometry = []
         self.helix_projection_geometry = []
         self.structure_geometry = []
+        self.domains_temperature_range = None
         self._logger = logging.getLogger(__name__)
         self._set_extent()
         # Generate auxiliary data (e.g. domains) needed for certain visualizations.
@@ -104,7 +105,7 @@ class VisModel(object):
         self.helix_names.append(VisMenuItem.ALL)
         self.helix_names.append(VisMenuItem.NONE)
         for helix in helix_list:
-            vis_helix = VisHelix(self.graphics, dna_structure, helix)
+            vis_helix = VisHelix(self, self.graphics, dna_structure, helix)
             self.helices[vis_helix.name] = vis_helix 
             self.helix_names.append(vis_helix.name)
     #_create_helices
@@ -115,7 +116,7 @@ class VisModel(object):
         # Create a  list of strands sorted by start helix and start position.
         strand_list = []
         for strand in dna_structure.strands:
-            vis_strand = VisStrand(self.graphics, dna_structure, strand)
+            vis_strand = VisStrand(self, self.graphics, dna_structure, strand)
             self.strands[vis_strand.name] = vis_strand 
             strand_list.append(vis_strand)
         #__for strand in dna_structure.strands
@@ -455,6 +456,30 @@ class VisModel(object):
             self.structure_geometry.append(geom)
 
         #__for helix in helix_list
+
+    def get_domains_temperature_range(self):
+        """ Get the domains temperature range. """
+        if self.domains_temperature_range == None:
+           tmin = None
+           tmax = None
+           for domain in self.dna_structure.domain_list:
+               temp = domain.melting_temperature()
+               if temp == -500.0:
+                   continue
+               if not tmin:
+                   tmin = temp
+                   vmax = temp
+               elif temp < tmin:
+                   tmin = temp
+               elif temp > tmax:
+                   tmax = temp
+           #__for domain in domain_list
+           self._logger.info("Domain temperature range min %g  max %g" % (tmin, tmax))
+           self.domains_temperature_range = (tmin,tmax)
+        #__if self.domains_temperature_range == None
+
+        return self.domains_temperature_range[0], self.domains_temperature_range[1]
+    #__def get_domain_temperature_range
 
     #__create_structure_geometry(self)
 

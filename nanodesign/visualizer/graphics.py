@@ -196,6 +196,7 @@ class VisGraphics(object):
         self.current_y = 0
         self.x_start = 0.0
         self.y_start = 0.0
+        self.spectrum_colors = None
         self.menu = None 
         self.render_geometry = {}
         self._logger = logging.getLogger(__name__)
@@ -663,3 +664,73 @@ class VisGraphics(object):
         glMatrixMode (GL_MODELVIEW);
 
         self.xform.set(self.initial_xform)
+    #__def init_view
+
+    def map_value_to_color(self, colors, vmin, vmax, value):
+        num_colors = len(colors)
+        dv = vmax - vmin
+        if dv != 0.0: 
+            f = (num_colors-1) / dv
+            ci = int(f*(value - vmin))
+            if ci < 0: ci = 0
+            if ci > num_colors-1: ci = num_colors-1
+            color = colors[ci]
+        else:
+            color = colors[0]
+        #__if dv != 0.0
+
+        return color[:]
+    #__def get_color_map
+
+    def get_spectrum_colors(self):
+        """ Get a spectrum color map. """
+        if self.spectrum_colors:
+            return self.spectrum_colors
+
+        num_colors = 16
+        inc = 240.0 / (num_colors - 1)
+        hue = 240.0
+        self.spectrum_colors = []
+
+        # Generate a list of RGB colors by incrementing hue.
+        for i in xrange(0,num_colors):
+            rgb = self.hsv_to_rgb(hue, 1.0, 1.0)
+            self.spectrum_colors.append(rgb)
+            hue -= inc
+        #__for i in xrange(0,num_colors)
+
+        return self.spectrum_colors
+    #__def get_spectrum_colors 
+
+    def hsv_to_rgb(self, h, s, v):
+        """ Convert a hsv color to rgb. """
+        if s == 0.0:
+            return [v, v, v]
+        else:
+          if h == 360.0:
+              h = 0.0;
+          h = h / 60.0
+          i = int(h)
+          f = h - i
+          p = v * (1.0 - s)
+          q = v * (1.0 - (s*f))
+          t = v * (1.0 - (s * (1.0 - f)))
+
+          if i == 0:
+              rgb = [v, t, p]
+          elif i == 1:
+              rgb = [q, v, p]
+          elif i == 2:
+              rgb = [p, v, t]
+          elif i == 3:
+              rgb = [p, q, v]
+          elif i == 4:
+              rgb = [t, p, v]
+          elif i == 5:
+              rgb = [v, p, q]
+        #__if s == 0.0
+
+        return rgb
+    #__def hsv_to_rgb
+      
+#__class VisGraphics
