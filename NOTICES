@@ -1,0 +1,10 @@
+Nanodesign Python Package incorporates code from the following sources:
+
+    dna_sequence_data.py
+----------------------------
+Copyright (c) 2011 Wyss Institute at Harvard University
+SOURCE CODE: nanodesign/converters/dna_sequence_data.py
+DESCRIPTION: Modified filename and variable name only. Contains raw sequence information for standard DNA Origami scaffold strands.
+LICENSE: nanodesign/converters/dna_sequence_data.py
+WEBSITE: https://github.com/cadnano/cadnano2.5/
+

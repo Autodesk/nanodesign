@@ -1,42 +1,38 @@
-NanoDesign
+Nanodesign
 ==========
 
-This repository contains the NanoDesign python package, as well as supporting material, such as docs, tests, Dockerfile, scripts used for common tasks, scripts used for the NanoDesign frontend tasks, etc.
+Create, interact and modify nucleic acid based structures. The Nanodesign Python Package is aimed at proving a toolkit for working with structural DNA/RNA nanotechnology designs. This package is meant to support all types of interaction with these designs, including loading Cadnano files and modifying them, building new structures from scratch, or just converting formats so you can easily visualize or simulate your design.
 
-## Authors
- 
-For more information, contact:
+## The Package
 
-* Joseph Schaeffer <joseph.schaeffer@autodesk.com>
-* Dave Parker <dave.parker@autodesk.com>
-* Mike Zyracki <michael.zyracki@autodesk.com>
+This package have several basic components:
 
-## Directory Structure
+* Data Format - our internal data format for use by specific algorithms and to serve as an intermediate if needing to do format conversion. This format breaks a nanostructure down into core components: contiguous helices, nucleic acid strands, domains within a strand.
+* Converters - we want to be able to work with any format found in the community. Currently we support loading of Cadnano files, and writing of several different formats, including [CanDo](http://cando-dna-origami.org), [SimDNA](https://github.com/mingqiu/SimDNA), [Nanodesign Viewer](https://autode.sk/nanodesign), and more.
+* Algorithms - common algorithms that are used on these structures. Currently this includes melting point calculations for domains, automatic generation of staple sets for a structure, removal of staples matching certain selections, and more.
 
-We use the following directory structure:
+## Get help
+ - API Documentation: We currently have help docstrings for most functions and methods, and will be expanding this into a full API Docs page soon.
+ - [Forums](https://forum.bionano.autodesk.com/c/Nano-Design/nanodesign-python)
+ - [Email us](mailto:nanodesign@autodesk.com)
 
-* `nanodesign`: the main python package
-* `docs`: doc generation for the package
-* `tests`: tests for the package
-* `scripts`: example scripts for using the package, as well as scripts used to run specific tasks for the NanoDesign web application
+## Contributing
 
-Individual top level files of interest:
+See [CONTRIBUTING.md](CONTRIBUTING.md) for details. 
 
-* `README.md`: You're reading it.
-* `Makefile`: Some basic commands you might use, such as 'make init' for doing the requirements install, or 'make tests' for running the tests. More will be added.
-* `requirements.txt`: pip requirements file. Add specific package requirements here.
-* `setup.py`: distutils based package install. To run the package install, 'python setup.py install'
-* `LICENSE`: Our distribution license. Currently blank, do not distribute.
-* `Dockerfile`: Defines docker container with appropriate requirements.
+## Contributors
 
-## Purpose
+We maintain an informal list of contributors to the repository. See [CONTRIBUTORS.md](CONTRIBUTORS.md) for a list of those who have made this possible.
 
-### Python Package
- We want to build most of our utilities as a python package; this will enable later API releases and open-source coding to expand the types of conversions allowed. The package is envisioned as having several basic components:
+## License
 
-* Data Format(s) - our internal data format for use by specific algorithms and to serve as an intermediate if needing to do format conversion. Could be multiples depending on usage. Should also have the format for sending back to client, etc.
-* Statistics Algorithms - python implementations of various visualization components being discussed on the frontend. This would let us make those easily expandable (if slower) by allowing others to be added on the backend if our data format can support sending it.
-* Editing/Modification Algorithms - e.g. auto-stapling, perhaps specific shape auto-creation, etc.
-* Converters - allow file type conversion and input to our system. Cadnano, CanDo, etc.
+See [NOTICES](NOTICES) for details about incorporated code.
 
+Copyright 2016 Autodesk Inc.
+
+Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License. You may obtain a copy of the License at
+
+http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.
 

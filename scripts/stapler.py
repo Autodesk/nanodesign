@@ -14,6 +14,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+#
+# This file was originally contributed by Jean-Philippe Sobczak of Tilibit Nanosystems
+#
+
 import os
 import sys
 import json
@@ -873,6 +877,10 @@ def main():
 
     stapler = Stapler(converter.dna_structure,converter.cadnano_design)
     stapler.template = [[7,7,14,7,7,7],[7,14,7,7,7],[14,7,7,7],[7,7,7,14,7,7],[7,7,7,14,7],[7,7,7,14],[7,7,14,7,7],[7,14,7,7],[14,7,7],[7,7,14,7],[7,7,14],[7,14,7]]
+
+
+    # A slightly expanded template might be: [[7,7,14,7,7,7],[7,14,7,7,7],[14,7,7,7],[7,7,7,14,7,7],[7,7,7,14,7],[7,7,7,14],[7,7,14,7,7],[7,14,7,7],[14,7,7],[7,7,14,7],[7,7,14],[7,14,7],[14,7,7,7,7],[7,7,7,7,14]]
+
     #stapler.template = [[7,7,7,14,7,7,7]]
     #stapler.template = [[7,7,7,14,7],[7,7,14,7,7],[7,14,7,7,7]]
     #stapler.template = [[16,16,16],[8,16],[16,8]]
@@ -889,20 +897,24 @@ def main():
     nr_steps = 10000000
     nr_steps_timescale = 10000
     stapler.generate(nr_steps, nr_steps_timescale, 0.999975)
-    
-    """ TODO
-       structure with only two staples with two segments each, one double crossover, crashes:
-       **** ERROR: Reached a visited base.Traceback (most recent call last):
-       File "testScript3.py", line 357, in <module>
-       main()
-       File "testScript3.py", line 346, in main
-       converter.dna_structure = converter.cadnano_convert_design.create_structure(converter.cadnano_design)
-       File "/Users/jeanphilippe/Google Drive/tilibit other/Todo/nanodesign/nanodesign_transition/converters/cadnano/convert_design.py", line 170, in create_structure
-       self._set_strands_colors(strands)
-       File "/Users/jeanphilippe/Google Drive/tilibit other/Todo/nanodesign/nanodesign_transition/converters/cadnano/convert_design.py", line 1124, in _set_strands_colors
-       for strand in strands:
-       TypeError: 'NoneType' object is not iterable
-    """
+
+    # For an overnight run, the paramaters (1e8, 1e4, 0.9999998047) should get to an error free structure.
+
+
+
+    # TODO: Check following edge condition. Reported by JP. Get sample file? (JMS 11/21/16)
+    #    structure with only two staples with two segments each, one double crossover, crashes:
+    #    **** ERROR: Reached a visited base.Traceback (most recent call last):
+    #    File "testScript3.py", line 357, in <module>
+    #    main()
+    #    File "testScript3.py", line 346, in main
+    #    converter.dna_structure = converter.cadnano_convert_design.create_structure(converter.cadnano_design)
+    #    File "/converters/cadnano/convert_design.py", line 170, in create_structure
+    #    self._set_strands_colors(strands)
+    #    File "/converters/cadnano/convert_design.py", line 1124, in _set_strands_colors
+    #    for strand in strands:
+    #    TypeError: 'NoneType' object is not iterable
+
     
     converter.dna_structure = converter.cadnano_convert_design.create_structure(converter.cadnano_design)
     converter.dna_structure.get_domains()
