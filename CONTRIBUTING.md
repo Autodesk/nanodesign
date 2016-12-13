@@ -38,7 +38,7 @@ We currently have the following maintainers:
 * Joseph Schaeffer <joseph.schaeffer@autodesk.com> - Project Lead, Maintainer
 * Dave Parker <dave.parker@autodesk.com> - Maintainer
 
-If you've established yourself as an impactful contributor for the project, and are willing take on the extra work, we'd love to have your help maintaining it! Email the maintainers list at `nanodesign_maintainers@autodesk.com` for details.
+If you've established yourself as an impactful contributor to the project, and are willing take on the extra work, we'd love to have your help maintaining it! Email the maintainers list at `nanodesign_maintainers@autodesk.com` for details.
 
 ### Contributors
 
@@ -103,7 +103,7 @@ If you're interested in getting started, here are some general contributions tha
 
 **Bug fixes:** Found a typo in the code? Found that a function fails under certain conditions? Know how to fix it? Great! Go for it. Please do [open an issue](https://github.com/autodesk/nanodesign/issues) so that we know you're working on it, and submit a pull request when you're ready.
 
-**Features:** We'd love to have new features be added. Please [open an issue](https://github.com/autodesk/nanodesign/issues) so that we know what you're working on.
+**Features:** We'd love to have new features added. Please [open an issue](https://github.com/autodesk/nanodesign/issues) so that we know what you're working on.
 
 ### Important note about pull requests
 

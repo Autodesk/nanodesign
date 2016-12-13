@@ -24,9 +24,11 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for details.
 
 We maintain an informal list of contributors to the repository. See [CONTRIBUTORS.md](CONTRIBUTORS.md) for a list of those who have made this possible.
 
-## License
+## Notices
 
-See [NOTICES](NOTICES) for details about incorporated code.
+See [NOTICES.md](NOTICES.md) for details about incorporated code and design files.
+
+## License
 
 Copyright 2016 Autodesk Inc.
 
