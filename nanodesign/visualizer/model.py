@@ -1,9 +1,23 @@
-#!/usr/bin/env python
-""" This module is used to visualize a DNA structure derived from a DNA design.
+# Copyright 2016 Autodesk Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
-    A DNA structure contains information about the virtual helices, strands, domains, base connectivity etc. derived 
-    from a DNA design. The VisModel class in this module manages the visualization of these entities using various
-    visualization representations (i.e. the geometry used to display an entity). 
+"""This module is used to visualize a DNA structure derived from a DNA design.
+
+   A DNA structure contains information about the virtual helices, strands,
+   domains, base connectivity etc. derived from a DNA design. The VisModel class
+   in this module manages the visualization of these entities using various
+   visualization representations (i.e. the geometry used to display an entity).
 """
 import os
 import numpy as np

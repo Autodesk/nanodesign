@@ -1,31 +1,57 @@
 #!/usr/bin/env python
-""" 
-This module is used to visualize a 3D DNA structure defined by a caDNAno design file.
 
-Virtual helix and strand information is read from a caDNAno design file and used to generate 3D coordinates of virtual 
-helices and their base positions based on the design lattice type. These coordinates are then used to visualize the
-geometry of virtual helices as cylinders, scaffold and staple strands as they wind through the virtual helices, base 
-coordinates and coordinate frames, and domains calculated from base pairing. The backbone P atoms and atom bonds of the 
-atomic model generated for the DNA structure can also be visualized.
+# Copyright 2016 Autodesk Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
-The 3D geometry of the DNA structure can be visualized by virtual helix or strand basis by selecting an ID from a popup menu.
-Virtual helices are selected from a menu using their caDNAno numbering; strands are selected using a name derived from their
-type (scaffold or staple), the virtual helix number they start from and the base position within the virtual helix they start 
-from. Strand names are sorted by virtual helix number. 
+"""This module is used to visualize a 3D DNA structure defined by a caDNAno
+   design file.
 
-Selecting an ID from a popup menu displays its geometry in the grapics window. Items selected from a menu display a '+' after 
-it to indicate it has been selected and is visible. Selecting an item with a '+' will then deselect it and remove it from the 
-graphics window. All menus have a 'All' and 'None' entries that are used to select all or none of the items in the menu, 
-respectively.
+   Virtual helix and strand information is read from a caDNAno design file and
+   used to generate 3D coordinates of virtual helices and their base positions
+   based on the design lattice type. These coordinates are then used to
+   visualize the geometry of virtual helices as cylinders, scaffold and staple
+   strands as they wind through the virtual helices, base coordinates and
+   coordinate frames, and domains calculated from base pairing. The backbone P
+   atoms and atom bonds of the atomic model generated for the DNA structure can
+   also be visualized.
 
-Geometry displayed in the graphics window can be interactively rotated, translated and scaled using the mouse. Geometry can 
-also be interactively selected using the mouse. The selection is a 3D operation that highlights and prints any meaningful 
-component of the geometry. For example, selecting a bond on a atom bonds geometry of the atomic model highlights all the 
-bonds belonging to the base and prints its strand name, sequence number and base name.
+   The 3D geometry of the DNA structure can be visualized by virtual helix or
+   strand basis by selecting an ID from a popup menu.  Virtual helices are
+   selected from a menu using their caDNAno numbering; strands are selected
+   using a name derived from their type (scaffold or staple), the virtual helix
+   number they start from and the base position within the virtual helix they
+   start from. Strand names are sorted by virtual helix number.
 
-Each menu operation generates a visualization command that is written to a file named 'vis.cmd'. These commands can be saved 
-to a file and read in to perform operations when the visualizer starts. Commands can also be executed from the command line 
-as a semicolon-separated string.
+   Selecting an ID from a popup menu displays its geometry in the grapics
+   window. Items selected from a menu display a '+' after it to indicate it has
+   been selected and is visible. Selecting an item with a '+' will then deselect
+   it and remove it from the graphics window. All menus have a 'All' and 'None'
+   entries that are used to select all or none of the items in the menu,
+   respectively.
+
+   Geometry displayed in the graphics window can be interactively rotated,
+   translated and scaled using the mouse. Geometry can also be interactively
+   selected using the mouse. The selection is a 3D operation that highlights and
+   prints any meaningful component of the geometry. For example, selecting a
+   bond on a atom bonds geometry of the atomic model highlights all the bonds
+   belonging to the base and prints its strand name, sequence number and base
+   name.
+
+   Each menu operation generates a visualization command that is written to a
+   file named 'vis.cmd'. These commands can be saved to a file and read in to
+   perform operations when the visualizer starts. Commands can also be executed
+   from the command line as a semicolon-separated string.
 """
 import os
 import re

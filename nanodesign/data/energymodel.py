@@ -1,3 +1,17 @@
+# Copyright 2016 Autodesk Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 __all__ = ["EnergyModel", "energy_model", "BOLTZMANN_CONSTANT", "convert_temperature_K_to_C"]
 
 import math
@@ -175,11 +189,14 @@ class EnergyModel(object):
 
 energy_model = EnergyModel()
 
-if __name__ == "__main__":
-    a = EnergyModel()
-    seq_1 = "G"*3
-    seq_2 = "C"*3
-    print a.stack_energy(seq_1,seq_2)
-    _,_,dH,dS = a.stack_energy(seq_1, seq_2)
-    print a.melting_temperature(dH,dS)
-    print a.melting_temperature(dH,dS) - 273.15
+
+# TODO: Convert the below code to a unit test on the energy computation? (JMS 11/21/16)
+#
+# if __name__ == "__main__":
+#     a = EnergyModel()
+#     seq_1 = "G"*3
+#     seq_2 = "C"*3
+#     print a.stack_energy(seq_1,seq_2)
+#     _,_,dH,dS = a.stack_energy(seq_1, seq_2)
+#     print a.melting_temperature(dH,dS)
+#     print a.melting_temperature(dH,dS) - 273.15

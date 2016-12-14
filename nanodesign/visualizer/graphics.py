@@ -1,14 +1,32 @@
-#!/usr/bin/env python
-""" This module manages the OpenGL graphics used to display the geometry created by visualization.
+# Copyright 2016 Autodesk Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
-    The points, lines and polygons of the geometry created by various visualization representations 
-    of a DNA design are displayed in a graphics window using the PyOpenGL graphics API. The classes
-    in this module are used to manage viewing, window, mouse and keyboard events and picking of displayed
-    geometry. The VisGraphics class stores all of the geometry objects that are rendered in a scene. The
-    actual drawing of graphics primitives is performed in the geometry.py module.
+"""This module manages the OpenGL graphics used to display the geometry created
+by visualization.
 
-    Note that the OpenGL per-vertex operations (e.g. glColor, glNormal, glVertex) used here are now deprecated 
-    and that for large models rendering will be slow. 
+    The points, lines and polygons of the geometry created by various
+    visualization representations of a DNA design are displayed in a graphics
+    window using the PyOpenGL graphics API. The classes in this module are used
+    to manage viewing, window, mouse and keyboard events and picking of
+    displayed geometry. The VisGraphics class stores all of the geometry objects
+    that are rendered in a scene. The actual drawing of graphics primitives is
+    performed in the geometry.py module.
+
+    Note that the OpenGL per-vertex operations (e.g. glColor, glNormal,
+    glVertex) used here are now deprecated and that for large models rendering
+    will be slow.
+
 """
 import copy
 from math import ceil, sqrt
