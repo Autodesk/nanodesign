@@ -855,7 +855,7 @@ def main():
     if (len(sys.argv) != 2):
         sys.stderr.write("**** ERROR: Wrong number of arguments.\n") 
         sys.stderr.write("Usage: stapler.py <filename>\n")
-        sys.stderr.write("Output: If <filename> is path/name.json, will be placed in path/name_recode.json")
+        sys.stderr.write("Output: If <filename> is path/name.json, output will be placed in path/name_recode.json\n")
         sys.exit(1)
     
     file_full_path_and_name = os.path.abspath( os.path.expanduser( sys.argv[1] ))
