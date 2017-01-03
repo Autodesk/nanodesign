@@ -46,38 +46,42 @@ def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("-dbg", "--debug",       help="set modules debugging logger")
     parser.add_argument("-hd",  "--helixdist",   help="distance between DNA helices")
-    parser.add_argument("-if",  "--informat",    help="input file format: cadnano, viewer")
+    parser.add_argument("-if",  "--informat",    help="input file format: cadnano")
     parser.add_argument("-i",   "--infile",      help="input file")
     parser.add_argument("-is",  "--inseqfile",   help="input sequence file")
     parser.add_argument("-isn", "--inseqname",   help="input sequence name")
     parser.add_argument("-m",   "--modify",      help="create DNA structure using the deleted/inserted bases given in a cadnano design file")
     parser.add_argument("-o",   "--outfile",     help="output file")
-    parser.add_argument("-of",  "--outformat",   help="output file format")
+    parser.add_argument("-of",  "--outformat",   help="output file format: cadnano, viewer, cando, cif, pdb, simdna, structure, topology")
     parser.add_argument("-s",   "--staples",     help="staple operations")
     parser.add_argument("-x",   "--transform",   help="apply a transformation to a set of helices")
-    return parser.parse_args()
+    return parser.parse_args(), parser.print_help
 
 def main():
     logger = logging.getLogger('nanodesign.converter')
     converter = Converter()
     infiles = []
+    error_flag = False
 
     # Process command-line arguments.
-    args = parse_args()
+    args, print_help = parse_args()
 
     if args.debug:
         converter.set_module_loggers(args.debug) 
 
     if args.infile == None:
         logger.error("No input file name given.")
+        error_flag = True
     else:
         logger.info("Input file name %s" % args.infile)
         converter.infile = args.infile
 
     if args.informat == None:
         logger.error("No input file format given.")
+        error_flag = True
     elif (args.informat not in ConverterFileFormats.names):
         logger.error("Unknown input file format given: %s" % args.informat)
+        error_flag = True
     else:
         logger.info("Input file format %s" % args.informat)
         converter.informat = args.informat
@@ -92,18 +96,25 @@ def main():
 
     if args.outfile == None:
         logger.error("No output file name given.")
+        error_flag = True
     else:
         logger.info("Output file name %s" % args.outfile)
 
     if args.outformat == None:
         logger.error("No output file format given.")
+        error_flag = True
     elif (args.outformat not in  ConverterFileFormats.names):
         logger.error("Unknown output file format given \'%s\'" % args.outformat)
+        error_flag = True
     else:
         logger.info("Output file format %s" % args.outformat)
         # Make the helix distance a bit larger to better visualization.
         if args.outformat == ConverterFileFormats.VIEWER:
             converter.dna_parameters.helix_distance = 2.50
+
+    if error_flag:
+        print_help()
+        return
 
     # read the input file
     read_function = getattr( converter, converter_read_map[args.informat] )
