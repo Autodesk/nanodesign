@@ -1,7 +1,7 @@
 Nanodesign
 ==========
 
-Create, interact and modify nucleic acid based structures. The Nanodesign Python Package is aimed at proving a toolkit for working with structural DNA/RNA nanotechnology designs. This package is meant to support all types of interaction with these designs, including loading Cadnano files and modifying them, building new structures from scratch, or just converting formats so you can easily visualize or simulate your design.
+Create, interact and modify nucleic acid based structures. The Nanodesign Python Package is aimed at providing a toolkit for working with structural DNA/RNA nanotechnology designs. This package is meant to support all types of interaction with these designs, including loading Cadnano files and modifying them, building new structures from scratch, or just converting formats so you can easily visualize or simulate your design.
 
 ## Getting Started
 
