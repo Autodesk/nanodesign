@@ -25,9 +25,21 @@ These are from the Douglas et al, Nature 2009 paper. Very good basic honeycomb d
 
 Dietz, et al, Science 2009
 --------------------------
-File: `beachball.json`
+Files: 
+```
+beachball.json
+convex_triangle.json
+```
 
-This is a great curved structure example.
+This are great curved  structure examples.
+
+
+
+Bai, et al, PNAS 2012
+---------------------
+File: `pointer.json`
+
+This is a structure which has been fully characterized via Cryo-EM. A useful design file for simulation comparisons and as a study in very dense 3D structure design.
 
 
 Rothemund, Paul WK, Nature 2006.
@@ -43,6 +55,12 @@ File: `Barrel_cadnano.json`
 
 A good example of a barrel structure.
 
+
+Tilibit Nanosystems - Flat Sheet
+--------------------------------
+File: `flat_sheet.json`
+
+A rectangle design, which includes corrections for twist problems caused by the square lattice design. A great example for using insertions and deletions to adjust twist.
 
 
 Various samples created for Nanodesign
@@ -69,12 +87,4 @@ Autodesk A Logo
 File: `aNANO_3D_7_14_final.json`
 
 This is an extremely large scaffold structure that makes an Autodesk A logo using a 3D square lattice design. Scaffold is ~24kb. Useful for testing very large structures.
-
-
-Via JP
--------
-convex_triangle.json
-flat_sheet.json
-pointer.json
-
 
