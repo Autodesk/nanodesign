@@ -25,6 +25,11 @@ import os
 import re
 import sys
 
+# The following imports are designed to try and get the nanodesign package
+# imported regardless of whether or not you have it installed in the
+# site-packages. If you have it in site packages, the first block should just work.
+# Otherwise, it will assume you can import it based on a relative path from this source
+# file's directory, and try to do so by adjusting the system paths temporarily.
 try:
     import nanodesign
 except ImportError:
@@ -32,9 +37,9 @@ except ImportError:
     base_path = os.path.abspath( os.path.join( os.path.dirname(os.path.abspath( __file__)), '../'))
     sys.path.append(base_path)
     import nanodesign
-    # if it fails now, we let the exception go all the way up to halt execution.
-    # TODO (JMS 10/26/16): add better reporting of the import error.
+    # If the import fails now, we let the exception go all the way up to halt execution.
     sys.path = sys.path[:-1]
+
 
 from nanodesign.converters import Converter
 
