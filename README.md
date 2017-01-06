@@ -27,10 +27,17 @@ Currently, the install should be functional for almost all of the package, excep
 
 ### Example Usage: Package
 
-To do some simple operations with the package, here's a few short scripts that show off the interface:
+To do some simple operations with the package, we have a few short scripts in the [`examples/`](examples/) subdirectory that show off the interface:
 
-#### Listing All Domains
+#### Strand Statistics
+
+Source: [`examples/strand-statistics.py`](examples/strand-statistics.py).   
+This script loads a Cadnano file and produces some statistics on the number of strands by length, and the number of distinct virtual helices visited by each strand.
+
 #### Find A Specific Sequence
+
+Source: [`examples/seq-search.py`](examples/seq-search.py).  
+This script loads a Cadnano file and searches through all of the domains to find a specific DNA sequence. It will print out all domain ids that contain that sequence.
 
 ### Example Usage: Scripts
 
