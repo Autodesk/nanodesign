@@ -31,12 +31,12 @@ To do some simple operations with the package, we have a few short scripts in th
 
 #### Strand Statistics
 
-Source: [`examples/strand-statistics.py`](examples/strand-statistics.py).   
+Source: [`examples/strand-statistics.py`](examples/strand-statistics.py)  
 This script loads a Cadnano file and produces some statistics on the number of strands by length, and the number of distinct virtual helices visited by each strand.
 
 #### Find A Specific Sequence
 
-Source: [`examples/seq-search.py`](examples/seq-search.py).  
+Source: [`examples/seq-search.py`](examples/seq-search.py)  
 This script loads a Cadnano file and searches through all of the domains to find a specific DNA sequence. It will print out all domain ids that contain that sequence.
 
 ### Example Usage: Scripts
