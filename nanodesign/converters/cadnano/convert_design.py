@@ -499,7 +499,7 @@ class CadnanoConvertDesign(object):
         next_coords = curr_coords + [0, -dist_bp*helix_axis[1], 0]
         rot_mat = vrrotvec2mat(y_up_vec, deg2rad(ang_bp))
         next_frame = np.dot(rot_mat,curr_frame)
-        [insert_coords, insert_frames] = _bp_interp(curr_coords, curr_frame, next_coords, next_frame, num_inserts/2)
+        [insert_coords, insert_frames] = bp_interp(curr_coords, curr_frame, next_coords, next_frame, num_inserts/2)
         self._logger.debug("Insert dsDNA")
         self._logger.debug("num_inserts %d " % num_inserts)
         self._logger.debug("next_coords %s" % str(next_coords))
