@@ -26,10 +26,10 @@ RUN mkdir -p $MODULE
 COPY ./ ${MODULE}/
 
 # install the module
-RUN cd $MODULE && python setup.py install
+# RUN cd $MODULE && python setup.py install
 
 # set up the scripts directory
-ENV APP /app
-WORKDIR $APP
+#ENV APP /app
+WORKDIR ${MODULE}/scripts
 
-COPY scripts/ ${APP}/
+#COPY scripts/ ${APP}/
