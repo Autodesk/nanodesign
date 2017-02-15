@@ -48,6 +48,23 @@ There are currently three main scripts available:
 
 For all of these, it's assumed that you are running from the `scripts/` subdirectory.
 
+### Running Tests: via Docker 
+
+You can easily run the tests included in this repo. These tests should be run, and pass, before submitting an update to the repo. 
+The tests are packaged in a `docker-compose` file for easy execution. Docker and Docker Compose must be installed to run tests using this method. 
+See the links at the end of this section for installation links.
+
+To run the tests, from the repo root, issue these two commands:
+* `docker-compose -f docker-compose-test.yml build`
+* `docker-compose -f docker-compose-test.yml run test`
+
+The test will output test progresss and results to stdout and will record details of the test run into a JUnit `output.xml` located in the repo root. See [](JUnit.org) for more details on the struture of this `output.xml` file.
+
+
+Here is more information on installing docker and docker-compose.
+* [Installing Docker](https://docs.docker.com/engine/installation/)
+* [Installing Docker Compose](https://docs.docker.com/compose/install/)
+
 #### Converter
 
 For more help on the converter's options:
