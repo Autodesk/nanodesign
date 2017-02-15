@@ -55,7 +55,7 @@ The tests are packaged in a `docker-compose` file for easy execution. Docker and
 See the links at the end of this section for installation links.
 
 To run the tests, from the repo root, issue this command:
-`docker-compose -f docker-compose-test.yml up`
+`docker-compose -f docker-compose-test.yml run test`
 
 
 Here is more information on installing docker and docker-compose.
