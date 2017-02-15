@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh -e
 
 # Copyright 2016 Autodesk Inc.
 #
@@ -17,8 +17,9 @@
 # This file is a shortcut to run the tests and produce the JUnitXML output to
 # stdout. This is needed for Jenkins CI automation of the tests.
 
-python -m pytest --tb=short tests_basic.py --junitxml=output.xml >> /dev/null
-export code=$?
-cat output.xml
-exit $code
+# Don't assume this script is run in same directory as where this file and the test file reside. 
+# Optionally set OUTPUT_DIR (with trailing slash) to location of output file
+pathPrefix=$(dirname $0)
 
+echo "python -m pytest --tb=short $pathPrefix/tests_basic.py --junitxml=${OUTPUT_DIR}output.xml"
+python -m pytest --tb=short $pathPrefix/tests_basic.py --junitxml=${OUTPUT_DIR}output.xml
