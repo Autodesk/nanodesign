@@ -12,7 +12,7 @@ MAINTAINER joseph.schaeffer@autodesk.com
 #        Note that the alpine minimal install does NOT have bash.
 
 RUN echo "@community http://dl-4.alpinelinux.org/alpine/edge/community" >> /etc/apk/repositories && \
-    apk add --update python python-dev gfortran py-pip build-base py-numpy@community && \
+    apk add --update python python-dev gfortran py-pip build-base py2-numpy@community && \
     pip install pytest && \
     apk del --purge python-dev gfortran build-base gcc g++ libgcc && \
     find /usr/local \
