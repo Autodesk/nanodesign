@@ -162,6 +162,8 @@ class DnaStructureHelix(object):
         """ Get the starting helix position of the scaffold or staple strands. 
         """
         num_bases = len(self.staple_bases)
+        if num_bases == 0:
+            return None 
         staple_start_pos = self.staple_bases[0].p
         scaffold_start_pos = self.scaffold_bases[0].p
         start_pos = min(staple_start_pos, scaffold_start_pos)

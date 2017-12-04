@@ -12,8 +12,9 @@ MAINTAINER joseph.schaeffer@autodesk.com
 #        Note that the alpine minimal install does NOT have bash.
 
 RUN echo "@community http://dl-4.alpinelinux.org/alpine/edge/community" >> /etc/apk/repositories && \
-    apk add --update python python-dev gfortran py-pip build-base py-numpy@community && \
-    apk del --purge python-dev gfortran py-pip build-base gcc g++ libgcc && \
+    apk add --update python python-dev gfortran py-pip build-base py2-numpy@community && \
+    pip install pytest && \
+    apk del --purge python-dev gfortran build-base gcc g++ libgcc && \
     find /usr/local \
         \( -type d -a -name test -o -name tests \) \
         -o \( -type f -a -name '*.pyc' -o -name '*.pyo' \) \
@@ -26,10 +27,10 @@ RUN mkdir -p $MODULE
 COPY ./ ${MODULE}/
 
 # install the module
-RUN cd $MODULE && python setup.py install
+# RUN cd $MODULE && python setup.py install
 
 # set up the scripts directory
-ENV APP /app
-WORKDIR $APP
+#ENV APP /app
+WORKDIR ${MODULE}/scripts
 
-COPY scripts/ ${APP}/
+#COPY scripts/ ${APP}/

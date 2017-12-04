@@ -315,6 +315,9 @@ class ViewerWriter(object):
         to_helix = connection.to_helix
         crossovers = connection.crossovers
         start_pos = from_helix.get_start_pos()
+        # Strands that are not base-paired don't have a start position. 
+        if start_pos == None:
+            return []
         self._logger.debug("    Start position: %d " % start_pos)
 
         # Create a list of staple and scaffold crossovers.

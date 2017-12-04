@@ -1,0 +1,13 @@
+test:
+  build: .
+  dockerfile: Dockerfile
+  extends:
+    file: docker-compose.yml
+    service: nanodesign
+  volumes:
+    - ./:/outputs
+  environment:
+    # path relative to inside the continer. real location is mapped via volume statement
+    OUTPUT_DIR: /outputs/
+  command:
+    /nanodesign/tests/run_tests.sh
